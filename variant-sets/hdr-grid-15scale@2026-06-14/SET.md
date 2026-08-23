@@ -1,0 +1,15 @@
+# hdr-grid-15scale@2026-06-14 — HDR multi-scale grid
+
+- **Files:** 1,140 16-bit PQ PNGs = 76 HDR gain-map origins × 15 aspect-preserving
+  scales (~96×128 … 3072×2304, log-spaced — covers the tiny bucket by design).
+- **Selection:** all 76 HDR origins (no subsetting — the HDR estate is small);
+  density carried by the 15-scale ladder.
+- **Render:** zenanalyze `examples/extract_hdr_size_grid.rs` — **linear-light**
+  resample before PQ re-encode, cICP-correct. No per-file selection.tsv exists
+  (renderer + args are the provenance; recorded gap).
+- **Storage:** `/mnt/v/output/imazen-26-hdr-grid-2026-06-14/` (7.8 GB) ·
+  refs `s3://zentrain/refs/imazen-26-hdr-grid-2026-06-14/` · Tower mirror.
+- **Consumers:** hdrgrid multi-codec corpus (102,600 cells + score + 193k diffmap
+  waves), kadis-hdr-2026-07-13 (11,400 cells), zensim `hdr_v3mix`@944 leg
+  (58-origin subset), the HDR feature TSVs.
+- **Status:** active.
