@@ -88,3 +88,36 @@ idle box (load-gated <2.0); decoders `pngtopam` (netpbm 11.10.2, stdout→/dev/n
 - Tool caveat: these are the reference CLI decoders; in-process decoders (zenpng /
   zenjxl-decoder in the fleet path) avoid the spawn floor and will shift absolute
   numbers, not the ~4× single-thread ordering.
+
+## oxipng losslessness — corpus-wide verification (MEASURED 2026-08-23, follow-up)
+
+The earlier "verified" was a single-file probe; this is the census. Every one of the
+7,119 pairs was re-encoded and checked three ways: decoded-pixel-stream hash
+(`pngtopam | sha256`), IHDR depth/colortype/interlace diff, and full chunk-sequence
+diff (`pngmeta_{orig,oxipng}_*_2026-08-23.tsv`).
+
+**Verdict: colorimetrically lossless everywhere; NOT container-preserving in default
+mode for 341 SDR files (4.8%).**
+
+- **Pixel values: identical on all 7,119 pairs.** The 269 pixel-stream hash
+  mismatches were representation-only (channel count); ImageMagick `compare -metric
+  AE` on every flagged pair = **0 differing pixels, 341/341**.
+- **HDR set: perfect container preservation** — 0/1,140 deviations of any kind;
+  **cICP present on 1,140/1,140 outputs**; depth 16 everywhere; nothing stripped.
+- **ICC profiles: preserved** — the 55 cleanpicker files carrying `iCCP` all still
+  carry it (same file set before/after).
+- **Container changes (default mode, SDR only):** oxipng's lossless reductions
+  rewrote 341 files — RGB→grayscale (colortype 2→0) where R=G=B, and RGB→palette
+  (2→3, `PLTE` added) where ≤256 colors. Decoded values are untouched, but channel
+  count / color model changes are visible to anything that reads the container
+  (zenanalyze's `channel_count`-class features, strict format assertions), so for
+  dataset use this is drift, not noise.
+- **The fix is free: `oxipng -o 4 --nx`** (reductions disabled, filter/deflate
+  optimization only) is container-preserving by construction and costs almost
+  nothing: total ratio **0.851 vs 0.849** (cleanpicker 0.897 vs 0.890, sdrfps 0.703
+  vs 0.698, hdrgrid identical 0.875). Per-file sizes:
+  `oxipng_nx_*_2026-08-23.tsv`.
+
+**Standing rule for corpus/dataset PNGs: use `oxipng -o 4 --nx` (never default
+reductions, never `--strip`).** The decode-speed and byte-ratio conclusions above
+are unaffected (the two modes differ by ~0.2% of bytes).
