@@ -58,3 +58,33 @@ at depth=16). Per-file data: `lossless_recompress_{cleanpicker,sdrfps,hdrgrid}_2
 Environment: cjxl v0.11.1 (apt), cwebp/dwebp 1.5.0 (upstream binaries), single-thread
 per file × 20 workers via run-heavy; sources read from the `/mnt/v` set locations
 recorded in each SET.md.
+
+## Decode speed (MEASURED 2026-08-23, follow-up)
+
+Serial single-process decodes of every file, interleaved per file across formats on an
+idle box (load-gated <2.0); decoders `pngtopam` (netpbm 11.10.2, stdout→/dev/null) and
+`djxl` v0.11.1 (`/dev/stdout --output_format ppm`); a second jxl pass adds
+`--num_threads 1`. Per-file data: `decode_times{,_jxl1t}_2026-08-23.tsv`.
+
+| set | PNG MP/s | oxipng MP/s | JXL 1-thread MP/s | JXL default (multithread) MP/s |
+|---|--:|--:|--:|--:|
+| cleanpicker-ladder11 | 29.3 | 31.3 | 8.5 | 18.1 |
+| sdr-fps-1p5gp | 40.0 | 44.4 | 11.2 | 75.9 |
+| hdr-grid-15scale (16-bit) | 23.9 | 26.5 | 5.9 | 38.2 |
+| **total (10.3 GiB / ~4 GP)** | **29.7** (136.6 s) | **32.6** (124.4 s) | **7.9** (512.2 s) | **34.8** (116.4 s) |
+
+- **Per core, lossless JXL decode is ~3.7× slower than PNG** on this corpus (3.4–4.5×
+  by set; worst on 16-bit HDR). That is the real format cost of the 29% byte win over
+  optimized PNG.
+- **`djxl`'s default multithreading buys it all back and more** (34.8 vs 29.7 MP/s
+  aggregate wall) — and PNG structurally cannot do this (DEFLATE is serial within a
+  file), so intra-file parallel decode is a genuine JXL capability, at the price of
+  occupying many cores per image.
+- **oxipng'd PNGs decode ~5–10% FASTER than the as-rendered PNGs** (fewer compressed
+  bytes to inflate) — optimization is a small decode win, not a cost.
+- Process-spawn+init floors (50 reps, tiniest file): djxl ~3.9 ms vs pngtopam ~2.2 ms —
+  inflates jxl's per-file medians on the thumbnail-heavy set; the MP/s columns are the
+  comparable numbers.
+- Tool caveat: these are the reference CLI decoders; in-process decoders (zenpng /
+  zenjxl-decoder in the fleet path) avoid the spawn floor and will shift absolute
+  numbers, not the ~4× single-thread ordering.
