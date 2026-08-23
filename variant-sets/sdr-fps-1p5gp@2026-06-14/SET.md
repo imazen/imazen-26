@@ -24,5 +24,5 @@
   (0.487 — the large FPS-selected renditions dominate), lossless WebP 0.87 GiB (0.539)
 ; oxipng -o 4 ratio 0.698
   — `../../benchmarks/lossless_recompress_2026-08-23.md`.
-- **Status:** active. Gap: png-v1-sourced (v3 is the current public layer) —
+- **Status:** superseded by [`sdr-fps-1p5gp@2026-08-23`](../sdr-fps-1p5gp@2026-08-23/SET.md) for new consumers; existing sha256 references stay valid against these bytes. Gap: png-v1-sourced (v3 is the current public layer) —
   pixel-equivalence v1↔v3 unverified; a successor set should render from v3.

@@ -16,4 +16,4 @@
   (0.624). Lossless WebP N/A — VP8L is 8-bit-only and this set is 16-bit PQ
 ; oxipng -o 4 ratio 0.875
   — `../../benchmarks/lossless_recompress_2026-08-23.md`.
-- **Status:** active.
+- **Status:** superseded by [`hdr-grid-15scale@2026-08-23`](../hdr-grid-15scale@2026-08-23/SET.md) for new consumers; existing sha256 references stay valid against these bytes.

@@ -29,9 +29,12 @@ A set = one directory `variant-sets/<name>@<date>/` containing:
 
 | set id | what | files | status |
 |---|---|---:|---|
-| [`sdr-fps-1p5gp@2026-06-14`](sdr-fps-1p5gp@2026-06-14/SET.md) | SDR training renditions, budget-first FPS @1.5 GP, Mitchell+sharpen | 1,482 | active (train-only by construction) |
-| [`hdr-grid-15scale@2026-06-14`](hdr-grid-15scale@2026-06-14/SET.md) | HDR 16-bit PQ, 76 origins × 15 linear-light scales | 1,140 | active |
-| [`cleanpicker-ladder11@2026-06-26`](cleanpicker-ladder11@2026-06-26/SET.md) | 414 K-rep sources × ≤11-rung Lanczos ladder, all three splits | 4,497 | active — the SDR picker corpus |
+| [`sdr-fps-1p5gp@2026-08-23`](sdr-fps-1p5gp@2026-08-23/SET.md) | byte successor of the 06-14 set (`oxipng -o4 --nx`, ratio 0.703) — same pixels, names, containers | 1,482 | **active** (train-only by construction) |
+| [`hdr-grid-15scale@2026-08-23`](hdr-grid-15scale@2026-08-23/SET.md) | byte successor of the 06-14 set (`--nx`, ratio 0.875); cICP/16-bit verified intact | 1,140 | **active** |
+| [`cleanpicker-ladder11@2026-08-23`](cleanpicker-ladder11@2026-08-23/SET.md) | byte successor of the 06-26 set (`--nx`, ratio 0.897); iCCP verified intact | 4,497 | **active** — the SDR picker corpus |
+| [`sdr-fps-1p5gp@2026-06-14`](sdr-fps-1p5gp@2026-06-14/SET.md) | SDR training renditions, budget-first FPS @1.5 GP, Mitchell+sharpen | 1,482 | superseded by the 08-23 bytes (sha refs stay valid) |
+| [`hdr-grid-15scale@2026-06-14`](hdr-grid-15scale@2026-06-14/SET.md) | HDR 16-bit PQ, 76 origins × 15 linear-light scales | 1,140 | superseded by the 08-23 bytes |
+| [`cleanpicker-ladder11@2026-06-26`](cleanpicker-ladder11@2026-06-26/SET.md) | 414 K-rep sources × ≤11-rung Lanczos ladder, all three splits | 4,497 | superseded by the 08-23 bytes |
 | [`krep-500@2026-06-14`](krep-500@2026-06-14/SET.md) | k-means K=500 (image,crop) representative selection, all ids | 500 rows | active (selection manifest, not renders) |
 | [`krep-500-even@2026-06-18`](krep-500-even@2026-06-18/SET.md) | within-train re-cluster of the above | 500 rows | active for train-only work |
 | [`dense-r6@2026-06-26`](dense-r6@2026-06-26/SET.md) | 2,000 renditions / 672 origins from K500_even reps | 2,000 | **deprecated** — train-biased AND local bytes lost |
@@ -39,6 +42,12 @@ A set = one directory `variant-sets/<name>@<date>/` containing:
 Base layers (1:1 normalizations, not subsets — referenced, not registered here):
 `imazen-26-png-v3` on public R2 (current), `-png-v2` (in-code canonical for the HDR
 sweep path), `-png` v1 (historical; the FPS renders read their sources from it).
+
+**Byte successors (2026-08-23):** the three rendition sets were re-encoded
+`oxipng -o 4 --nx` and registered as successors — pixels, names, and containers
+verified identical file-by-file; only PNG bytes (and therefore sha256s) changed.
+New consumers cite the 08-23 ids; existing datasets keep citing the predecessors,
+whose recorded sha256s match the bytes they actually read.
 
 ## Who used what (per-project map, reconstructed 2026-08-22/23)
 

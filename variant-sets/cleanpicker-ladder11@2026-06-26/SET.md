@@ -21,4 +21,4 @@
   zenjpeg v0.4/v0.5 + jxl-lossy cleansplit picker bins; the zensim bigcodec legs.
 - **Footprint (measured 2026-08-23):** 1.02 GiB PNG as stored; lossless JXL 0.67 GiB
   (0.656), lossless WebP 0.69 GiB (0.673) — `../../benchmarks/lossless_recompress_2026-08-23.md`.
-- **Status:** active — the workhorse.
+- **Status:** superseded by [`cleanpicker-ladder11@2026-08-23`](../cleanpicker-ladder11@2026-08-23/SET.md) for new consumers; existing sha256 references stay valid against these bytes.
