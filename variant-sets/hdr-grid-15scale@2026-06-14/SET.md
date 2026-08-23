@@ -12,4 +12,7 @@
 - **Consumers:** hdrgrid multi-codec corpus (102,600 cells + score + 193k diffmap
   waves), kadis-hdr-2026-07-13 (11,400 cells), zensim `hdr_v3mix`@944 leg
   (58-origin subset), the HDR feature TSVs.
+- **Footprint (measured 2026-08-23):** 7.72 GiB PNG as stored; lossless JXL 4.81 GiB
+  (0.624). Lossless WebP N/A — VP8L is 8-bit-only and this set is 16-bit PQ
+  — `../../benchmarks/lossless_recompress_2026-08-23.md`.
 - **Status:** active.

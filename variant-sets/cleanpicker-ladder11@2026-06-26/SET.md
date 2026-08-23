@@ -19,4 +19,6 @@
   2026-07-01-zensimA (5.74M rows) → tbig/ext 720/924/944 backfills → jxl-lossless
   re-canonical 2026-07-03 → jxl-lossy-hqfill(-A) → fill4 sidecars; committed
   zenjpeg v0.4/v0.5 + jxl-lossy cleansplit picker bins; the zensim bigcodec legs.
+- **Footprint (measured 2026-08-23):** 1.02 GiB PNG as stored; lossless JXL 0.67 GiB
+  (0.656), lossless WebP 0.69 GiB (0.673) — `../../benchmarks/lossless_recompress_2026-08-23.md`.
 - **Status:** active — the workhorse.
