@@ -22,6 +22,7 @@
   SCORING_DATA_2026-06-24.
 - **Footprint (measured 2026-08-23):** 1.61 GiB PNG as stored; lossless JXL 0.79 GiB
   (0.487 — the large FPS-selected renditions dominate), lossless WebP 0.87 GiB (0.539)
+; oxipng -o 4 ratio 0.698
   — `../../benchmarks/lossless_recompress_2026-08-23.md`.
 - **Status:** active. Gap: png-v1-sourced (v3 is the current public layer) —
   pixel-equivalence v1↔v3 unverified; a successor set should render from v3.

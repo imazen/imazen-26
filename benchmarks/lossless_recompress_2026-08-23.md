@@ -32,8 +32,21 @@ at depth=16). Per-file data: `lossless_recompress_{cleanpicker,sdrfps,hdrgrid}_2
 
 ## Interpretation / caveats
 
-- These PNGs are as-rendered (PIL/zenresize output), not `oxipng`-optimized; part of
-  the headroom is generic PNG slack. Optimized-PNG-vs-JXL was NOT measured.
+- **Optimized-PNG baseline (MEASURED 2026-08-23, follow-up):** `oxipng 10.2.0 -o 4`
+  (no stripping — cICP/chunks preserved, verified; roundtrip AE=0, 16-bit kept), all
+  7,119 files, 302 s, 0 failures. Per-file TSVs: `oxipng_{cleanpicker,sdrfps,hdrgrid}_2026-08-23.tsv`.
+
+  | set | oxipng ratio (median/file) | JXL vs optimized PNG |
+  |---|--:|--:|
+  | cleanpicker-ladder11 | 0.890 (0.923) | 0.737 |
+  | sdr-fps-1p5gp | 0.698 (0.872) | 0.698 |
+  | hdr-grid-15scale | 0.875 (0.885) | 0.713 |
+  | **total** | **0.849** — 10.35 → 8.79 GiB, saves 1.56 GiB | **0.713** — JXL stays 28.7% below optimized PNG |
+
+  So of JXL's 39.4% total saving, ~15 points were generic PNG slack (the as-rendered
+  files were never optimized — the large sdr-fps renditions had the most, 0.698) and
+  the remaining ~29% below even optimized PNG is genuine format advantage. Ranking on
+  every set: **JXL < WebP < oxipng < stored PNG**.
 - Every canonical reference to these sets (registry `files.tsv`, R2 refs, ledger
   provenance) keys on the **PNG bytes' sha256**. Re-encoding changes every hash:
   converting a registered set in place is a NEW set under the registry contract,

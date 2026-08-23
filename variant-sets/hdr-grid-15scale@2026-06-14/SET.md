@@ -14,5 +14,6 @@
   (58-origin subset), the HDR feature TSVs.
 - **Footprint (measured 2026-08-23):** 7.72 GiB PNG as stored; lossless JXL 4.81 GiB
   (0.624). Lossless WebP N/A — VP8L is 8-bit-only and this set is 16-bit PQ
+; oxipng -o 4 ratio 0.875
   — `../../benchmarks/lossless_recompress_2026-08-23.md`.
 - **Status:** active.
