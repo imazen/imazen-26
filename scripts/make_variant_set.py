@@ -27,6 +27,10 @@ Kernel: --kernel lanczos (PIL, gamma-space, the built-in path)
         'CMD {src} {w} {h} {dst}' (e.g. a zenresize wrapper) — the tool refuses to
         fake kernels it cannot produce. HDR/linear-light also requires a renderer.
 
+Deps: Pillow (the lanczos path). Some corpus sources are native .heic — install
+      `pillow-heif` too (auto-registered if present, silently skipped if not,
+      Image.open raises UnidentifiedImageError on a .heic source if missing).
+
 Example (the jxl-ablation gap):
   ./scripts/make_variant_set.py --set-id jxlp0-ladder@2026-08-23 \
       --select reps --reps-tsv manifests/imazen26_representatives_K500_2026-06-14.tsv \
@@ -183,6 +187,11 @@ def main():
     Image = None
     if not a.dry_run and not a.renderer_cmd:
         from PIL import Image  # only the built-in lanczos path needs pillow
+        try:
+            from pillow_heif import register_heif_opener
+            register_heif_opener()  # corpus has native .heic sources; PIL can't open them otherwise
+        except ImportError:
+            pass  # fine unless a selected source is actually HEIC — Image.open will then say so
     os.makedirs(a.out, exist_ok=True)
     gen_commit = git_commit(root)
     out_rows, total_px = [], 0
