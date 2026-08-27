@@ -33,3 +33,23 @@ prefix without a 4-digit leading id, all inside the `nope/` staging folder
 for the queued reconciliation pass (STORAGE-MAP "Known drift"). Mirror note:
 the local dev-box mirror was spot-verified byte-identical to the published
 prefix (13/13 md5) on this date.
+
+## Provenance-derived census (same day, supersedes the dHash numbers above as the owner)
+
+`scripts/derive_sharing_provenance.py` derives both sets from names/manifest
+over ALL 2,160 images (the dHash sweep covered only the 414 picker-selected
+ids and becomes the verifier): **90 split-piercing families, 166 non-train
+ids with a train-side twin.** Family keys: screenshots (site normalized,
+page) minus dpr/viewport; plots (index, seed) across kind variants; patents
+(patent, page). Verifier agreement: every eye-confirmed dHash pair is inside
+a family; the two dHash-only patent ids (6067, 6083) matched DIFFERENT pages
+(schematic aliasing) and are provenance-contradicted.
+
+**Design observation:** whether a by-design content family crosses the split
+is decided by its id-offset parity. The lynn-conway patent trio's +30 offsets
+preserve parity (same bucket — the right pattern); the dpr/viewport ladders
+and the +3/+4 patent families flip parity and cross. The structural fix, if
+content-level split separation is ever wanted for these classes, is a
+family-aware split (bucket by family key, not raw id). Downstream stakes were
+measured at ≈0 (zensim, 9 leader models, 25-32% upper-bound exclusion:
+median ΔSROCC +0.0043, max 0.0143, positive-leaning).
