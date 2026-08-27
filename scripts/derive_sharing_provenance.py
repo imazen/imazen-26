@@ -61,6 +61,7 @@ def main():
     ap.add_argument("--repo", default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     ap.add_argument("--pool-names", help="file of pool basenames for derivation A")
     ap.add_argument("--out-prefix", default="/tmp/sharing")
+    ap.add_argument("--emit-family-split", help="write the family-aware canonical split manifest (id, split, family, path)")
     a = ap.parse_args()
     rows = corpus_rows(a.repo)
 
@@ -102,6 +103,27 @@ def main():
     with open(a.out_prefix + "_dupoftrain.tsv", "w") as f:
         f.write("id\tsplit\n")
         for i in nontrain: f.write(f"{i}\t{split_of(i)}\n")
+
+    if a.emit_family_split:
+        # FAMILY-AWARE canonical split (registered 2026-08-28): every id in a
+        # family takes the bucket of the family's LOWEST id under the
+        # canonical last-digit rule; singleton families reduce to the rule.
+        id2fam = {}
+        for k, v in fams.items():
+            for i in v: id2fam[i] = k
+        rows_out = []
+        for r in rows:
+            i = r["number"]
+            fam = id2fam.get(i)
+            anchor = min(fams[fam]) if fam else i
+            rows_out.append((i, split_of(anchor), "|".join(map(str, fam)) if fam else "", r["path"]))
+        with open(a.emit_family_split, "w") as f:
+            f.write("id\tsplit\tfamily\tpath\n")
+            for t in sorted(rows_out): f.write("\t".join(t) + "\n")
+        import collections as _c
+        c = _c.Counter(t[1] for t in rows_out)
+        moved = sum(1 for t in rows_out if t[1] != split_of(t[0]))
+        print(f"family split -> {a.emit_family_split}: {dict(c)}; {moved} ids re-bucketed vs raw rule")
 
 if __name__ == "__main__":
     main()
