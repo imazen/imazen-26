@@ -13,3 +13,6 @@ imazen-26 - Copy*/
 imazen26/
 nope/
 *.lnk
+
+# variant branch: the png-v3 render set is tracked here, via LFS
+!png-v3/**/*.png

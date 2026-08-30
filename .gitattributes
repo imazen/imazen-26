@@ -1,0 +1,5 @@
+# Variant branch: renders are distributed through Git LFS.
+# Manifests stay in git proper so they diff and grep normally.
+*.png filter=lfs diff=lfs merge=lfs -text
+*.tsv text
+*.md  text
