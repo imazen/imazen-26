@@ -23,6 +23,40 @@ working material). A reconciliation pass to make each prefix exactly mirror the 
 is queued. Until then, **`CORPUS-MANIFEST.tsv` is the membership oracle** — an object on
 R2 with no manifest row is not part of the corpus.
 
+## Variant branches (checkoutable render sets)
+
+Derived render sets are distributed as `variant/*` branches in this repository,
+with the image bytes in Git LFS. `main` still holds no image bytes — the split
+is deliberate: canonical provenance stays small and cloneable, while a consumer
+who wants pixels can take exactly one variant.
+
+| Branch | Contents | Objects |
+|---|---|--:|
+| `variant/png-v3` | SDR (+ HDR where present) PNG renders, mirroring `imazen-26-png-v3/` | 1,983 |
+
+```sh
+git clone --branch variant/png-v3 --single-branch --depth 1 \
+  https://github.com/imazen/imazen-26.git
+```
+
+Rules, enforced by `corpus-guard`:
+
+- Image bytes on a `variant/*` branch must be LFS pointers, and
+  `.gitattributes` must declare the LFS filter. A raw blob cannot be rewound out
+  of a published branch, so the guard fails before it lands.
+- Canonical branches keep the no-image-bytes rule unchanged.
+- A `variant/*` branch is never merged into `main`.
+- A new render pass gets a new branch (`variant/png-v4`) rather than rewriting an
+  existing one, so a set someone cited stays reproducible.
+
+Each variant branch carries a `VARIANT.md` stating what the set is, how it was
+produced, and — importantly — where its coverage is incomplete. `variant/png-v3`
+mirrors 1,961 of the 2,160 canonical images; the 199 renders that do not exist
+on R2 are listed in that branch's `MISSING.tsv`.
+
+The R2 prefixes remain available over plain HTTPS for consumers who want a
+handful of files without git or an LFS client — see [`ACCESS.md`](ACCESS.md).
+
 ## Metadata policy (published files)
 
 Camera-sourced files carry **whitelist EXIF only**: Make/Model/lens identification,

@@ -1,8 +1,10 @@
 > **This repository is the canonical home of the imazen-26 corpus** — provenance
 > manifests, the canonical train/validate/test split, the variant-set registry, and
-> generation tooling. **Image bytes are not in git**: they are served from public R2
-> (see [`ACCESS.md`](ACCESS.md)); local checkouts may sync them into the class
-> folders (gitignored). Moved out of `imazen/codec-corpus` on 2026-08-23 so the
+> generation tooling. **Image bytes are not in git on canonical branches**: they are
+> served from public R2 (see [`ACCESS.md`](ACCESS.md)); local checkouts may sync them
+> into the class folders (gitignored). Derived render sets live on `variant/*`
+> branches in Git LFS — see [Variant branches](#variant-branches).
+> Moved out of `imazen/codec-corpus` on 2026-08-23 so the
 > corpus versions as one unit (git tags cover corpus + splits + registry together).
 > Predecessor record: codec-corpus PR #12.
 
@@ -70,6 +72,34 @@ Caveats: `license` is **folder-level best-effort, not per-file legal clearance**
 Artwork "photos" are reproductions of PD works (CC0 on the reproduction). Document
 and screenshot renders may embed third-party logos/photos whose rights differ from the
 page. For redistribution, verify the 8000 set and spot-check embedded media.
+
+## Variant branches
+
+Derived render sets are distributed as `variant/*` branches of this repository,
+with the bytes in Git LFS, so a consumer can check out exactly one variant
+without the corpus carrying any of them on `main`.
+
+| Branch | Contents | Objects | Size |
+|---|---|--:|--:|
+| `variant/png-v3` | SDR (+ HDR where present) PNG renders | 1,983 | 8.7 GB |
+
+```sh
+git clone --branch variant/png-v3 --single-branch --depth 1 \
+  https://github.com/imazen/imazen-26.git
+```
+
+Each variant branch carries a `VARIANT.md` saying what the set is, how it was
+produced, and where its coverage is incomplete — `variant/png-v3` mirrors 1,961
+of the 2,160 canonical images, and lists the 199 renders that do not exist on R2
+in its `MISSING.tsv`.
+
+`corpus-guard` enforces the split: canonical branches carry no image bytes, and
+on a `variant/*` branch images must be LFS pointers with the filter declared in
+`.gitattributes`. A `variant/*` branch is never merged into `main`, and a new
+render pass gets a new branch rather than rewriting an existing one.
+
+The same bytes stay available over plain HTTPS for consumers who want a handful
+of files without git or an LFS client — see [`ACCESS.md`](ACCESS.md).
 
 ## Manifests
 
