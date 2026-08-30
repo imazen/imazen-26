@@ -4,17 +4,64 @@ jobs:
   guard:
     runs-on: ubuntu-latest
     steps:
+      # lfs: false is the default — image files land as LFS POINTERS, which is
+      # exactly what the variant-branch check below needs to inspect.
       - uses: actions/checkout@v5
+      - name: classify branch
+        id: cls
+        run: |
+          set -e
+          ref="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          case "$ref" in
+            variant/*) echo "kind=variant" >> "$GITHUB_OUTPUT" ;;
+            *)         echo "kind=canonical" >> "$GITHUB_OUTPUT" ;;
+          esac
+          echo "branch '$ref' treated as: $(grep kind= "$GITHUB_OUTPUT" | cut -d= -f2)"
       - name: forbid non-canonical paths and untracked-class content in the index
         run: |
           set -e
           bad=$(git ls-files -z | tr '\0' '\n' | grep -E '^(imazen-26 - Copy|imazen26/|nope/)|\.lnk$' || true)
           if [ -n "$bad" ]; then echo "Forbidden non-canonical paths tracked:"; echo "$bad"; exit 1; fi
-      - name: forbid image bytes in git (images are served from R2; splits/ symlinks exempt)
+
+      # Canonical branches: image bytes are served from R2 and never enter git.
+      - name: forbid image bytes in git (canonical branches)
+        if: steps.cls.outputs.kind == 'canonical'
         run: |
           set -e
           imgs=$(git ls-files -z | tr '\0' '\n' | grep -Ei '\.(jpg|jpeg|png|heic|dng|pdf)$' | grep -v '^splits/' || true)
-          if [ -n "$imgs" ]; then echo "Image files tracked outside splits/ symlink views:"; echo "$imgs"; exit 1; fi
+          if [ -n "$imgs" ]; then
+            echo "Image files tracked outside splits/ symlink views:"; echo "$imgs"
+            echo "Variant image sets belong on a variant/* branch, in Git LFS."
+            exit 1
+          fi
+
+      # variant/* branches distribute renders, but only through LFS. A raw blob
+      # committed by accident is unrewindable, so fail before it lands.
+      - name: image bytes on variant branches must be LFS pointers
+        if: steps.cls.outputs.kind == 'variant'
+        run: |
+          set -e
+          bad=""
+          while IFS= read -r -d '' f; do
+            case "$f" in splits/*) continue ;; esac
+            head -c 43 "$f" | grep -q '^version https://git-lfs.github.com/spec/v1' \
+              || bad="$bad$f"$'\n'
+          done < <(git ls-files -z -- '*.jpg' '*.jpeg' '*.png' '*.heic' '*.dng' '*.pdf')
+          if [ -n "$bad" ]; then
+            echo "Image files committed as raw bytes instead of LFS pointers:"; echo "$bad"
+            echo "Fix: ensure .gitattributes marks them 'filter=lfs' BEFORE git add."
+            exit 1
+          fi
+          echo "all tracked image files are LFS pointers"
+      - name: variant branches must declare LFS tracking
+        if: steps.cls.outputs.kind == 'variant'
+        run: |
+          set -e
+          grep -q 'filter=lfs' .gitattributes 2>/dev/null \
+            || { echo ".gitattributes must mark image types filter=lfs on a variant branch"; exit 1; }
+
+      # Applies to every branch: on variant/* this catches a raw blob that somehow
+      # slipped the pointer check, since a pointer is ~130 bytes.
       - name: forbid oversized blobs
         run: |
           set -e
