@@ -25,10 +25,18 @@ variant name).
 | `test.tsv` | 418 | full rows for the test bucket |
 
 Columns: `id, split, content_class, path, width, height, format, bytes_manifest,
-bytes_actual, sha256, raw_url, png_v3_sdr_url`. `sha256`/`bytes_actual` are computed
+bytes_actual, sha256, raw_url, png_v3_sdr_url, png_v3_hdr_url`. `sha256`/`bytes_actual` are computed
 from the canonical files at generation time (`bytes_manifest` is the historical
 `CORPUS-MANIFEST.tsv` value, which can lag after metadata rewrites). `raw_url` serves
-the original bytes; `png_v3_sdr_url` the codec-test-ready PNG render.
+the original bytes; `png_v3_sdr_url` / `png_v3_hdr_url` the codec-test-ready PNG
+renders.
+
+**Never derive a render URL from `path`.** The corpus filename ends in a `_WxH`
+token from the *stored* dimensions; the render pass applied EXIF rotation and
+named its output by the *rotated* dimensions, so for the 196 images with EXIF
+Orientation 5/6/7/8 the two numbers are transposed and an extension swap 404s.
+Use the columns, or `variant-sets/png-v3-index.tsv`. An empty value means the
+object does not exist (3 rows for SDR; only 76 rows have an HDR companion).
 
 Regenerate:
 
@@ -52,7 +60,14 @@ be treated as training data going forward.
 - ids **9231, 9869, 9874** (renamed during curation): `png_v3` URL live, `raw_url`
   404 — `imazen-26-unprocessed/` still holds the pre-rename objects. Reconciliation
   pass queued.
-- id **1433**: `raw_url` live, `png_v3` 404 (render missing under the current name).
+- ~~id **1433**: `png_v3` 404 (render missing under the current name).~~
+  **Resolved 2026-08-30 — misdiagnosed.** The render exists; the manifest URL was
+  built by swapping the extension on the corpus name, and 1433 is one of the 196
+  EXIF-rotated images whose render name transposes the `WxH` token. The URL
+  columns are now generated from `variant-sets/png-v3-index.tsv` rather than
+  derived, so this class is gone. Genuinely absent renders: **3** (ids 1444,
+  1455, 1458 — the corpus's only DNG originals), which now carry an empty
+  `png_v3_sdr_url`.
 - The R2 prefixes also hold objects with **no manifest row** (pre-curation working
   material). `CORPUS-MANIFEST.tsv` is the membership oracle; ignore unmanifested
   objects.

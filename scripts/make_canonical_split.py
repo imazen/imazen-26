@@ -43,7 +43,8 @@ SPLIT_OF = {0: "train", 2: "train", 4: "train", 6: "train", 8: "train",
             7: "test", 9: "test"}
 
 OUT_COLS = ["id", "split", "content_class", "path", "width", "height", "format",
-            "bytes_manifest", "bytes_actual", "sha256", "raw_url", "png_v3_sdr_url"]
+            "bytes_manifest", "bytes_actual", "sha256", "raw_url", "png_v3_sdr_url",
+            "png_v3_hdr_url"]
 
 
 def sha256_file(path: str) -> str:
@@ -65,6 +66,38 @@ def head_status(url: str) -> int:
         return e.code
     except Exception:
         return 0
+
+
+
+# The corpus filename embeds a `_WxH` token from the *stored* dimensions, but the
+# PNG-v3 render pass applied EXIF rotation and named its output by the *rotated*
+# dimensions. So for every original with EXIF Orientation 5/6/7/8 the render is
+# `..._3000x4000.sdr.png` while the corpus file is `..._4000x3000.jpg`, and
+# deriving the URL by swapping the extension yields a 404. That mistake shipped
+# in 196 of 2,160 rows and went unnoticed for months, because a naive swap looks
+# right and fails only on rotated originals.
+#
+# Render names are therefore NOT derived. They are read from
+# variant-sets/png-v3-index.tsv, which records what actually exists on R2
+# (measured by probing, regenerate with scripts/build_png_v3_index.py). A row
+# whose render is absent gets an EMPTY url — a wrong URL is worse than none.
+RENDER_INDEX = "variant-sets/png-v3-index.tsv"
+
+
+def render_index(repo_root):
+    """id -> (sdr_url, hdr_url). Empty string means no such object on R2."""
+    path = os.path.join(repo_root, RENDER_INDEX)
+    if not os.path.isfile(path):
+        raise SystemExit(
+            f"{RENDER_INDEX} not found. It is the source of truth for render URLs; "
+            "do not fall back to deriving them from the corpus stem."
+        )
+    out = {}
+    with open(path, encoding="utf-8", newline="") as fh:
+        for row in csv.DictReader(fh, delimiter="\t"):
+            sdr = row["sdr_url"] if row["sdr_present"] == "1" else ""
+            out[row["id"]] = (sdr, row["hdr_url"])
+    return out
 
 
 def main() -> int:
@@ -99,6 +132,8 @@ def main() -> int:
         print(f"ERROR: non-4-digit ids: {bad[:5]}", file=sys.stderr)
         return 2
 
+    render_urls = render_index(im26)
+
     out_rows = []
     missing = []
     for r in rows:
@@ -121,7 +156,9 @@ def main() -> int:
             "bytes_manifest": r["bytes"], "bytes_actual": bytes_actual,
             "sha256": digest,
             "raw_url": f"{R2_BASE}/{RAW_PREFIX}/{path}",
-            "png_v3_sdr_url": f"{R2_BASE}/{PNGV3_PREFIX}/{stem}.sdr.png",
+            # NOT f"{stem}.sdr.png" — see render_index() above.
+            "png_v3_sdr_url": render_urls.get(rid, ("", ""))[0],
+            "png_v3_hdr_url": render_urls.get(rid, ("", ""))[1],
         })
 
     if missing:
@@ -171,12 +208,22 @@ def main() -> int:
         bad_urls = 0
         for r in sample:
             a = head_status(r["raw_url"])
-            b = head_status(r["png_v3_sdr_url"])
-            flag = "" if (a == 200 and b == 200) else "   <-- CHECK"
-            if a != 200 or b != 200:
+            # A blank render url is a recorded absence, not a failure.
+            b = head_status(r["png_v3_sdr_url"]) if r["png_v3_sdr_url"] else 200
+            c = head_status(r["png_v3_hdr_url"]) if r["png_v3_hdr_url"] else 200
+            ok = (a == 200 and b == 200 and c == 200)
+            if not ok:
                 bad_urls += 1
-            print(f"  url-probe id={r['id']} raw={a} png_v3={b}{flag}")
+            print(f"  url-probe id={r['id']} raw={a} sdr={b} hdr={c}"
+                  f"{'' if ok else '   <-- CHECK'}")
         print(f"url probe: {len(sample) - bad_urls}/{len(sample)} fully live")
+        if bad_urls:
+            # This used to print and pass. It printed for months while 196 rows
+            # carried 404s, so it now fails the run.
+            print(f"ERROR: {bad_urls} sampled rows have a dead url — regenerate "
+                  f"{RENDER_INDEX} (scripts/build_png_v3_index.py) before shipping "
+                  "these manifests", file=sys.stderr)
+            return 4
     return 0
 
 

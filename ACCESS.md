@@ -42,15 +42,36 @@ https://codec-corpus.r2.imazen.org/imazen-26-unprocessed/6000-lilith-scans-publi
 
 ## 2. PNG derivatives (codec-test-ready, SDR + HDR renders)
 
-`s3://codec-corpus/imazen-26-png-v3/` — 2,639 objects, 16 GB. One SDR render
-per corpus image (`.sdr.png`) plus an HDR render for the 76 gain-map images
+`s3://codec-corpus/imazen-26-png-v3/` — 2,639 objects, 16 GB. An SDR render per
+corpus image (`.sdr.png`) plus an HDR render for the 76 gain-map images
 (`.hdr.png`). **No EXIF/GPS** — this is the layer to use if you don't need the
 raw originals.
 
+> **Do not build these URLs by swapping the extension on the corpus filename.**
+> The corpus name ends in a `_WxH` token taken from the **stored** dimensions,
+> but the render pass applied EXIF rotation and named its output by the
+> **rotated** dimensions. For every original with EXIF Orientation 5/6/7/8 —
+> **196 of the 2,160** — the two numbers are transposed:
+>
+> ```
+> corpus  1009_..._4000x3000.jpg
+> render  1009_..._3000x4000.sdr.png     <- swapping the extension gives a 404
+> ```
+>
+> Take the URL from the `png_v3_sdr_url` / `png_v3_hdr_url` columns of the split
+> manifests (§3), or from
+> [`variant-sets/png-v3-index.tsv`](variant-sets/png-v3-index.tsv), which records
+> what actually exists on R2. An **empty** value means no such object — 3 images
+> (the corpus's only DNG originals, ids 1444/1455/1458) have no render at all.
+> `.hdr.png` companions cannot be inferred from the SDR name either; only the 76
+> rows with a non-empty `png_v3_hdr_url` have one.
+
 ```
-https://codec-corpus.r2.imazen.org/imazen-26-png-v3/<category>/<basename>.sdr.png
-https://codec-corpus.r2.imazen.org/imazen-26-png-v3/<category>/<basename>.hdr.png   (gain-map images only)
+https://codec-corpus.r2.imazen.org/imazen-26-png-v3/<category>/<render-basename>.sdr.png
+https://codec-corpus.r2.imazen.org/imazen-26-png-v3/<category>/<render-basename>.hdr.png   (76 gain-map images only)
 ```
+
+where `<render-basename>` comes from the index, **not** from the corpus filename.
 
 ## 3. Canonical split manifests (train / validate / test)
 
@@ -64,8 +85,12 @@ image, with sha256 and direct raw + PNG-v3 URLs per row:
 - [`manifests/split_map.tsv`](manifests/split_map.tsv) — the bare id→split map (2,160 rows)
 
 Columns: `id, split, content_class, path, width, height, format, bytes_manifest,
-bytes_actual, sha256, raw_url, png_v3_sdr_url`. Regenerate with
-`imazen-26/scripts/make_canonical_split.py`; browsable per-bucket folder views live
+bytes_actual, sha256, raw_url, png_v3_sdr_url, png_v3_hdr_url`. The two render
+columns are the **authoritative** source for those URLs — see the warning in §2
+about why they cannot be derived from `path`. Either may be empty, meaning no
+such object exists; `png_v3_hdr_url` is populated for exactly 76 rows. Regenerate
+with `imazen-26/scripts/make_canonical_split.py` (which reads
+`variant-sets/png-v3-index.tsv` and will not derive a render name); browsable per-bucket folder views live
 under `imazen-26/splits/`. Derived datasets inherit an image's bucket by id — never
 invent a per-dataset split (details + near-duplicate caveats:
 [`manifests/README.md`](manifests/README.md)).

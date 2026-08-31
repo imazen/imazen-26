@@ -14,7 +14,7 @@ distribution surface.
 | Layer | Location | Contents |
 |---|---|---|
 | Raw corpus | `…/imazen-26-unprocessed/<manifest path>` | the corpus images + manifests (ACCESS.md §1) |
-| PNG derivatives | `…/imazen-26-png-v3/<manifest path minus extension>.sdr.png` (+ `.hdr.png` for the gain-map images) | one codec-test-ready PNG render per corpus image (ACCESS.md §2) |
+| PNG derivatives | `…/imazen-26-png-v3/<render basename>.sdr.png` (+ `.hdr.png` for the 76 gain-map images) — **basename comes from [`variant-sets/png-v3-index.tsv`](variant-sets/png-v3-index.tsv), not from the corpus path**, because EXIF-rotated originals transpose the `WxH` token (ACCESS.md §2) | codec-test-ready PNG renders; 2,157 of 2,160 images have one |
 | Multi-scale renditions + codec-encoded sweeps | `…/picker-sweep-2026-06-22/` | ACCESS.md §5–6 |
 
 Known drift (recorded 2026-08-22): the R2 prefixes predate the final curation pass and
