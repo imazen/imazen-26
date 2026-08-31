@@ -15,7 +15,15 @@ is wrong: the PNG-v3 render pass applied the rotation and named the output by th
 **rotated** dimensions, so the object on R2 is `…_3000x4000.sdr.png` while the
 manifest asks for `…_4000x3000.sdr.png`.
 
-[`RENDER-NAME-MAP.tsv`](RENDER-NAME-MAP.tsv) maps all 196 affected rows:
+**Fixed upstream on `main` (2026-08-30).** The split manifests no longer derive
+render URLs: `png_v3_sdr_url` is corrected for all 196 rows, a `png_v3_hdr_url`
+column is populated for the 76 images that have an HDR companion, and both are
+generated from [`variant-sets/png-v3-index.tsv`](https://github.com/imazen/imazen-26/blob/main/variant-sets/png-v3-index.tsv)
+— a probe of what actually exists on R2. **Use the manifest columns or that
+index; never build a render URL from the corpus filename.**
+
+[`RENDER-NAME-MAP.tsv`](RENDER-NAME-MAP.tsv) remains as the record of what was
+wrong, and maps all 196 affected rows:
 `id, corpus_path, manifest_sdr_url (404s), actual_sdr_url, actual_hdr_url`.
 **Join through that file, not through `png_v3_sdr_url` alone.**
 
