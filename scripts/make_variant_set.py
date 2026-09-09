@@ -84,6 +84,15 @@ def git_commit(root):
         return "unknown"
 
 
+def png_dims(p):
+    """(width, height) from a PNG IHDR — no image library needed."""
+    with open(p, "rb") as f:
+        head = f.read(24)
+    if len(head) < 24 or head[:8] != b"\x89PNG\r\n\x1a\n":
+        return (0, 0)
+    return (int.from_bytes(head[16:20], "big"), int.from_bytes(head[20:24], "big"))
+
+
 def crop_rect(w, h, label):
     if label == "full":
         return None
@@ -103,7 +112,14 @@ def main():
     ap.add_argument("--corpus-root", default=".")
     ap.add_argument("--images-root", default=None,
                     help="where class dirs hold bytes (default: corpus root)")
-    ap.add_argument("--select", choices=["all", "reps", "fps"], required=True)
+    ap.add_argument("--select", choices=["all", "reps", "fps", "list"], required=True)
+    ap.add_argument("--list-file",
+                    help="--select list: one source path per line, relative to "
+                         "--images-root. For deriving a set from an existing "
+                         "rendition layer (e.g. the 16-bit HDR renders) rather "
+                         "than from corpus originals — those files are not in "
+                         "CORPUS-MANIFEST, so their dimensions are read from the "
+                         "PNG header and the origin id from the leading integer.")
     ap.add_argument("--reps-tsv")
     ap.add_argument("--fps-tsv")
     ap.add_argument("--budget-gp", type=float)
@@ -112,7 +128,24 @@ def main():
     ap.add_argument("--preset", choices=sorted(PRESETS))
     ap.add_argument("--sizes")
     ap.add_argument("--crops", choices=["none", "c50", "c25", "both"], default="none")
-    ap.add_argument("--kernel", choices=["lanczos", "mitchell", "mitchell-sharp"],
+    ap.add_argument("--ratio", type=int,
+                    help="fixed 1/N downscale instead of grid rungs. The candidate "
+                         "grid (spec v2 s2) is longest-side and explicitly "
+                         "'joinability, not a mandate'; an artifact-removal set is "
+                         "defined by a RATIO to the source's block grid, not by a "
+                         "rung, so it cannot use one. Emitted names stay grammar-"
+                         "compliant (.scale<W>x<H>) and the ratio is recorded as "
+                         "selection_param. Sources are cropped to a whole multiple "
+                         "of N first (a partial MCU cannot have its AC cancelled).")
+    ap.add_argument("--sources", choices=["all", "lossy"], default="all",
+                    help="'lossy' keeps only jpg/jpeg/heic origins — the ones that "
+                         "actually carry codec artifacts to remove.")
+    ap.add_argument("--colorspace-path", default=None,
+                    help="recorded verbatim in variants.tsv. Required with "
+                         "--renderer-cmd: the generator cannot inspect what an "
+                         "external renderer did, and guessing it would put an "
+                         "unverified claim in the manifest.")
+    ap.add_argument("--kernel", choices=["lanczos", "mitchell", "mitchell-sharp", "box"],
                     default="lanczos")
     ap.add_argument("--renderer-cmd",
                     help="external renderer: 'CMD {src} {w} {h} {dst}' (required "
@@ -124,6 +157,16 @@ def main():
     images = (a.images_root or root).rstrip("/")
     if "@" not in a.set_id:
         sys.exit("--set-id must be <name>@<date>")
+    if a.renderer_cmd and not a.colorspace_path:
+        sys.exit("--renderer-cmd needs --colorspace-path (e.g. linear-light); the "
+                 "generator will not record a colorspace it did not perform")
+    if a.ratio is not None:
+        if a.ratio < 2:
+            sys.exit("--ratio must be >= 2")
+        if a.preset or a.sizes:
+            sys.exit("--ratio replaces --preset/--sizes; pass one or the other")
+        if a.select == "fps":
+            sys.exit("--select fps carries its own per-unit targets; --ratio conflicts")
     if a.kernel != "lanczos" and not a.renderer_cmd:
         sys.exit(f"--kernel {a.kernel} needs --renderer-cmd (PIL cannot produce it; "
                  "the tool does not fake kernels)")
@@ -135,6 +178,16 @@ def main():
 
     def unit_from(pathlike, crop_label):
         oid = leading_id(pathlike)
+        if a.select == "list":
+            # A rendition layer, not a corpus original: the path IS the source and
+            # its dimensions are its own. The id still has to resolve, because the
+            # split is inherited from it.
+            if not oid or oid not in cm:
+                sys.exit(f"cannot map to a corpus id: {pathlike}")
+            w, h = png_dims(os.path.join(images, pathlike))
+            if not w:
+                sys.exit(f"not a readable PNG: {pathlike}")
+            return (pathlike, crop_label, w, h)
         if not oid or oid not in cm:
             sys.exit(f"cannot map to a corpus id: {pathlike}")
         p, w, h = cm[oid]
@@ -152,16 +205,24 @@ def main():
         sel_method, sel_param = "fps", f"{a.budget_gp}GP"
         sizes = None
     else:
-        if a.sizes:
+        if a.ratio:
+            sizes = None  # per-source, derived from the ratio below
+        elif a.sizes:
             sizes = [int(x) for x in a.sizes.split(",")]
         elif a.preset:
             sizes = PRESETS[a.preset]
         else:
-            sys.exit("--select all/reps needs --preset or --sizes")
-        off_grid = [s for s in sizes if s not in GRID]
-        if off_grid:
-            sys.exit(f"sizes {off_grid} are not rungs of the canonical grid {GRID}")
-        if a.select == "reps":
+            sys.exit("--select all/reps needs --preset, --sizes or --ratio")
+        if sizes is not None:
+            off_grid = [s for s in sizes if s not in GRID]
+            if off_grid:
+                sys.exit(f"sizes {off_grid} are not rungs of the canonical grid {GRID}")
+        if a.select == "list":
+            if not a.list_file:
+                sys.exit("--select list needs --list-file")
+            src = [(l.strip(), "full") for l in open(a.list_file) if l.strip()]
+            sel_method, sel_param = "list", os.path.basename(a.list_file)
+        elif a.select == "reps":
             if not a.reps_tsv:
                 sys.exit("--select reps needs --reps-tsv")
             with open(a.reps_tsv, newline="") as f:
@@ -170,7 +231,11 @@ def main():
             sel_method, sel_param = "kmeans", os.path.basename(a.reps_tsv)
         else:
             with open(os.path.join(root, "CORPUS-MANIFEST.tsv"), newline="") as f:
-                src = [(r["path"], "full") for r in csv.DictReader(f, delimiter="\t")]
+                rows_all = list(csv.DictReader(f, delimiter="\t"))
+            if a.sources == "lossy":
+                rows_all = [r for r in rows_all
+                            if r["format"].lower() in ("jpg", "jpeg", "heic")]
+            src = [(r["path"], "full") for r in rows_all]
             sel_method, sel_param = "all", a.split
         if a.crops != "none":
             kinds = {"c50": ["c50"], "c25": ["c25"], "both": ["c50", "c25"]}[a.crops]
@@ -209,10 +274,21 @@ def main():
             rect = crop_rect(nat_w, nat_h, crop_label)
             cw, ch = rect[2], rect[3]
             ops.append(f"crop{rect[0]}.{rect[1]}.{rect[2]}.{rect[3]}")
-        targets = ([(tw, th)] if tw else
-                   [(max(1, round(cw * s / max(cw, ch))),
-                     max(1, round(ch * s / max(cw, ch))))
-                    for s in sizes if s <= max(cw, ch)])
+        if a.ratio:
+            # Whole blocks only: crop to a multiple of N, then divide. The
+            # discarded edge is at most N-1 px per axis and is exactly where
+            # partial-MCU artifacts live.
+            bw, bh = (cw // a.ratio) * a.ratio, (ch // a.ratio) * a.ratio
+            targets = ([(bw // a.ratio, bh // a.ratio)] if bw and bh else [])
+            if not targets:
+                sys.exit(f"{path}: {cw}x{ch} is smaller than one "
+                         f"{a.ratio}x{a.ratio} block")
+        elif tw:
+            targets = [(tw, th)]
+        else:
+            targets = [(max(1, round(cw * s / max(cw, ch))),
+                        max(1, round(ch * s / max(cw, ch))))
+                       for s in sizes if s <= max(cw, ch)]
         if True:
             for (w, h) in targets:
                 op_chain = ".".join(ops + [f"scale{w}x{h}"])
@@ -233,13 +309,22 @@ def main():
                                 im = im.crop((rect[0], rect[1],
                                               rect[0] + rect[2], rect[1] + rect[3]))
                             im.resize((w, h), Image.LANCZOS).save(dst)
+                # An external renderer that disagrees with the recorded target
+                # would put wrong dimensions in the manifest silently. Read them
+                # back from the PNG header (IHDR is fixed-offset) and fail loud.
+                if not a.dry_run:
+                    got = png_dims(dst)
+                    if got != (w, h):
+                        sys.exit(f"{dst}: renderer wrote {got[0]}x{got[1]}, "
+                                 f"manifest says {w}x{h} — refusing to record it")
                 total_px += w * h
                 out_rows.append({
                     "origin_id": oid, "origin_sha256": origin_sha,
                     "op_chain": op_chain, "kernel": a.kernel,
                     "sharpen": "1" if a.kernel.endswith("sharp") else "0",
-                    "colorspace_path": "gamma-srgb" if not a.renderer_cmd else "per-renderer",
-                    "selection_method": sel_method, "selection_param": sel_param,
+                    "colorspace_path": a.colorspace_path or "gamma-srgb",
+                    "selection_method": sel_method,
+                    "selection_param": (f"1/{a.ratio}" if a.ratio else sel_param),
                     "rank": rank, "cumulative_gp": cgp,
                     "generator": "make_variant_set.py", "generator_commit": gen_commit,
                     "out_path": out_name,
