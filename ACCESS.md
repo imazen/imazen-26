@@ -149,7 +149,8 @@ sha256, kernel, colorspace path and split bucket; the SDR one also has a
 profile. Colour is preserved rather than normalised — 191 SDR and 43 HDR files
 are Display-P3 and say so.
 
-Also available as `variant/pristine-8th` (Git LFS) for a one-checkout copy.
+Also available as `variant/pristine-8th` (Git LFS, objects served from this
+bucket — §7) for a one-checkout copy.
 Method, the kernel measurement behind it, and the caveats that matter (chroma is
 only partly cleaned at 1/8; DC quantization error survives any kernel):
 `variant-sets/pristine-8th@2026-09-09/SET.md`.
@@ -161,3 +162,17 @@ sweeps, HDR zenjxl passes, named benchmark runs) at
 `s3://codec-corpus/picker-sweep-2026-06-22/` — same public-URL pattern as
 above. Full breakdown (sizes, sub-prefixes, what's confirmed vs. not) is in
 [`STORAGE-MAP.md`](STORAGE-MAP.md).
+
+## 7. Git LFS objects (the `variant/*` branches)
+
+`s3://codec-corpus/lfs/imazen-26/` — the Git LFS objects behind the `variant/*`
+branches, one object per distinct file keyed by its sha256: 2,222 png-v3 +
+581 pristine-8th objects, 15.6 GB. Git LFS reaches them through
+`https://imazen-lfs.pages.dev`, imazen's instance of git-lfs-s3-proxy (the
+`.lfsconfig` on every variant branch), so a plain `git clone` of a variant
+branch needs nothing else and draws no GitHub LFS bandwidth. Given a pointer's
+oid, the same bytes are also here directly:
+
+```
+https://codec-corpus.r2.imazen.org/lfs/imazen-26/<sha256>
+```

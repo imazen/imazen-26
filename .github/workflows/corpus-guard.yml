@@ -60,6 +60,24 @@ jobs:
           grep -q 'filter=lfs' .gitattributes 2>/dev/null \
             || { echo ".gitattributes must mark image types filter=lfs on a variant branch"; exit 1; }
 
+      # LFS bytes for a variant branch live on R2 behind the imazen git-lfs-s3-proxy
+      # instance, never on GitHub's LFS store. .lfsconfig must say so, and must
+      # not carry credentials: downloads are public, uploads take a key that
+      # stays in the maintainer's own git config.
+      - name: variant branches must point Git LFS at the R2 proxy
+        if: steps.cls.outputs.kind == 'variant'
+        run: |
+          set -e
+          url=$(git config -f .lfsconfig --get lfs.url || true)
+          case "$url" in
+            https://imazen-lfs.pages.dev/*|https://lfs.imazen.org/*) ;;
+            *) echo ".lfsconfig lfs.url must point at the imazen LFS proxy (got '$url')"; exit 1 ;;
+          esac
+          case "$url" in
+            *@*) echo ".lfsconfig must not embed credentials"; exit 1 ;;
+          esac
+          echo "lfs.url = $url"
+
       # Applies to every branch: on variant/* this catches a raw blob that somehow
       # slipped the pointer check, since a pointer is ~130 bytes.
       - name: forbid oversized blobs

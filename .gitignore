@@ -13,3 +13,6 @@ imazen-26 - Copy*/
 imazen26/
 nope/
 *.lnk
+
+# python bytecode from scripts/
+__pycache__/

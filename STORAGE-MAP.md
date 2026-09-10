@@ -16,6 +16,7 @@ distribution surface.
 | Raw corpus | `…/imazen-26-unprocessed/<manifest path>` | the corpus images + manifests (ACCESS.md §1) |
 | PNG derivatives | `…/imazen-26-png-v3/<render basename>.sdr.png` (+ `.hdr.png` for the 76 gain-map images) — **basename comes from [`variant-sets/png-v3-index.tsv`](variant-sets/png-v3-index.tsv), not from the corpus path**, because EXIF-rotated originals transpose the `WxH` token (ACCESS.md §2) | codec-test-ready PNG renders; 2,157 of 2,160 images have one |
 | Multi-scale renditions + codec-encoded sweeps | `…/picker-sweep-2026-06-22/` | ACCESS.md §5–6 |
+| Git LFS objects of the `variant/*` branches | `…/lfs/imazen-26/<sha256>` | content-addressed copies of the branch renders; Git LFS reaches them through `imazen-lfs.pages.dev` (ACCESS.md §7) |
 
 Known drift (recorded 2026-08-22): the R2 prefixes predate the final curation pass and
 hold more objects than the 2,160-row canonical manifest (earlier mirror passes included
@@ -26,13 +27,16 @@ R2 with no manifest row is not part of the corpus.
 ## Variant branches (checkoutable render sets)
 
 Derived render sets are distributed as `variant/*` branches in this repository,
-with the image bytes in Git LFS. `main` still holds no image bytes — the split
-is deliberate: canonical provenance stays small and cloneable, while a consumer
-who wants pixels can take exactly one variant.
+with the image bytes in Git LFS — served from the `lfs/imazen-26/` prefix above
+through imazen's [git-lfs-s3-proxy](https://github.com/imazen/git-lfs-s3-proxy)
+instance, not from GitHub's LFS store. `main` still holds no image bytes — the
+split is deliberate: canonical provenance stays small and cloneable, while a
+consumer who wants pixels can take exactly one variant.
 
-| Branch | Contents | Objects |
+| Branch | Contents | Pointers |
 |---|---|--:|
-| `variant/png-v3` | SDR (+ HDR where present) PNG renders, mirroring `imazen-26-png-v3/` | 1,983 |
+| `variant/png-v3` | SDR (+ HDR where present) PNG renders, mirroring `imazen-26-png-v3/` | 2,233 |
+| `variant/pristine-8th` | artifact-free 1/8 references, SDR + HDR | 581 |
 
 ```sh
 git clone --branch variant/png-v3 --single-branch --depth 1 \
@@ -44,6 +48,9 @@ Rules, enforced by `corpus-guard`:
 - Image bytes on a `variant/*` branch must be LFS pointers, and
   `.gitattributes` must declare the LFS filter. A raw blob cannot be rewound out
   of a published branch, so the guard fails before it lands.
+- `.lfsconfig` must point Git LFS at `imazen-lfs.pages.dev` (or `lfs.imazen.org`)
+  and carry no credentials: downloads are public, and an upload key stays in
+  the maintainer's own git config.
 - Canonical branches keep the no-image-bytes rule unchanged.
 - A `variant/*` branch is never merged into `main`.
 - A new render pass gets a new branch (`variant/png-v4`) rather than rewriting an
@@ -51,8 +58,8 @@ Rules, enforced by `corpus-guard`:
 
 Each variant branch carries a `VARIANT.md` stating what the set is, how it was
 produced, and — importantly — where its coverage is incomplete. `variant/png-v3`
-mirrors 1,961 of the 2,160 canonical images; the 199 renders that do not exist
-on R2 are listed in that branch's `MISSING.tsv`.
+mirrors 2,157 of the 2,160 canonical images; the three with no render are
+listed in that branch's `MISSING.tsv`.
 
 The R2 prefixes remain available over plain HTTPS for consumers who want a
 handful of files without git or an LFS client — see [`ACCESS.md`](ACCESS.md).

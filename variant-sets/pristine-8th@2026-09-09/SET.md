@@ -19,7 +19,7 @@ artifacts it carries are gone and it can serve as a **clean reference**.
   `ColorEmitPolicy::Verbatim`.
 - **Split:** inherited per origin id, against the canonical 50/30/20.
 - **Storage:** `/mnt/v/output/imazen-26-variants/pristine-8th-2026-09-09/`.
-  Distribution: the `variant/pristine-8th` branch (Git LFS).
+  Distribution: the `variant/pristine-8th` branch (Git LFS; objects on R2 under `lfs/imazen-26/`, served through `imazen-lfs.pages.dev`).
 - **Consumers:** (fill in as projects adopt this set)
 - **Status:** active.
 

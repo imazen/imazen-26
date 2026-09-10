@@ -3,7 +3,8 @@
 > generation tooling. **Image bytes are not in git on canonical branches**: they are
 > served from public R2 (see [`ACCESS.md`](ACCESS.md)); local checkouts may sync them
 > into the class folders (gitignored). Derived render sets live on `variant/*`
-> branches in Git LFS — see [Variant branches](#variant-branches).
+> branches in Git LFS, with the objects served from R2 rather than GitHub — see
+> [Variant branches](#variant-branches).
 > Moved out of `imazen/codec-corpus` on 2026-08-23 so the
 > corpus versions as one unit (git tags cover corpus + splits + registry together).
 > Predecessor record: codec-corpus PR #12.
@@ -79,24 +80,43 @@ Derived render sets are distributed as `variant/*` branches of this repository,
 with the bytes in Git LFS, so a consumer can check out exactly one variant
 without the corpus carrying any of them on `main`.
 
-| Branch | Contents | Objects | Size |
+| Branch | Contents | Pointers | Size |
 |---|---|--:|--:|
-| `variant/png-v3` | SDR (+ HDR where present) PNG renders | 1,983 | 8.7 GB |
+| `variant/png-v3` | SDR (+ HDR where present) PNG renders | 2,233 | 15.4 GB |
+| `variant/pristine-8th` | artifact-free 1/8 references, SDR + HDR | 581 | 0.23 GB |
 
 ```sh
 git clone --branch variant/png-v3 --single-branch --depth 1 \
   https://github.com/imazen/imazen-26.git
 ```
 
+The LFS objects themselves are **not on GitHub's LFS store**. Each variant
+branch's `.lfsconfig` points Git LFS at `imazen-lfs.pages.dev`, imazen's
+instance of [git-lfs-s3-proxy](https://github.com/imazen/git-lfs-s3-proxy),
+which answers a download request with plain
+`https://codec-corpus.r2.imazen.org/lfs/imazen-26/<sha256>` URLs. A clone
+therefore needs no credentials and draws no GitHub LFS bandwidth; the objects
+are the same bytes as the R2 prefixes in `ACCESS.md`, stored once more under
+`lfs/imazen-26/` keyed by sha256 (`ACCESS.md` §7).
+
+Pushing a new variant branch needs write access to that prefix: an R2 API token
+with Object Read & Write on `codec-corpus`, handed to Git LFS as the
+username/password for the proxy host — at the credential prompt on the first
+push, or with `git config lfs.url` in your own clone set to the `.lfsconfig`
+URL with `<id>:<secret>` as its userinfo. That URL never goes in the
+repository. `scripts/lfs_r2_migrate.py` plans, server-side copies, and
+hash-verifies a branch's objects against its pointers.
+
 Each variant branch carries a `VARIANT.md` saying what the set is, how it was
-produced, and where its coverage is incomplete — `variant/png-v3` mirrors 1,961
-of the 2,160 canonical images, and lists the 199 renders that do not exist on R2
-in its `MISSING.tsv`.
+produced, and where its coverage is incomplete — `variant/png-v3` mirrors
+2,157 of the 2,160 canonical images and lists the three that have no render in
+its `MISSING.tsv`.
 
 `corpus-guard` enforces the split: canonical branches carry no image bytes, and
 on a `variant/*` branch images must be LFS pointers with the filter declared in
-`.gitattributes`. A `variant/*` branch is never merged into `main`, and a new
-render pass gets a new branch rather than rewriting an existing one.
+`.gitattributes` and a credential-free `.lfsconfig` naming the proxy. A
+`variant/*` branch is never merged into `main`, and a new render pass gets a
+new branch rather than rewriting an existing one.
 
 The same bytes stay available over plain HTTPS for consumers who want a handful
 of files without git or an LFS client — see [`ACCESS.md`](ACCESS.md).
