@@ -137,3 +137,14 @@ out of a pushed branch.
 - Never merge a `variant/*` branch into `main`. Canonical stays byte-free.
 - Renders are not regenerated in place. A new render pass gets a new branch
   (`variant/png-v4`), so an existing set stays reproducible.
+
+## Where the LFS bytes come from
+
+Git LFS objects for this branch are served from R2, not from GitHub's LFS
+store. `.lfsconfig` points Git LFS at `imazen-lfs.pages.dev`, imazen's instance
+of [git-lfs-s3-proxy](https://github.com/imazen/git-lfs-s3-proxy), which answers
+a download request with plain
+`https://codec-corpus.r2.imazen.org/lfs/imazen-26/<sha256>` URLs — so a clone
+needs no credentials and consumes no GitHub LFS quota. Pushing new objects needs
+an R2 key with write access to `codec-corpus`; see "Variant branches" in the
+`README.md` on `main`.
