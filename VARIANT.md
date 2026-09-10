@@ -50,3 +50,14 @@ describe it without an ICC profile and converting would have altered the pixels.
 
 Every file was verified by decoding it back and comparing sample-for-sample
 against the buffer that was encoded.
+
+## Where the LFS bytes come from
+
+Git LFS objects for this branch are served from R2, not from GitHub's LFS
+store. `.lfsconfig` points Git LFS at `imazen-lfs.pages.dev`, imazen's instance
+of [git-lfs-s3-proxy](https://github.com/imazen/git-lfs-s3-proxy), which answers
+a download request with plain
+`https://codec-corpus.r2.imazen.org/lfs/imazen-26/<sha256>` URLs — so a clone
+needs no credentials and consumes no GitHub LFS quota. Pushing new objects needs
+an R2 key with write access to `codec-corpus`; see "Variant branches" in the
+`README.md` on `main`.
