@@ -125,6 +125,35 @@ https://codec-corpus.r2.imazen.org/clean-picker-corpus-2026-06-26/<filename>
 alongside imazen-26 in practice, but no manifest ties it explicitly to imazen-26
 by content hash — flagging for anyone who needs a hard provenance chain.*
 
+## 5b. Artifact-free 1/8 references (`pristine-8th`)
+
+The corpus's photographic half is lossy-sourced — 417 jpg + 90 heic of 2,160 —
+so anything that needs a **clean reference** cannot just use those files, and
+dropping them leaves a corpus of screenshots, plots and scans. These sets remove
+the artifacts instead: an 8x8 JPEG block averaged down to one pixel is that
+block's DC coefficient, so the ringing and blocking integrate away.
+
+```
+https://codec-corpus.r2.imazen.org/imazen-26-variants/pristine-8th-2026-09-09/<file>
+https://codec-corpus.r2.imazen.org/imazen-26-variants/pristine-8th-hdr-2026-09-09/<file>
+```
+
+| set | files | what |
+|---|---|---|
+| `pristine-8th-2026-09-09` | 505 | every lossy origin at 1/8, 8-bit PNG |
+| `pristine-8th-hdr-2026-09-09` | 76 | the 16-bit PQ layer at 1/8, cICP preserved |
+
+Each prefix carries its own `variants.tsv` naming every file with origin id,
+sha256, kernel, colorspace path and split bucket; the SDR one also has a
+`MISSING.tsv` for 2 Adobe RGB sources that PNG cannot describe without an ICC
+profile. Colour is preserved rather than normalised — 191 SDR and 43 HDR files
+are Display-P3 and say so.
+
+Also available as `variant/pristine-8th` (Git LFS) for a one-checkout copy.
+Method, the kernel measurement behind it, and the caveats that matter (chroma is
+only partly cleaned at 1/8; DC quantization error survives any kernel):
+`variant-sets/pristine-8th@2026-09-09/SET.md`.
+
 ## 6. Codec-encoded derivatives (quality sweeps, benchmark runs)
 
 ~178 GB of codec-encoded outputs (zenavif/zenjpeg/zenpng/zenwebp quality
