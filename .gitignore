@@ -1,0 +1,19 @@
+.workongoing
+# Image bytes live on R2, never in git (ACCESS.md). Local syncs sit untracked.
+*.jpg
+*.jpeg
+*.png
+*.heic
+*.dng
+*.pdf
+# the splits/ trees are symlinks named like images — keep them trackable
+!splits/**
+# non-canonical working copies must never appear here (guard CI mirrors this)
+imazen-26 - Copy*/
+imazen26/
+nope/
+*.lnk
+
+# variant branch: the pristine-8th render set is tracked here, via LFS
+!sdr/**/*.png
+!hdr/**/*.png
