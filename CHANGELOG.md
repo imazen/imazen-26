@@ -10,3 +10,4 @@
 ### Added
 - `scripts/lfs_r2_migrate.py` — plan, server-side copy, batch-API hash verification, and local-cache seeding for moving a branch's LFS objects onto R2
 - ACCESS.md §7: the LFS object prefix and its direct URL form
+- `.lfsconfig` on `main`, so branches created from it inherit the proxy; `main` still tracks nothing in LFS

@@ -97,7 +97,9 @@ which answers a download request with plain
 `https://codec-corpus.r2.imazen.org/lfs/imazen-26/<sha256>` URLs. A clone
 therefore needs no credentials and draws no GitHub LFS bandwidth; the objects
 are the same bytes as the R2 prefixes in `ACCESS.md`, stored once more under
-`lfs/imazen-26/` keyed by sha256 (`ACCESS.md` §7).
+`lfs/imazen-26/` keyed by sha256 (`ACCESS.md` §7). `main` carries the same
+`.lfsconfig`, so a branch created from it inherits the proxy before its first
+object is pushed; `main` itself tracks nothing in LFS.
 
 Pushing a new variant branch needs write access to that prefix: an R2 API token
 with Object Read & Write on `codec-corpus`, handed to Git LFS as the
