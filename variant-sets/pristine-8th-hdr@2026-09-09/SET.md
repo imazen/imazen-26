@@ -1,6 +1,6 @@
 # pristine-8th-hdr@2026-09-09
 
-- **Files:** 33 renditions, 0.006 GP total.
+- **Files:** 76 renditions, 0.017 GP, 80 MB.
 - **Selection:** list (hdr_ok.txt); split=any; crops=none.
 - **Render:** kernel=mitchell, generator=make_variant_set.py@187fbf3.
 - **Storage:** /mnt/v/output/imazen-26-variants/pristine-8th-hdr-2026-09-09 (register mirrors here when synced).
@@ -19,22 +19,27 @@ Output is 16-bit RGB PNG with cICP preserved verbatim (all 33 carry `1/16/0/1` �
 BT.709 primaries, PQ transfer, full range). Verified by reading IHDR and the
 cICP chunk back off every file.
 
-## 43 of 76 are MISSING, and why — see MISSING.tsv
+## All 76 render — the Display-P3 half needed a zenpng fix first
 
-The HDR layer splits 43 Display-P3 / 33 BT.709, both PQ. **The Display-P3 half
-cannot currently be written.** zenpng's accepted-format set does not include
-Display-P3 primaries, so `adapt_for_encode_cow` negotiates towards BT.709, and
-converting a PQ source across primaries requires a peak luminance that is not
-available — `HdrSourceRequiresPeak`.
+The HDR layer splits **43 Display-P3 / 33 BT.709**, both PQ, and on the first
+attempt only the 33 could be written. zenpng advertised no wide-gamut or HDR
+encode descriptors, so `adapt_for_encode_cow` targeted BT.709 and converting a
+PQ source across primaries failed for want of a peak luminance
+(`HdrSourceRequiresPeak`).
 
-This fails loudly, which is the correct behaviour: the alternative is a
-silently gamut-shifted file presented as a reference. It is a real gap in
-zenpng (PNG's own cICP chunk can express Display-P3 — primaries code 12 — so
-this is a supported-format-list omission, not a format limitation), and zenpng
-is a separate repository, so it is reported here rather than patched.
+Worse, the 33 that *did* succeed were only correct by accident: their primaries
+matched an advertised entry, so the *permissive* negotiator passed PQ samples
+through unconverted and would have written them with **no colour chunk** — PQ
+pixels in a file reading back as sRGB — had the caller not passed `cICP` by
+hand. That is exactly why this layer has been produced outside zencodecs until
+now (`extract_hdr_size_grid.rs` writes through the `image` crate and splices the
+cICP chunk in by hand).
 
-Unblocking it makes this set 76 files with no other change. The 43 are exactly
-the HEIC-origin images, which is where the phone-captured P3 content lives.
+Fixed in zenpng `cfccd88f` by advertising the forms PNG can already carry and
+deriving `cICP` from a non-sRGB descriptor. All 76 now render with colour
+preserved: 33 × `1/16/0/1` (BT.709 PQ) and 43 × `12/16/0/1` (Display-P3 PQ),
+all 16-bit, every file verified by decoding it back and comparing
+sample-for-sample.
 
 ## The linear-light path is hand-rolled here, and has to be
 

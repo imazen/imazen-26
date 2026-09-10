@@ -150,6 +150,11 @@ def main():
     ap.add_argument("--renderer-cmd",
                     help="external renderer: 'CMD {src} {w} {h} {dst}' (required "
                          "for non-lanczos kernels / linear-light paths)")
+    ap.add_argument("--skip-failed", action="store_true",
+                    help="record a source the renderer refuses in MISSING.tsv and "
+                         "carry on, instead of aborting the set. The refusal is "
+                         "still a refusal — the file is absent from the set and "
+                         "named, with the renderer's reason, in MISSING.tsv.")
     ap.add_argument("--dry-run", action="store_true")
     a = ap.parse_args()
 
@@ -259,7 +264,7 @@ def main():
             pass  # fine unless a selected source is actually HEIC — Image.open will then say so
     os.makedirs(a.out, exist_ok=True)
     gen_commit = git_commit(root)
-    out_rows, total_px = [], 0
+    out_rows, total_px, missing = [], 0, []
     for (path, crop_label, nat_w, nat_h, tw, th, rank, cgp) in units:
         src_path = os.path.join(images, path)
         if not a.dry_run and not os.path.isfile(src_path):
@@ -301,7 +306,14 @@ def main():
                                         cy=rect[1] if rect else 0,
                                         cw=cw, ch=ch)
                                for t in shlex.split(a.renderer_cmd)]
-                        subprocess.run(cmd, check=True)
+                        r = subprocess.run(cmd, check=not a.skip_failed,
+                                           capture_output=a.skip_failed, text=True)
+                        if a.skip_failed and r.returncode != 0:
+                            reason = " ".join(
+                                l for l in (r.stderr or "").splitlines()
+                                if l.startswith("FAIL")) or f"rc={r.returncode}"
+                            missing.append((os.path.basename(path), oid, reason))
+                            continue
                     else:
                         with Image.open(src_path) as im:
                             im = im.convert("RGB")
@@ -331,6 +343,16 @@ def main():
                     "out_sha256": "" if a.dry_run else sha256_file(dst),
                     "width": w, "height": h,
                     "split": SPLIT_OF[int(oid) % 10]})
+
+    if missing:
+        for d in (a.out, os.path.join(root, "variant-sets", a.set_id)):
+            os.makedirs(d, exist_ok=True)
+            with open(os.path.join(d, "MISSING.tsv"), "w", newline="") as f:
+                f.write("source\torigin_id\treason\n")
+                for m in missing:
+                    f.write("\t".join(m) + "\n")
+        print(f"MISSING: {len(missing)} source(s) the renderer refused — see "
+              f"MISSING.tsv")
 
     vt = os.path.join(a.out, "variants.tsv")
     with open(vt, "w", newline="") as f:
