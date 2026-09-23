@@ -136,6 +136,17 @@ the 33 also have orientation 6.
 For naive readers nothing changes: without gain-map support, either format shows the
 SDR base image, which is the camera's own SDR rendering.
 
+**Restore candidates exist.** `scripts/restore_uhdr_gainmaps.py` rebuilds each of the 33
+from the canonical file (its whitelisted Exif, ICC and image data) plus the original's
+container XMP, ISO 21496-1 marker, MPF (sizes and offset recomputed) and gain-map JPEG.
+It leaves out the original's APP4 segment, full Exif and vendor trailer (191–256 bytes).
+All 33 pass: zenjpeg finds each gain map at the original's exact size, the JPEG-in-JXL
+transcode rebuilds each byte-exact, ICC and orientation match, and no metadata segment
+mentions location or a device id. They are 17–172 KB larger than today's canonical
+files. Candidates and `restore_manifest.tsv` (canonical, original, restored and gain-map
+sha256 per id): `/mnt/v/output/imazen-26-variants/uhdr-restore-candidates-2026-09-22/`.
+Swapping them in is decision 8 in `split_branches_design_2026-09-22.md`.
+
 ## Byte-exact rebuild
 
 384 of 417 rebuild exactly at HEAD. The 33 that don't fall into two groups.
@@ -217,10 +228,10 @@ It doesn't change the layout conclusion: train twins still exceed a 10 GB reposi
 4. **Gain maps as `jhgm`** (imazen/jxl-encoder#122): transcode an UltraHDR JPEG's gain
    map into a `jhgm` bundle so the JXL is HDR, not just able to rebuild an HDR JPEG. The
    bundle serializer exists (`hdr/bundle.rs`).
-5. **Restore the 33 gain maps in the corpus** (this repo; owner decision): re-attach the
-   gain-map JPEGs and their metadata to the canonical files without bringing back
-   location metadata. That changes 33 canonical sha256s, and the whitelist rewrite as
-   specified would strip them again, so it needs an exception for the MPF, ISO 21496-1
+5. **Restore the 33 gain maps in the corpus** (this repo; owner decision): verified
+   candidates are built (§HDR). Swapping them in changes 33 canonical sha256s (manifests,
+   R2 objects, anything pinned by source sha256), and the whitelist rewrite as specified
+   would strip the gain maps again, so it needs an exception for the MPF, ISO 21496-1
    and `hdrgm` pieces.
 6. **Build** (imazen/jxl-encoder#121): main (`ac733993`) doesn't compile with
    `jpeg-reencoding`. `ca264f4f` declared `LosslessConfig.limits`, `with_limits` and

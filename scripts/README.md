@@ -33,6 +33,10 @@
   (`variant-sets/squintly-candidates@<date>/`): stimulus families, bucket-clean picks
   per content stratum, presentation suggestions. Grades come from
   `squintly_screening.py`, the record of the 2026-09-22 visual screening.
+- `restore_uhdr_gainmaps.py` — build restore candidates for the UltraHDR JPEGs whose
+  gain maps the metadata rewrite removed: canonical Exif/ICC and image data plus the
+  original's container XMP, ISO 21496-1 marker, recomputed MPF and gain-map JPEG. Writes
+  candidates and `restore_manifest.tsv` to `--out-dir`; never touches the canonical tree.
 
 ## History
 
