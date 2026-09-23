@@ -84,3 +84,9 @@ these enumerable groups:
 - `8100-lilith-web-screenshots`: the same URL captured at up to 6 viewports.
 - `6600` + `6800` IA scans: illustrations vs text pages drawn from the same 6 source
   works.
+
+Measured 2026-09-22 (`../benchmarks/split_leak_audit_2026-09-22.md`), the family map
+(`split_map_family.tsv`) still misses: byte-identical files under two ids (11 groups;
+same URL captured under two capture-job slugs), photo bursts in 1000–1600 (consecutive
+shots alternate buckets), and multi-page NOAA reports. Group by `sha256`, by the 8100
+`url` + page, and by capture timestamp if your task is near-duplicate-sensitive.
