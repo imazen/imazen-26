@@ -26,6 +26,11 @@ tool) are not recorded in this repo.
 
 ## 2. ~165 Display-P3 photos are labelled BT.709 in png-v3
 
+*Updated 2026-09-24 (`signal_index_2026-09-24.md`): 165 is the count within
+pristine-8th's 505 renders. Across all png-v3 renders, 210 wide-gamut sources are
+tagged sRGB: 166 Display-P3 JPEGs, 42 HEICs whose colour sits only on their tiles, and
+2 Adobe RGB JPEGs.*
+
 `pristine-8th@2026-09-09` reads each lossy origin's colour description and
 preserves it (`cICP` verbatim). Joining its 505 renders to png-v3 by id:
 
@@ -51,9 +56,13 @@ both sides (reference and encodes built from the same render) are internally
 consistent. Anything that claims colour fidelity to the original, or wide-gamut
 evaluation, is not.
 
-The 22 in the other direction are iPhone HDR HEICs (e.g. 1495–1498). Their first
-colour boxes belong to the gain map ("Linear Gray"). Which layer is right there is
-**not verified**.
+The 22 in the other direction are iPhone HEICs. 19 are Apple Adaptive HDR files: their
+primary profile ("Display P3 Primaries; PQ (…)") carries a PQ `cicp` tag, but their ISO
+21496-1 `tmap` puts the base at SDR (headroom 0), so png-v3's P3 tag is right and
+pristine-8th's untagged is not. The other 3 (1495, 1496, 1498) carry a "Linear Gray"
+profile on the primary image itself; which layer is right for those is **not
+verified**. (Corrected 2026-09-24: this paragraph first attributed the profile to the
+gain map, whose `colr` box is in fact empty.)
 
 ## 3. Orientation differs between layers
 

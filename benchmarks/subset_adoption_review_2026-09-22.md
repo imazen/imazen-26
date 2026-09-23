@@ -60,7 +60,8 @@ diagnostic stimuli:
 ## Problems found
 
 Corpus (this repo): see the two audits — byte-identical duplicates across buckets,
-photo bursts across buckets, ~165 Display-P3 photos labelled BT.709 in png-v3,
+photo bursts across buckets, 210 wide-gamut renders tagged sRGB in png-v3
+(`signal_index_2026-09-24.md`),
 orientation differing between png-v3 and pristine-8th, 16 zero-value entries.
 Also: the 25 EPA pages are RGBA with an unused alpha channel and no colour chunk,
 which zenpipe's `pristine_downscale` refuses on write-verify (zenpng writes RGB8,

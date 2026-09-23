@@ -1,0 +1,4 @@
+target/
+# 46 KB, over the repo's 30 KB commit limit: kept on block storage instead
+# (/mnt/v/output/imazen-26-variants/signal-index-2026-09-24/corpus-signal-probe.Cargo.lock).
+Cargo.lock

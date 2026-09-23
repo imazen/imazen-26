@@ -1,0 +1,37 @@
+[package]
+name = "corpus-signal-probe"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Index each corpus source's orientation, colour signalling (ICC, CICP) and HDR metadata through zencodecs"
+
+# Standalone: not part of any workspace.
+[workspace]
+
+[dependencies]
+# zencodecs is unpublished: pinned to zenpipe main 6a5b052 (2026-09-09). The patch
+# table below pins each git-sourced codec to the revision zenpipe's own Cargo.lock
+# resolves at that commit, so this builds the same probe code zenpipe CI built.
+zencodecs = { git = "https://github.com/imazen/zenpipe", rev = "6a5b052b2c0d398cbd16add420babe246a9638b7", default-features = false, features = ["jpeg", "jpeg-ultrahdr", "png", "heic-decode", "raw-decode", "raw-decode-exif", "raw-decode-gainmap"] }
+zencodec = "0.1.26"
+zenpixels = { version = "0.2.16", default-features = false, features = ["std", "icc"] }
+# The codecs' own container probes, for what a file actually signals: the zencodecs
+# probe reports effective colour (an untagged file comes back as sRGB) and doesn't
+# carry HEIC colour through.
+zenjpeg = { version = "0.9.0", default-features = false }
+zenpng = "0.2.0"
+heic = { version = "0.2.0", default-features = false, features = ["backend-rust"] }
+enough = "0.4.4"
+sha2 = "0.11.0"
+
+[patch.crates-io]
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "e7c53d2e36914989585791b504a957064e0e8d91" }
+heic = { git = "https://github.com/imazen/heic", rev = "8d40c94e018082f4bffcfc688dfbb8e83925a1b0" }
+zenpixels = { git = "https://github.com/imazen/zenpixels", rev = "3dbf24634fbd854e01d52f524ef87bac85e5507b" }
+zenpixels-convert = { git = "https://github.com/imazen/zenpixels", rev = "3dbf24634fbd854e01d52f524ef87bac85e5507b" }
+ultrahdr-core = { git = "https://github.com/imazen/ultrahdr", rev = "031d4a2070a522f82bd02aee712a2806a2c17bbd" }
+zenpng = { git = "https://github.com/imazen/zenpng", rev = "cfccd88f77cce5836c25bb70534fa49e4a5cd3c0" }
+zenraw = { git = "https://github.com/imazen/zenraw", rev = "a6b78e93c46e32df4eb1bc9066f494a036b36031" }
+
+[profile.release]
+debug = false

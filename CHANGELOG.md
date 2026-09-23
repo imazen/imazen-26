@@ -8,6 +8,8 @@
 - README / STORAGE-MAP variant tables list both branches with current pointer counts
 
 ### Added
+- `benchmarks/signal_index_2026-09-24.md` — orientation, ICC, CICP and HDR signalling of all 2,160 sources by file type: 207 rotated, 365 with ICC (275 Display P3), 0 with CICP, 43 with gain maps (76 once the JPEG ones are restored), no PQ/HLG sources; 42 HEICs carry colour only on their tiles; 210 png-v3 renders are tagged sRGB although the source is wide-gamut; normalization rules and repositories-by-file-type sizing
+- `tools/corpus-signal-probe` — the indexer: zencodecs' effective view plus each codec crate's signalled view
 - `scripts/restore_uhdr_gainmaps.py` — builds verified restore candidates for the 33 UltraHDR JPEGs that lost their gain maps (canonical Exif/ICC/image data + the original's gain-map pieces, no location metadata); candidates live on block storage, the canonical files are unchanged
 - `benchmarks/jpeg_in_jxl_validation_2026-09-22.md` — lossless JPEG→JXL transcode of all 417 JPEG sources: 0.824× the JPEG (a lossless JXL render is 2.40×), ICC carried byte-exact, 384/417 rebuild byte-exact at unpublished HEAD revisions (267/350 with the published crates); the transcoder drops EXIF orientation (134 files), 21 trailing-RST and 12 progressive files don't rebuild exactly, gain maps aren't exposed as `jhgm`; the canonical corpus's 33 UltraHDR JPEGs lost their gain maps in the metadata rewrite
 - `tools/jxl-transcode-check` — the validation tool, buildable against the published crates or the HEAD revisions
@@ -19,3 +21,6 @@
 - `scripts/lfs_r2_migrate.py` — plan, server-side copy, batch-API hash verification, and local-cache seeding for moving a branch's LFS objects onto R2
 - ACCESS.md §7: the LFS object prefix and its direct URL form
 - `.lfsconfig` on `main`, so branches created from it inherit the proxy; `main` still tracks nothing in LFS
+
+### Fixed
+- `color_orientation_audit_2026-09-22.md` §2: the "Linear Gray" profile on 3 iPhone HEICs sits on the primary image, not the gain map, and the other 19 of the 22 are Adaptive HDR files with an SDR base; png-v3's wide-gamut mislabels number 210, not ~165

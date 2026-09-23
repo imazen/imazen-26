@@ -81,9 +81,9 @@ git clone --branch test --single-branch --depth 1 https://github.com/imazen/imaz
   clone of `test` holds no twin of a train image. Doing this before the branches exist
   is cheap. Doing it after means moving files between branches that people have
   already cloned.
-- **Content:** a new render pass ("v4", below), not png-v3: png-v3 labels ~165
-  Display-P3 photos BT.709 (`color_orientation_audit_2026-09-22.md`), and registered
-  sets are immutable.
+- **Content:** a new render pass ("v4", below), not png-v3: png-v3 tags 210
+  wide-gamut renders as sRGB (`signal_index_2026-09-24.md`), and registered sets are
+  immutable.
 - **Originals** stay on R2 (`imazen-26-unprocessed/`, ACCESS.md §1). Most consumers
   want decoded pixels, and originals as LFS branches would double the storage for a
   layer few people clone.
