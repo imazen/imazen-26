@@ -8,6 +8,8 @@
 - README / STORAGE-MAP variant tables list both branches with current pointer counts
 
 ### Added
+- `benchmarks/jpeg_in_jxl_validation_2026-09-22.md` — lossless JPEG→JXL transcode of all 417 JPEG sources: 0.824× the JPEG (a lossless JXL render is 2.40×), ICC carried byte-exact, 384/417 rebuild byte-exact at unpublished HEAD revisions (267/350 with the published crates); the transcoder drops EXIF orientation (134 files), 21 trailing-RST and 12 progressive files don't rebuild exactly, gain maps aren't exposed as `jhgm`; the canonical corpus's 33 UltraHDR JPEGs lost their gain maps in the metadata rewrite
+- `tools/jxl-transcode-check` — the validation tool, buildable against the published crates or the HEAD revisions
 - `benchmarks/split_branches_design_2026-09-22.md` — proposal for `train`/`validate`/`test` branches (LFS on R2), PNG + JXL lossless twins with decoded-pixel hashes, a raw-git conformance repo and a v4 render pass; measured: lossless JXL (jxl-encoder `cjxl-rs`) is 0.533× PNG for SDR and 0.646× for HDR over all 2,233 renders, no JXL over 100 MB
 - `benchmarks/color_orientation_audit_2026-09-22.md` and `benchmarks/subset_adoption_review_2026-09-22.md` — ~165 Display-P3 photos labelled BT.709 in png-v3, orientation differs between png-v3 and pristine-8th; what the zen repos built to test better and what to adopt
 - `variant-sets/rdgap-train26@2026-07-02` and `variant-sets/lossless-bench-43@2026-06-10` — legacy imports of the selections zenavif and jxl-encoder built from this corpus, so their results cite a set id; 3 rdgap picks are validate under the family map

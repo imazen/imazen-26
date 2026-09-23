@@ -1,0 +1,42 @@
+[package]
+name = "jxl-transcode-check-head"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "jxl-transcode-check built against committed (unpublished) jxl-encoder / zenjxl-decoder / zenjpeg revisions"
+autobins = false
+
+# Standalone: not part of any workspace (and not of the parent package's).
+[workspace]
+
+[[bin]]
+name = "jxl-transcode-check-head"
+path = "../src/main.rs"
+
+[dependencies]
+# Committed revisions (not published yet). jxl-encoder: the last main commit before
+# ca264f4f, which duplicated LosslessConfig::limits and broke the jpeg-reencoding
+# build; it carries the JPEG-transcode fixes made after 0.3.1 (DQT-id quant tables,
+# hardened transcode, JBRD round-trip gate). zenjxl-decoder carries the
+# reconstruction-writer fix (#56).
+jxl-encoder = { git = "https://github.com/imazen/jxl-encoder", rev = "8da452cf13273c2752b770fb980bbb41082a0f22", default-features = false, features = ["std", "jpeg-reencoding"] }
+zenjxl-decoder = { git = "https://github.com/imazen/zenjxl-decoder", rev = "940d2c518b1357f0db553e641ac430180272174d", features = ["jpeg"] }
+# `ultrahdr` compiles in gain-map extraction; without it GainMapHandling::PreserveRaw
+# silently finds nothing.
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "8f703a6eeaad080045aa4c1b3713a25df2e15529", features = ["ultrahdr"] }
+enough = "0.4.4"
+sha2 = "0.11.0"
+
+[features]
+default = ["head"]
+head = []
+
+[patch.crates-io]
+# jxl-encoder main requires zenjpeg 0.9.0, which exists only on zenjpeg main.
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "8f703a6eeaad080045aa4c1b3713a25df2e15529" }
+# zenjpeg main resolves zenanalyze 0.2.0 through its own workspace patch; patches
+# don't propagate, so the same source is pinned here.
+zenanalyze = { git = "https://github.com/imazen/zenanalyze", rev = "b102fa5f3480f0c3911fa85a8a6ad23c64936f18" }
+
+[profile.release]
+debug = false

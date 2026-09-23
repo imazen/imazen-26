@@ -112,6 +112,16 @@ Two lessons from today's probe go into the build:
 - Lossless WebP (VP8L) is 8-bit only and cannot hold the 16-bit HDR twins. Leave it
   out rather than carry a format that covers half the corpus.
 
+**JPEG sources get a transcode, not a render, as the JXL member**
+(`jpeg_in_jxl_validation_2026-09-22.md`). For the 417 JPEG sources, a lossless
+JPEG→JXL transcode is 0.82× the JPEG against 2.40× for a lossless JXL render, and it
+rebuilds the original byte-for-byte. Its decoded pixels are decoder-dependent (median
+max difference 6 levels against zenjpeg), so it can't carry `pixel_sha256`. Its gate is
+instead "rebuilt JPEG sha256 = original sha256", plus header orientation and colour
+matching the source; the PNG render remains the pixel reference. This shrinks the JXL
+layer from 8.06 to 6.18 GiB. It is blocked on encoder/decoder fixes listed in that note:
+orientation, trailing restart markers, progressive rebuilds, and `jhgm` for gain maps.
+
 **Separate repository: `imazen-26-conformance`** (raw git, target well under 1 GB): a
 curated ~150–200 image decoder set, PNG + JXL twins with the same manifest columns.
 It spans 1/8/16-bit; gray, RGB, RGBA and palette; sRGB, Display-P3, PQ (BT.709 and P3)
@@ -220,3 +230,8 @@ changes the bytes but not the order of magnitude.
 4. **Render v4 scope:** SDR + HDR twins from originals; DNGs via zenraw or excluded?
 5. **sRGB layer:** ship one for display-constrained consumers, or native only?
 6. **Conformance repo:** create `imazen-26-conformance` as raw git?
+7. **JPEG sources:** use the JPEG-in-JXL transcode as their JXL member (once the
+   blockers in `jpeg_in_jxl_validation_2026-09-22.md` are fixed)?
+8. **HDR JPEGs:** restore the gain maps the metadata rewrite removed from the 33 UltraHDR
+   originals (33 canonical sha256s change; location metadata stays out)? Without it, render v4 has no
+   HDR for those ids.

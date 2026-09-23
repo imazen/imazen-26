@@ -1,0 +1,31 @@
+[package]
+name = "jxl-transcode-check"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Validate JPEG -> JXL lossless transcodes of imazen-26 sources: size, byte-exact reconstruction, ICC carry-over, gain-map survival, naive-reader pixel parity"
+
+# Standalone: not part of any workspace.
+[workspace]
+
+[dependencies]
+# Published versions pinned exactly, so the sibling repos' uncommitted work never
+# leaks into a corpus measurement.
+jxl-encoder = { version = "=0.3.1", default-features = false, features = ["std", "jpeg-reencoding"] }
+zenjxl-decoder = { version = "=0.3.10", features = ["jpeg"] }
+# 0.7.1 is the version jxl-encoder 0.3.1 builds against. It needs magetypes <= 0.9.20:
+# 0.9.21 added a required token argument to the generic f32x8::load_8x8 that
+# 0.7.1 calls, so Cargo.lock pins magetypes 0.9.20 (and linear-srgb 0.6.11: 0.6.12
+# requires a newer magetypes).
+# `ultrahdr` compiles in gain-map extraction; without it GainMapHandling::PreserveRaw
+# silently finds nothing.
+zenjpeg = { version = "=0.7.1", features = ["ultrahdr"] }
+enough = "0.4.4"
+sha2 = "0.11.0"
+
+[features]
+# Set by head/Cargo.toml: build against the committed revisions (read_jpeg signature).
+head = []
+
+[profile.release]
+debug = false
