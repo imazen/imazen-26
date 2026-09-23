@@ -1,0 +1,211 @@
+id	pick	stratum	grade	squintly_split	canonical_split	group_id	presentation	lossy_origin	hdr_available	license	note
+1000	batch1-train	photo-general	A	train	train	1000	scaled:256,512,768,1024	1	0	PD-own	
+1002	batch1-train	photo-general	A	train	train	1002	scaled:256,512,768,1024	1	0	PD-own	night / low light (shadow blocking)
+1004	batch1-train	photo-general	A	train	train	1004	scaled:256,512,768,1024	1	0	PD-own	saturated colour swatches (chroma subsampling)
+1007	reserve-test	photo-general	A	test	test	1007	scaled:256,512,768,1024	1	0	PD-own	
+1010	batch1-train	photo-general	A	train	train	1010	scaled:256,512,768,1024	1	0	PD-own	
+1012	batch1-train	photo-general	A	train	train	1012	scaled:256,512,768,1024	1	0	PD-own	saturated art glass (chroma stress)
+1022	batch1-train	photo-general	A	train	train	1022	scaled:256,512,768,1024	1	0	PD-own	
+1024	batch1-train	photo-general	A	train	train	1024	scaled:256,512,768,1024	1	0	PD-own	
+1039	reserve-test	photo-general	A	test	test	1039	scaled:256,512,768,1024	1	0	PD-own	
+1042	batch1-train	photo-general	A	train	train	1042	scaled:256,512,768,1024	1	0	PD-own	
+1047	reserve-test	photo-general	A	test	test	1047	scaled:256,512,768,1024	1	0	PD-own	
+1052	batch1-train	photo-general	A	train	train	1052	scaled:256,512,768,1024	1	0	PD-own	
+1054	batch1-train	photo-general	A	train	train	1054	scaled:256,512,768,1024	1	0	PD-own	
+1057	reserve-test	photo-general	A	test	test	1057	scaled:256,512,768,1024	1	0	PD-own	night / low light (shadow blocking)
+1059	reserve-test	photo-general	A	test	test	1059	scaled:256,512,768,1024	1	0	PD-own	
+1064	batch1-train	photo-general	A	train	train	1064	scaled:256,512,768,1024	1	1	PD-own	
+1066	batch1-train	photo-general	A	train	train	1066	scaled:256,512,768,1024	1	1	PD-own	
+1068	batch1-train	photo-general	A	train	train	1068	scaled:256,512,768,1024	1	0	PD-own	
+1069	reserve-test	photo-general	A	test	test	1069	scaled:256,512,768,1024	1	1	PD-own	night / low light (shadow blocking)
+1070	batch1-train	photo-general	A	train	train	1070	scaled:256,512,768,1024	1	1	PD-own	
+1200	batch1-train	photo-interior	A	train	train	1200	scaled:256,512,768,1024	1	0	PD-own	
+1202	batch1-train	photo-interior	A	train	train	1202	scaled:256,512,768,1024	1	0	PD-own	
+1204	batch1-train	photo-interior	A	train	train	1204	scaled:256,512,768,1024	1	0	PD-own	
+1207	reserve-test	photo-interior	B	test	test	1207	scaled:256,512,768,1024	1	0	PD-own	plain hotel/kitchen interior
+1208	batch1-train	photo-interior	A	train	train	1032	scaled:256,512,768,1024	1	0	PD-own	
+1209	reserve-test	photo-interior	A	test	test	1209	scaled:256,512,768,1024	1	0	PD-own	
+1216	batch1-train	photo-interior	A	train	train	1216	scaled:256,512,768,1024	1	0	PD-own	
+1217	reserve-test	photo-interior	B	test	test	1217	scaled:256,512,768,1024	1	0	PD-own	plain hotel/kitchen interior
+1220	batch1-train	photo-interior	A	train	train	1220	scaled:256,512,768,1024	1	0	PD-own	
+1222	batch1-train	photo-interior	A	train	train	1222	scaled:256,512,768,1024	1	0	PD-own	
+1224	batch1-train	photo-interior	A	train	train	1224	scaled:256,512,768,1024	1	0	PD-own	
+1226	batch1-train	photo-interior	A	train	train	1226	scaled:256,512,768,1024	1	0	PD-own	
+1232	batch1-train	photo-interior	A	train	train	1232	scaled:256,512,768,1024	1	1	PD-own	cathedral interior, stained glass
+1234	batch1-train	photo-interior	A	train	train	1234	scaled:256,512,768,1024	1	1	PD-own	cathedral interior, stained glass
+1237	reserve-test	photo-interior	A	test	test	1237	scaled:256,512,768,1024	1	1	PD-own	Gaudi interior (texture, coloured glass)
+1246	batch1-train	photo-interior	A	train	train	1246	scaled:256,512,768,1024	1	1	PD-own	
+1247	reserve-test	photo-interior	A	test	test	1247	scaled:256,512,768,1024	0	0	PD-own	
+1406	batch1-train	photo-landscape	A	train	train	1406	scaled:256,512,768,1024	1	0	PD-own	landscape / seascape (sky, water, texture)
+1407	reserve-test	photo-landscape	A	test	test	1407	scaled:256,512,768,1024	1	0	PD-own	landscape / seascape (sky, water, texture)
+1408	batch1-train	photo-landscape	A	train	train	1408	scaled:256,512,768,1024	1	0	PD-own	
+1409	reserve-test	photo-landscape	A	test	test	1409	scaled:256,512,768,1024	1	0	PD-own	landscape / seascape (sky, water, texture)
+1416	batch1-train	photo-landscape	A	train	train	1416	scaled:256,512,768,1024	1	0	PD-own	sunset sky gradient (banding stress)
+1418	batch1-train	photo-flora	A	train	train	1418	scaled:256,512,768,1024	1	0	PD-own	flowers / foliage (saturated reds+purples, fine texture)
+1427	reserve-test	photo-flora	A	test	test	1427	scaled:256,512,768,1024	1	0	PD-own	flowers / foliage (saturated reds+purples, fine texture)
+1428	batch1-train	photo-flora	A	train	train	1428	scaled:256,512,768,1024	1	0	PD-own	flowers / foliage (saturated reds+purples, fine texture)
+1432	batch1-train	photo-flora	A	train	train	1432	scaled:256,512,768,1024	1	0	PD-own	flowers / foliage (saturated reds+purples, fine texture)
+1436	batch1-train	photo-flora	A	train	train	1436	scaled:256,512,768,1024	1	0	PD-own	flowers / foliage (saturated reds+purples, fine texture)
+1448	batch1-train	photo-landscape	A	train	train	1448	scaled:256,512,768,1024	1	0	PD-own	
+1450	batch1-train	photo-landscape	A	train	train	1450	scaled:256,512,768,1024	1	0	PD-own	landscape / seascape (sky, water, texture)
+1452	batch1-train	photo-landscape	A	train	train	1452	scaled:256,512,768,1024	1	0	PD-own	landscape / seascape (sky, water, texture)
+1454	batch1-train	photo-landscape	A	train	train	1454	scaled:256,512,768,1024	1	0	PD-own	landscape / seascape (sky, water, texture)
+1457	reserve-test	photo-landscape	A	test	test	1457	scaled:256,512,768,1024	1	0	PD-own	landscape / seascape (sky, water, texture)
+1460	batch1-train	photo-flora	A	train	train	1460	scaled:256,512,768,1024	1	0	PD-own	flowers / foliage (saturated reds+purples, fine texture)
+1464	batch1-train	photo-flora	A	train	train	1464	scaled:256,512,768,1024	1	0	PD-own	flowers / foliage (saturated reds+purples, fine texture)
+1469	reserve-test	photo-landscape	A	test	test	1469	scaled:256,512,768,1024	1	0	PD-own	
+1472	batch1-train	photo-landscape	A	train	train	1472	scaled:256,512,768,1024	1	0	PD-own	
+1480	batch1-train	photo-landscape	A	train	train	1480	scaled:256,512,768,1024	1	0	PD-own	landscape / seascape (sky, water, texture)
+1482	batch1-train	photo-landscape	A	train	train	1482	scaled:256,512,768,1024	1	0	PD-own	landscape / seascape (sky, water, texture)
+1486	batch1-train	photo-landscape	A	train	train	1486	scaled:256,512,768,1024	1	0	PD-own	landscape / seascape (sky, water, texture)
+1499	reserve-test	photo-landscape	A	test	test	1499	scaled:256,512,768,1024	1	0	PD-own	landscape / seascape (sky, water, texture)
+1502	batch1-train	photo-landscape	A	train	train	1502	scaled:256,512,768,1024	1	1	PD-own	ice cave / cave, smooth blue gradients
+1507	reserve-test	photo-landscape	A	test	test	1507	scaled:256,512,768,1024	1	1	PD-own	ice cave / cave, smooth blue gradients
+1510	batch1-train	photo-flora	A	train	train	1510	scaled:256,512,768,1024	1	0	PD-own	flowers / foliage (saturated reds+purples, fine texture)
+1512	batch1-train	photo-flora	A	train	train	1512	scaled:256,512,768,1024	1	0	PD-own	flowers / foliage (saturated reds+purples, fine texture)
+1516	batch1-train	photo-flora	A	train	train	1516	scaled:256,512,768,1024	1	1	PD-own	flowers / foliage (saturated reds+purples, fine texture)
+1519	reserve-test	photo-flora	A	test	test	1519	scaled:256,512,768,1024	1	1	PD-own	flowers / foliage (saturated reds+purples, fine texture)
+1522	batch1-train	photo-flora	A	train	train	1522	scaled:256,512,768,1024	1	1	PD-own	flowers / foliage (saturated reds+purples, fine texture)
+1528	batch1-train	photo-flora	A	train	train	1528	scaled:256,512,768,1024	1	1	PD-own	flowers / foliage (saturated reds+purples, fine texture)
+1547	reserve-test	photo-flora	A	test	test	1547	scaled:256,512,768,1024	1	1	PD-own	flowers / foliage (saturated reds+purples, fine texture)
+1548	batch1-train	photo-flora	A	train	train	1548	scaled:256,512,768,1024	1	0	PD-own	flowers / foliage (saturated reds+purples, fine texture)
+1550	batch1-train	photo-landscape	A	train	train	1550	scaled:256,512,768,1024	0	0	PD-own	sunset sky gradient (banding stress)
+1554	batch1-train	photo-landscape	A	train	train	1554	scaled:256,512,768,1024	0	0	PD-own	
+1600	batch1-train	photo-food	A	train	train	1600	scaled:256,512,768,1024	1	0	PD-own	food (texture, saturated colour)
+1602	batch1-train	photo-food	A	train	train	1602	scaled:256,512,768,1024	1	0	PD-own	food (texture, saturated colour)
+1604	batch1-train	photo-food	A	train	train	1604	scaled:256,512,768,1024	1	0	PD-own	food (texture, saturated colour)
+1606	batch1-train	photo-food	A	train	train	1606	scaled:256,512,768,1024	1	0	PD-own	food (texture, saturated colour)
+1607	reserve-test	photo-food	A	test	test	1607	scaled:256,512,768,1024	1	0	PD-own	food (texture, saturated colour)
+1609	reserve-test	photo-food	A	test	test	1609	scaled:256,512,768,1024	1	0	PD-own	food (texture, saturated colour)
+1610	batch1-train	photo-food	A	train	train	1610	scaled:256,512,768,1024	1	0	PD-own	food (texture, saturated colour)
+1612	batch1-train	photo-food	A	train	train	1612	scaled:256,512,768,1024	1	0	PD-own	food (texture, saturated colour)
+1616	batch1-train	photo-food	A	train	train	1616	scaled:256,512,768,1024	1	0	PD-own	food (texture, saturated colour)
+1617	reserve-test	photo-food	B	test	test	1617	scaled:256,512,768,1024	1	0	PD-own	table spread / plain plate
+1618	batch1-train	photo-food	A	train	train	1618	scaled:256,512,768,1024	1	0	PD-own	food (texture, saturated colour)
+1620	batch1-train	photo-food	A	train	train	1620	scaled:256,512,768,1024	1	0	PD-own	food (texture, saturated colour)
+1622	batch1-train	photo-food	A	train	train	1622	scaled:256,512,768,1024	1	0	PD-own	food (texture, saturated colour)
+1626	batch1-train	photo-food	A	train	train	1626	scaled:256,512,768,1024	1	0	PD-own	food (texture, saturated colour)
+1627	reserve-test	photo-food	A	test	test	1627	scaled:256,512,768,1024	1	0	PD-own	food (texture, saturated colour)
+1628	batch1-train	photo-food	A	train	train	1628	scaled:256,512,768,1024	1	0	PD-own	food (texture, saturated colour)
+1632	batch1-train	photo-food	A	train	train	1632	scaled:256,512,768,1024	1	0	PD-own	food (texture, saturated colour)
+1637	reserve-test	photo-food	A	test	test	1637	scaled:256,512,768,1024	1	0	PD-own	food (texture, saturated colour)
+1638	batch1-train	photo-food	A	train	train	1638	scaled:256,512,768,1024	1	1	PD-own	food (texture, saturated colour)
+1639	reserve-test	photo-food	A	test	test	1639	scaled:256,512,768,1024	1	1	PD-own	food (texture, saturated colour)
+2004	batch1-train	photo-people	A	train	train	2004	scaled:256,512,768,1024	1	0	Unsplash-License	professional portrait
+2006	batch1-train	photo-people	A	train	train	2006	scaled:256,512,768,1024	1	0	Unsplash-License	professional portrait
+2007	reserve-test	photo-people	A	test	test	2007	scaled:256,512,768,1024	1	0	Unsplash-License	professional portrait
+2008	batch1-train	photo-people	A	train	train	2008	scaled:256,512,768,1024	1	0	Unsplash-License	professional portrait
+2009	reserve-test	photo-people	A	test	test	2009	scaled:256,512,768,1024	1	0	Unsplash-License	professional portrait
+2010	batch1-train	photo-people	A	train	train	2010	scaled:256,512,768,1024	1	0	Unsplash-License	professional portrait
+2012	batch1-train	photo-people	A	train	train	2012	scaled:256,512,768,1024	1	0	Unsplash-License	professional portrait
+2014	batch1-train	photo-people	A	train	train	2014	scaled:256,512,768,1024	1	0	Unsplash-License	professional portrait
+2016	batch1-train	photo-people	A	train	train	2016	scaled:256,512,768,1024	1	0	Unsplash-License	professional portrait
+2017	reserve-test	photo-people	A	test	test	2017	scaled:256,512,768,1024	1	0	Unsplash-License	professional portrait
+2018	batch1-train	photo-people	A	train	train	2018	scaled:256,512,768,1024	1	0	Unsplash-License	professional portrait
+2019	reserve-test	photo-people	A	test	test	2019	scaled:256,512,768,1024	1	0	Unsplash-License	professional portrait
+2024	batch1-train	photo-people	A	train	train	2024	scaled:256,512,768,1024	1	0	Unsplash-License	professional portrait
+2026	batch1-train	photo-people	A	train	train	2026	scaled:256,512,768,1024	1	0	Unsplash-License	professional portrait
+2027	reserve-test	photo-people	A	test	test	2027	scaled:256,512,768,1024	1	0	Unsplash-License	professional portrait
+2200	batch1-train	render-texture	A	train	train	2200	scaled:256,512,768,1024	1	0	Unsplash-License	3D render, smooth gradients
+2202	batch1-train	render-texture	A	train	train	2202	scaled:256,512,768	1	0	Unsplash-License	3D render, smooth gradients
+2209	reserve-test	render-texture	B	test	test	2209	scaled:256,512,768	1	0	Unsplash-License	
+2400	batch1-train	render-texture	A	train	train	2400	scaled:256,512,768,1024	1	0	Unsplash-License	texture, attractive
+2404	batch1-train	render-texture	A	train	train	2404	scaled:256,512,768	1	0	Unsplash-License	texture, attractive
+2406	batch1-train	render-texture	A	train	train	2406	scaled:256,512,768,1024	1	0	Unsplash-License	texture, attractive
+2407	reserve-test	render-texture	B	test	test	2407	scaled:256,512,768,1024	1	0	Unsplash-License	
+2408	batch1-train	render-texture	A	train	train	2408	scaled:256,512,768	1	0	Unsplash-License	texture, attractive
+2409	reserve-test	render-texture	B	test	test	2409	scaled:256,512,768,1024	1	0	Unsplash-License	
+3002	batch1-train	art-reproduction	A	train	train	3002	scaled:256,512,768,1024	1	0	CC0	artwork reproduction
+3004	batch1-train	art-reproduction	A	train	train	3004	scaled:256,512	1	0	CC0	artwork reproduction
+3006	batch1-train	art-reproduction	A	train	train	3006	scaled:256,512,768	1	0	CC0	woodblock print; Adobe RGB source (no CICP; pristine route refuses it)
+3007	reserve-test	art-reproduction	B	test	test	3007	scaled:256,512,768	1	0	CC0	
+3008	batch1-train	art-reproduction	A	train	train	3008	scaled:256,512,768,1024	1	0	CC0	artwork reproduction
+3009	reserve-test	art-reproduction	A	test	test	3009	scaled:256,512,768	1	0	CC0	artwork reproduction
+3014	batch1-train	art-reproduction	A	train	train	3014	scaled:256,512,768	1	0	CC0	artwork reproduction
+3300	batch1-train	art-reproduction	A	train	train	3300	scaled:256,512,768,1024	1	0	CC0	artwork reproduction
+3304	batch1-train	art-reproduction	A	train	train	3304	scaled:256,512,768,1024	1	0	CC0	artwork reproduction
+3306	batch1-train	art-reproduction	A	train	train	3306	scaled:256,512,768,1024	1	0	CC0	artwork reproduction
+3309	reserve-test	art-reproduction	A	test	test	3309	scaled:256,512,768,1024	1	0	CC0	artwork reproduction
+3310	batch1-train	art-reproduction	A	train	train	3310	scaled:256,512,768,1024	1	0	CC0	artwork reproduction
+3316	batch1-train	art-reproduction	A	train	train	3316	scaled:256,512,768,1024	1	0	CC0	artwork reproduction
+3317	reserve-test	art-reproduction	A	test	test	3317	scaled:256	1	0	CC0	artwork reproduction
+3319	reserve-test	art-reproduction	C	test	test	3319	scaled:256,512,768	1	0	CC0	dull grey object / faint drawing
+3320	batch1-train	art-reproduction	A	train	train	3320	scaled:256,512,768,1024	1	0	CC0	artwork reproduction
+3322	batch1-train	art-reproduction	A	train	train	3322	scaled:256,512,768,1024	1	0	CC0	artwork reproduction
+5000	batch1-train	document-graphic	A	train	train	5000	native-window:1024	0	0	PD-USGov	colour brochure: photos + map + text
+5002	batch1-train	document-graphic	A	train	train	5002	native-window:1024	0	0	PD-USGov	colour brochure: photos + map + text
+5009	reserve-test	document-graphic	B	test	test	5009	native-window:1024	0	0	PD-USGov	map/brochure
+5010	batch1-train	document-graphic	B	train	train	5010	native-window:1024	0	0	PD-USGov	map/brochure
+5012	batch1-train	document-graphic	B	train	train	5012	native-window:714	0	0	PD-USGov	map/brochure
+5014	batch1-train	document-graphic	B	train	train	5014	native-window:1024	0	0	PD-USGov	map/brochure
+5016	batch1-train	document-graphic	B	train	train	5016	native-window:1024	0	0	PD-USGov	map/brochure
+5022	batch1-train	document-graphic	B	train	train	5022	native-window:1024	0	0	PD-USGov	map/brochure
+5026	batch1-train	document-graphic	A	train	train	5026	native-window:1024	0	0	PD-USGov	colour brochure: photos + map + text
+5027	reserve-test	document-graphic	A	test	test	5027	native-window:1024	0	0	PD-USGov	colour brochure: photos + map + text
+5028	batch1-train	document-graphic	A	train	train	5028	native-window:1024	0	0	PD-USGov	colour brochure: photos + map + text
+5029	reserve-test	document-graphic	B	test	test	5029	native-window:1024	0	0	PD-USGov	map/brochure
+5030	batch1-train	document-graphic	A	train	train	5030	native-window:1024	0	0	PD-USGov	colour brochure: photos + map + text
+5202	batch1-train	document-graphic	B	train	train	5202	native-window:1024	0	0	PD-USGov	report figure / map page
+5217	reserve-test	document-graphic	B	test	test	5217	native-window:1024	0	0	PD-USGov	report figure / map page
+5218	batch1-train	document-text	C	train	train	5218	native-window:1024	0	0	PD-USGov	report text/table page
+5306	batch1-train	document-text	C	train	train	5306	native-window:1024	0	0	PD-USGov	report text/table page
+6004	batch1-train	document-graphic	B	train	train	6004	native-window:1024	0	0	PD	patent drawing sheet (line art)
+6008	batch1-train	document-text	C	train	train	6008	native-window:1024	0	0	PD	patent text page
+6029	reserve-test	document-text	C	test	test	6029	native-window:1024	1	0	PD	patent text page
+6089	reserve-test	document-graphic	B	test	test	6089	native-window:1024	0	0	PD	patent drawing sheet (line art)
+6600	batch1-train	illustration-scan	A	train	train	6600	scaled:256,512,768,1024	0	0	PD	illustrated plate
+6604	batch1-train	illustration-scan	A	train	train	6604	scaled:256,512,768,1024	0	0	PD	illustrated plate
+6606	batch1-train	illustration-scan	A	train	train	6606	scaled:256,512,768,1024	0	0	PD	illustrated plate
+6607	reserve-test	illustration-scan	A	test	test	6607	scaled:256,512,768,1024	0	0	PD	illustrated plate
+6612	batch1-train	illustration-scan	A	train	train	6612	scaled:256,512,768,1024	0	0	PD	illustrated plate
+6614	batch1-train	illustration-scan	A	train	train	6614	scaled:256,512,768,1024	0	0	PD	illustrated plate
+6617	reserve-test	illustration-scan	A	test	test	6617	scaled:256,512,768,1024	0	0	PD	illustrated plate
+6624	batch1-train	illustration-scan	A	train	train	6624	scaled:256,512,768,1024	0	0	PD	illustrated plate
+6626	batch1-train	illustration-scan	A	train	train	6626	scaled:256,512,768,1024	0	0	PD	illustrated plate
+6627	reserve-test	illustration-scan	A	test	test	6627	scaled:256,512,768,1024	0	0	PD	illustrated plate
+6629	reserve-test	illustration-scan	A	test	test	6629	scaled:256,512,768,1024	0	0	PD	illustrated plate
+6630	batch1-train	illustration-scan	A	train	train	6630	scaled:256,512,768,1024	0	0	PD	illustrated plate
+6632	batch1-train	illustration-scan	A	train	train	6632	scaled:256,512,768,1024	0	0	PD	illustrated plate
+6634	batch1-train	illustration-scan	A	train	train	6634	scaled:256,512,768,1024	0	0	PD	illustrated plate
+6800	batch1-train	document-text	B	train	train	6800	native-window:1024	0	0	PD	title page / illustrated text page
+6806	batch1-train	document-text	B	train	train	6806	native-window:1024	0	0	PD	title page / illustrated text page
+6807	reserve-test	document-text	B	test	test	6807	native-window:1024	0	0	PD	title page / illustrated text page
+6808	batch1-train	document-text	B	train	train	6808	native-window:1024	0	0	PD	title page / illustrated text page
+6809	reserve-test	document-text	B	test	test	6809	native-window:1024	0	0	PD	title page / illustrated text page
+6816	batch1-train	document-text	C	train	train	6816	native-window:1024	0	0	PD	manuscript text page
+6817	reserve-test	document-text	C	test	test	6817	native-window:1024	0	0	PD	manuscript text page
+6822	batch1-train	document-text	C	train	train	6822	native-window:1024	0	0	PD	manuscript text page
+7024	batch1-train	chart	B	train	train	7024	native-window:1024	0	0	PD-own	saturated flat polygons (chroma edges)
+7027	reserve-test	chart	B	test	test	7027	native-window:1024	0	0	PD-own	saturated flat polygons (chroma edges)
+7038	batch1-train	chart	B	train	train	7038	native-window:1024	0	0	PD-own	chart / heatmap
+7039	reserve-test	chart	B	test	test	7039	native-window:1024	0	0	PD-own	chart / heatmap
+7044	batch1-train	chart	B	train	train	7044	native-window:1024	0	0	PD-own	chart / heatmap
+7046	batch1-train	chart	B	train	train	7046	native-window:1024	0	0	PD-own	chart / heatmap
+7047	reserve-test	chart	B	test	test	7047	native-window:1024	0	0	PD-own	chart / heatmap
+7083	reserve-test	chart	B	test	test	7029	native-window:1024	0	0	PD-own	saturated flat polygons (chroma edges)
+7086	batch1-train	chart	B	train	train	7032	native-window:1024	0	0	PD-own	saturated flat polygons (chroma edges)
+7094	batch1-train	chart	B	train	train	7094	native-window:1024	0	0	PD-own	chart / heatmap
+7108	batch1-train	chart	B	train	train	7108	native-window:1024	0	0	PD-own	chart / heatmap
+7114	batch1-train	chart	B	train	train	7114	native-window:1024	0	0	PD-own	chart / heatmap
+7122	batch1-train	chart	B	train	train	7122	native-window:1024	0	0	PD-own	chart / heatmap
+7124	batch1-train	chart	B	train	train	7124	native-window:1024	0	0	PD-own	chart / heatmap
+8104	batch1-train	web-screenshot	B	train	train	8104	native-window:900	0	0	PD	web page with photos / hero image
+8122	batch1-train	web-screenshot	B	train	train	8122	native-window:900	0	0	PD	web page with photos / hero image
+8129	reserve-test	web-screenshot	B	test	test	8129	native-window:900	0	0	PD	web page with photos / hero image
+8132	batch1-train	web-screenshot	B	train	train	8132	native-window:900	0	0	PD	web page with photos / hero image
+8244	batch1-train	web-screenshot	B	train	train	8128	native-window:1024	0	0	PD	web page with photos / hero image
+8248	batch1-train	web-screenshot	B	train	train	8130	native-window:1024	0	0	PD	web page with photos / hero image
+8254	batch1-train	web-screenshot	B	train	train	8138	native-window:1024	0	0	PD	web page with photos / hero image
+8260	batch1-train	web-screenshot	B	train	train	8142	native-window:1024	0	0	PD	web page with photos / hero image
+8264	reserve-test	web-screenshot	B	test	test	8147	native-window:1024	0	0	PD	web page with photos / hero image
+8267	batch1-train	web-screenshot	B	train	train	8152	native-window:1024	0	0	PD	web page with photos / hero image
+8287	reserve-test	web-screenshot	B	test	test	8117	native-window:375	0	0	PD	web page with photos / hero image
+8288	batch1-train	web-screenshot	B	train	train	8118	native-window:375	0	0	PD	web page with photos / hero image
+8290	batch1-train	web-screenshot	B	train	train	8120	native-window:375	0	0	PD	web page with photos / hero image
+8392	batch1-train	web-screenshot	B	train	train	8102	native-window:375	0	0	PD	web page with photos / hero image
+8400	batch1-train	web-screenshot	B	train	train	8398	native-window:1024	0	0	PD	web page with photos / hero image
+8406	batch1-train	web-screenshot	B	train	train	8106	native-window:375	0	0	PD	web page with photos / hero image
+8407	reserve-test	web-screenshot	B	test	test	8107	native-window:375	0	0	PD	web page with photos / hero image
+8421	reserve-test	web-screenshot	B	test	test	8127	native-window:768	0	0	PD	web page with photos / hero image
+8428	batch1-train	web-screenshot	B	train	train	8428	native-window:800	0	0	PD	web page with photos / hero image
+8431	reserve-test	web-screenshot	B	test	test	8429	native-window:375	0	0	PD	web page with photos / hero image

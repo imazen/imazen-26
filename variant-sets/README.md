@@ -35,6 +35,7 @@ A set = one directory `variant-sets/<name>@<date>/` containing:
 | [`sdr-fps-1p5gp@2026-06-14`](sdr-fps-1p5gp@2026-06-14/SET.md) | SDR training renditions, budget-first FPS @1.5 GP, Mitchell+sharpen | 1,482 | superseded by the 08-23 bytes (sha refs stay valid) |
 | [`hdr-grid-15scale@2026-06-14`](hdr-grid-15scale@2026-06-14/SET.md) | HDR 16-bit PQ, 76 origins × 15 linear-light scales | 1,140 | superseded by the 08-23 bytes |
 | [`cleanpicker-ladder11@2026-06-26`](cleanpicker-ladder11@2026-06-26/SET.md) | 414 K-rep sources × ≤11-rung Lanczos ladder, all three splits | 4,497 | superseded by the 08-23 bytes |
+| [`squintly-candidates@2026-09-22`](squintly-candidates@2026-09-22/SET.md) | squintly stimulus candidates: 148 train + 62 reserve-test, visually screened, bucket-clean stimulus families | 210 rows | **proposed** (selection manifest, not renders) |
 | [`krep-500@2026-06-14`](krep-500@2026-06-14/SET.md) | k-means K=500 (image,crop) representative selection, all ids | 500 rows | active (selection manifest, not renders) |
 | [`krep-500-even@2026-06-18`](krep-500-even@2026-06-18/SET.md) | within-train re-cluster of the above | 500 rows | active for train-only work |
 | [`dense-r6@2026-06-26`](dense-r6@2026-06-26/SET.md) | 2,000 renditions / 672 origins from K500_even reps | 2,000 | **deprecated** — train-biased AND local bytes lost |
@@ -62,4 +63,5 @@ whose recorded sha256s match the bytes they actually read.
 | jxl-lossy picker v0.1 (`dense-r6-evenodd`, committed in zenjxl) + `zenjxl_lossy` provisional canonical | `dense-r6` | deprecated lineage — supersede per the roadmap |
 | knob-ablation firstcut 2026-06-28 (47 sources) | `krep-500` train subset (16 reps × {256,512,768}) | analysis run |
 | picker-sweep-2026-06-22 `renditions/` on R2 (1,482 objs) | mirror of `sdr-fps-1p5gp` | |
+| **squintly** paid phone study (proposed) | `squintly-candidates@2026-09-22` | not adopted yet; squintly's published corpora (`imazen26-v4-test`, `-v5-test-noai`) were built by its own builder from png-v3, not from a registered set |
 | **jxl knobspace-ablation P0 fleet corpus** | **NONE PINNED** — the program doc names a pool ("imazen-26 renditions + screenshots + collections") with no concrete set | the known gap: build + register it via `make_variant_set.py` before the fleet run |

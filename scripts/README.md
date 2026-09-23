@@ -29,6 +29,10 @@
 
 - `build_corpus_manifest.py` — regenerate the unified manifest from per-folder ones.
 - `fetch_art.py` — fetch CC0/PD artworks (Met / Art Institute of Chicago).
+- `build_squintly_candidates.py` — emit a squintly stimulus-candidate selection
+  (`variant-sets/squintly-candidates@<date>/`): stimulus families, bucket-clean picks
+  per content stratum, presentation suggestions. Grades come from
+  `squintly_screening.py`, the record of the 2026-09-22 visual screening.
 
 ## History
 
