@@ -16,8 +16,8 @@ Companion records: `split_leak_audit_2026-09-22.md` (split leaks),
 
 | set | where | n | what it is | action |
 |---|---|--:|---|---|
-| rd-gap train26 | zenavif `scripts/rd_gap/sample_images_train26.tsv` | 24 (all train) | one hand-picked origin per category; the index behind most AVIF RD-gap investigations (renders at 1024 in `/mnt/v/output/rd-gap-train26-2026-07-02/`) | register as a selection set |
-| lossless bench set | jxl-encoder `benchmarks/lossless_bench_set_2026-06-10.tsv` | 43 (27 train / 13 validate / 3 test) | k-means over 23 strata, ≤16 MP, sha256 per row | register as a selection set |
+| rd-gap train26 | zenavif `scripts/rd_gap/sample_images_train26.tsv` | 24 (train by the last-digit rule; 3 are validate under the family map) | k-means K=24 representatives; the index behind most AVIF RD-gap investigations (renders at 1024 in `/mnt/v/output/rd-gap-train26-2026-07-02/`) | **registered** as `rdgap-train26@2026-07-02` |
+| lossless bench set | jxl-encoder `benchmarks/lossless_bench_set_2026-06-10.tsv` | 43 (26 train / 13 validate / 4 test under the family map) | per-stratum k-means over 23 strata, ≤16 MP, sha256 per row | **registered** as `lossless-bench-43@2026-06-10` |
 | imazen-26-synth / -synth-500 | `~/work/codec-corpus/imazen-26-synth{,-500}` | 10,736 / 502 files | derived renditions and a 500-image k-means subset; gitignored, local disk only | register, then mirror to R2 and tower — today a single disk holds them |
 | train-legal hunt | jxl-encoder `benchmarks/corpora/imazen26_trainlegal_hunt_2026-08-20.tsv` | 21 (all train) | split-hygiene picks | reference only |
 
@@ -25,7 +25,7 @@ Companion records: `split_leak_audit_2026-09-22.md` (split leaks),
 
 | set | where | n | adds | verdict |
 |---|---|--:|---|---|
-| Wikimedia featured/quality images | `/mnt/v/output/wikimedia-corpus/2026-04-16/` | 778 manifest rows (804 files on disk) | illustration 300, screen content 250, photos 228; per-file license, artist, credit and Commons URL (CC0 345, PD 171, CC-BY 262) | **adopt** after a dedupe pass against the non-photo corpus; CC-BY rows need attribution carried |
+| Wikimedia featured/quality images | `/mnt/v/output/wikimedia-corpus/2026-04-16/` | 778 manifest rows (804 files on disk) | illustration 300, screen content 250, photos 228; per-file license, artist, credit and Commons URL (CC0 345, PD 171, CC-BY 262) | **adopt** after reconciling the 26 files on disk with no manifest row and a hash check against imazen-26; the 262 CC-BY rows need their attribution carried |
 | Real product photography | `/mnt/v/collections/sierra-2026-06-07/` (598, 21 categories) and `zen/commerce-corpus` (Kaggle) | 598 + ? | the corpus's product class is 100% AI-generated; e-commerce is a large share of web images | **blocked on license** — neither source's redistribution terms are established |
 | Format probes | `codec-corpus/imageflow/test_inputs/orientation/` (16: 8 EXIF orientations × landscape/portrait); `zen/gainmap-spec-status/test-vectors/` (AVIF tmap, JPEG hdrgm, JXL jhgm, ISO 21496-1 metadata; per-file source/license/sha256 in `manifest.toml`); `zen/heic/testdata/` (128 files incl. `apple-hdr/hdr-sample.heic`) | ~150 | orientation, gain-map and HEIF-feature edge cases the photographic corpus cannot exercise | **adopt as a separate format-probe set** — never mixed into content categories |
 | Wide-gamut ICC samples | `/mnt/v/output/corpus-builder/wide-gamut/` (210: Adobe RGB, Display-P3, ProPhoto, Rec.2020-PQ, gray-2.2); `/mnt/v/datasets/non-srgb-by-profile/` (498 files, 63 profiles) | 708 | ICC-driven colour paths | reference only — no provenance or license recorded for either |
