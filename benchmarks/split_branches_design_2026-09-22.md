@@ -44,15 +44,15 @@ issue: the largest class folder in one bucket holds 374 images, under 800 files 
 **Lossless JXL twins.** The 2026-08-23 benchmark (`lossless_recompress_2026-08-23.md`)
 measured lossless JXL at 0.606× the stored PNG bytes over 7,119 variant-set files,
 16-bit PQ included, with libjxl's `cjxl`. That predates the imazen-only rule, so
-twins should come from jxl-encoder's `cjxl-rs`. Its measurement over the full-size
-png-v3 renders is in progress. See "JXL twin sizes" below.
+twins should come from jxl-encoder's `cjxl-rs`. Measured below on all 2,233 full-size
+renders: 0.533× for SDR and 0.646× for 16-bit HDR.
 
 ## Three ways to ship split branches
 
 | layout | fits GitHub? | notes |
 |---|---|---|
 | **A. Raw bytes, `train`/`validate`/`test` branches in this repo** | **No.** SDR PNG alone is 10.54 GiB; with originals and HDR, 19.8 GiB, all charged to one repo. Seven files are blocked outright. | Every later render pass adds to the same budget, permanently. |
-| **B. Raw bytes, one repository per bucket** | test fits (0.99 + 2.04 + 0.89 = 3.9 GiB); validate ~5.9 GiB, already past the "strongly recommended" 5 GB; **train 9.96 GiB is at the hard limit** before any JXL twin or re-render. | Works only for a lean layer (one format, capped size). The seven >100 MB files still need splitting or a different format. |
+| **B. Raw bytes, one repository per bucket** | With PNG renders: test fits (0.99 + 2.04 + 0.89 = 3.9 GiB); validate ~5.9 GiB, already past the "strongly recommended" 5 GB; **train 9.96 GiB is at the hard limit**. JXL-only fits every bucket (train 4.03 GiB), but PNG + JXL twins put train at 11.2 GiB. | Works only for one lean format, which gives up the twin check. No JXL render exceeds 100 MB. |
 | **C. LFS pointers on R2, `train`/`validate`/`test` branches in this repo** (the mechanism `variant/png-v3` and `variant/pristine-8th` already use) | **Yes.** Git holds ~130-byte pointers; bytes live at `codec-corpus/lfs/imazen-26/<sha256>` behind `imazen-lfs.pages.dev`. No GitHub storage, bandwidth, 10 GB or 100 MB limit applies. | Consumers need `git-lfs`. Re-renders cost R2 bytes, not repo size. Cloning a bucket is one command. |
 
 **Proposal: C for the corpus, plus one small raw-git repository for decoder
@@ -165,11 +165,49 @@ size grid, the 11-unit crop vocabulary and the selection procedures. What is mis
   (krep-500, FPS, squintly-candidates, rd-gap train26, the lossless bench set) stay
   selection manifests on `main` and materialize by id from the bucket branches.
 
-## JXL twin sizes
+## JXL twin sizes (measured 2026-09-22)
 
-*In progress: `cjxl-rs --lossless -e 7 --threads 2` over all 2,233 png-v3 renders,
-seeded random order, niced. Per-file results:
-`/mnt/v/output/imazen-26-variants/jxl-lossless-probe-2026-09-22/`.*
+Every one of the 2,233 png-v3 renders (2,157 SDR, 76 HDR) was encoded with
+jxl-encoder `cjxl-rs --lossless -e 7 --threads 2` (binary built 2026-09-17), 4 jobs
+at a time under `run-heavy`, niced. 0 failures. Per-file data:
+`/mnt/v/output/imazen-26-variants/jxl-lossless-probe-2026-09-22/sizes.tsv`
+(sha256 `bff33dcfa4ce367a0b592f9af7f284c5f70ad66db48e042780e011b0f8e59fb9`; columns
+`id, bucket_canonical_family, layer, png_bytes, jxl_bytes, encode_s, rc`).
+
+| layer | PNG | lossless JXL | ratio (total / median per file) | encode median (2 threads) |
+|---|--:|--:|--:|--:|
+| SDR, 8-bit (and 1-bit) | 10.54 GiB | 5.62 GiB | 0.533 / 0.550 | 1.2 s |
+| HDR, 16-bit PQ | 3.78 GiB | 2.44 GiB | 0.646 / 0.653 | 26.1 s |
+
+The largest JXL is 69 MB (1521, HDR), so **no JXL twin hits GitHub's 100 MB block**. Five
+of the seven >100 MB files are renders, and all five fit as JXL. The other two are DNG
+originals, which the branches don't carry.
+
+What each bucket would weigh (GiB):
+
+| bucket | JXL only | originals + JXL | PNG + JXL twins | originals + twins |
+|---|--:|--:|--:|--:|
+| train | 4.03 | 6.82 | 11.20 | 13.99 |
+| validate | 2.41 | 4.11 | 6.63 | 8.33 |
+| test | 1.63 | 2.62 | 4.55 | 5.54 |
+| all | 8.06 | 13.53 | 22.38 | 27.85 |
+
+So:
+
+- **Raw git, one repo for all buckets:** JXL-only (8.06 GiB) fits under 10 GB but not
+  under the 5 GB "strongly recommended" line, and it leaves no room for a second
+  render pass. Twins (22.4 GiB) do not fit.
+- **Raw git, one repo per bucket:** JXL-only fits every bucket (train 4.03 GiB), but
+  that drops the PNG twin, which is the decoder-consistency check. Twins put train
+  at 11.2 GiB (over the limit) and validate at 6.63 GiB (over the recommended 5 GB).
+- **LFS on R2 (proposed):** carries twins for every bucket, and later passes, with none
+  of these limits.
+
+Not measured here: **losslessness.** No imazen JXL decoder CLI was built in this
+session, so these bytes were not decoded back and compared. The `pixel_sha256` gate
+in the proposal is what closes that. The sizes also inherit png-v3's pixels,
+including the colour mislabels in `color_orientation_audit_2026-09-22.md`. A v4 pass
+changes the bytes but not the order of magnitude.
 
 ## Decisions for the owner
 
