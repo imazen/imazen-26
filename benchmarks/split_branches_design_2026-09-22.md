@@ -177,7 +177,8 @@ seeded random order, niced. Per-file results:
    repositories per bucket (B, lean layer only)?
 2. **Names:** `validate` (matches the manifests) or `eval`?
 3. **Bucket rule:** the current family map, or the extended map from the leak audit
-   (proposed) before any branch is cut?
+   (proposed) before any branch is cut? Measured: the extension moves 57 ids (2.6%) and
+   leaves bucket sizes at 1,083 / 663 / 414 (from 1,084 / 661 / 415).
 4. **Render v4 scope:** SDR + HDR twins from originals; DNGs via zenraw or excluded?
 5. **sRGB layer:** ship one for display-constrained consumers, or native only?
 6. **Conformance repo:** create `imazen-26-conformance` as raw git?

@@ -111,7 +111,10 @@ differently:
 1. Extend `scripts/derive_sharing_provenance.py` with four more family keys — `sha256`,
    `url` + page, photo bursts (timestamp gap plus an eye-checked pair list), and NOAA
    report id — and emit a successor `split_map_family` manifest rather than rewriting
-   the current one. Every consumer re-derives from it.
+   the current one. Every consumer re-derives from it. Measured cost, using the union
+   families in `variant-sets/squintly-candidates@2026-09-22/families.tsv` (canonical
+   family, sha256, url+page, bursts; NOAA not included) and the lowest-id rule: **57 ids
+   (2.6%) change bucket**, and the buckets go from 1,084 / 661 / 415 to 1,083 / 663 / 414.
 2. Adopt zensr's `tools/corpus_split.py` keys into that successor, so one definition
    exists instead of two that disagree.
 3. Re-key `nonphoto-picker-corpus` rows by imazen-26 id, inheriting the bucket, before
