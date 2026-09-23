@@ -207,31 +207,32 @@ It doesn't change the layout conclusion: train twins still exceed a 10 GB reposi
 
 ## Blockers
 
-1. **Orientation** (jxl-encoder): write the EXIF orientation into the JXL header, as
-   libjxl does. 134 files.
-2. **Trailing RST** (jxl-encoder and zenjxl-decoder): record the marker on parse and emit
-   it on rebuild. 21 files.
-3. **Progressive rebuild** (zenjxl-decoder): fix the rebuild for the 12 files, and make
-   `reconstruct_jpeg` return the error instead of `Ok(None)` when a `jbrd` box is present.
-4. **Gain maps as `jhgm`** (jxl-encoder): transcode an UltraHDR JPEG's gain map into a
-   `jhgm` bundle so the JXL is HDR, not just able to rebuild an HDR JPEG. The bundle
-   serializer exists (`hdr/bundle.rs`).
+1. **Orientation** (imazen/jxl-encoder#119): write the EXIF orientation into the JXL
+   header, as libjxl does. 134 files.
+2. **Trailing RST** (imazen/jxl-encoder#120, imazen/zenjxl-decoder#58): record the marker
+   on parse and emit it on rebuild. 21 files.
+3. **Progressive rebuild** (imazen/zenjxl-decoder#59): fix the rebuild for the 12 files,
+   and make `reconstruct_jpeg` return the error instead of `Ok(None)` when a `jbrd` box
+   is present.
+4. **Gain maps as `jhgm`** (imazen/jxl-encoder#122): transcode an UltraHDR JPEG's gain
+   map into a `jhgm` bundle so the JXL is HDR, not just able to rebuild an HDR JPEG. The
+   bundle serializer exists (`hdr/bundle.rs`).
 5. **Restore the 33 gain maps in the corpus** (this repo; owner decision): re-attach the
    gain-map JPEGs and their metadata to the canonical files without bringing back
-   location metadata.
-   That changes 33 canonical sha256s, and the whitelist rewrite as specified would strip
-   them again, so it needs an exception for the MPF, ISO 21496-1 and `hdrgm` pieces.
-6. **Build** (jxl-encoder): main (`ac733993`) doesn't compile with `jpeg-reencoding`.
-   `ca264f4f` declared `LosslessConfig.limits`, `with_limits` and `limits` a second
-   time. CI doesn't catch it, because every default-feature job stops earlier at
-   `cargo build --locked` on a stale Cargo.lock.
+   location metadata. That changes 33 canonical sha256s, and the whitelist rewrite as
+   specified would strip them again, so it needs an exception for the MPF, ISO 21496-1
+   and `hdrgm` pieces.
+6. **Build** (imazen/jxl-encoder#121): main (`ac733993`) doesn't compile with
+   `jpeg-reencoding`. `ca264f4f` declared `LosslessConfig.limits`, `with_limits` and
+   `limits` a second time. CI doesn't catch it: every failing job in the run for
+   `ac733993` stops earlier, at `cargo build --locked`, on a stale Cargo.lock.
 
-Two build notes for anyone reproducing the published run: magetypes 0.9.21 added a
+Two build notes for anyone reproducing the published run. magetypes 0.9.21 added a
 required token argument to the generic `f32x8::load_8x8` that zenjpeg 0.7.1 calls, so
 jxl-encoder 0.3.1 builds need magetypes pinned to 0.9.20 (and linear-srgb to 0.6.11).
 And zenjpeg's `GainMapHandling::PreserveRaw` compiles without the `ultrahdr` feature but
-then finds nothing. An earlier run of this tool reported 0 gain maps in the 33 originals
-for exactly that reason.
+then finds nothing (imazen/zenjpeg#203); an earlier run of this tool reported 0 gain maps
+in the 33 originals for exactly that reason.
 
 ## How it was measured
 
