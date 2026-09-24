@@ -46,8 +46,8 @@ an independent chunk scan agrees exactly.
 **42 HEICs keep their colour only on the tiles.** The 33 Galaxy S23 Ultra HEICs and 9 of
 the 10 iPhone 8 Plus HEICs put a Display-P3 ICC profile (Samsung's "DCI-P3 D65 Gamut
 with sRGB Transfer", Apple's "Display P3") on every grid tile and none on the grid
-image. heic's `ImageInfo` reads only the primary item, so it reports no colour for them.
-Every png-v3 render of these 42 is tagged sRGB.
+image. heic's `ImageInfo` reads only the primary item, so it reports no colour for them
+(imazen/heic#49). Every png-v3 render of these 42 is tagged sRGB.
 
 **3 iPhone 13 Pro HEICs (1495, 1496, 1498) carry a "Linear Gray" profile on an RGB
 image.** It is associated with the primary grid and all its tiles, not with the gain map
@@ -62,13 +62,13 @@ image and an ISO 21496-1 `tmap` item. The `tmap` metadata settles what the base 
 base headroom 0 in all 19 (SDR), alternate headroom 1.31–2.79 stops. So a reader that
 honours the profile's `cicp` tag would misread the base as PQ. png-v3 tagging them P3
 SDR is right. For the 24 older Apple gain maps (iPhone 13/15 Pro), heic doesn't read the
-parameters.
+parameters (imazen/heic#50).
 
 **The zencodecs probe reports effective colour, not signalled colour.** It sets CICP
 1/13/0/1 on any untagged JPEG or PNG (`finalize_implicit_srgb`, on purpose) with nothing
 marking it as assumed. For HEIC it calls heic's light probe, which carries no colour and
-no gain-map parameters. Separately, its JPEG adapter never
-sets `is_progressive`, so all 66 progressive JPEGs read as baseline. heic's full probe
+no gain-map parameters (both: imazen/zenpipe#81). Separately, its JPEG adapter never sets
+`is_progressive`, so all 66 progressive JPEGs read as baseline (imazen/zenpipe#82). heic's full probe
 carries the grid's colour and the `tmap` parameters, but it too misses tile-only colour.
 The tool works around all of these by asking each codec crate directly (below).
 
