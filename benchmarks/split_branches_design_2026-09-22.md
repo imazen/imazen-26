@@ -1,6 +1,6 @@
 # Split branches, lossless twins, and variant layers — design proposal (2026-09-22)
 
-**Status: proposal, awaiting decisions (last section).** The question: can the
+**Status: proposal, awaiting decisions (last section).** The repository layout is revised in `layer_repos_2026-09-25.md` (originals plus sRGB and P3 PNG/JXL layers). The question: can the
 corpus ship as `train` / `eval` / `test` branches that hold the images themselves,
 with `.png` and `.jxl` twins for decoder consistency, and should any of that live in
 separate repositories? This note measures what each layout would weigh, then proposes

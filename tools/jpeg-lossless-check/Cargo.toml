@@ -1,0 +1,24 @@
+[package]
+name = "jpeg-lossless-check"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Check lossless JPEG transforms (progressive→sequential, EXIF-orientation rotation) at the coefficient and pixel level, and their JPEG-in-JXL transcodes"
+
+# Standalone: not part of any workspace.
+[workspace]
+
+[dependencies]
+# Same committed revisions as tools/jxl-transcode-check/head (see its manifest for why).
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "8f703a6eeaad080045aa4c1b3713a25df2e15529" }
+jxl-encoder = { git = "https://github.com/imazen/jxl-encoder", rev = "8da452cf13273c2752b770fb980bbb41082a0f22", default-features = false, features = ["std", "jpeg-reencoding"] }
+zenjxl-decoder = { git = "https://github.com/imazen/zenjxl-decoder", rev = "940d2c518b1357f0db553e641ac430180272174d", features = ["jpeg"] }
+enough = "0.4.4"
+sha2 = "0.11.0"
+
+[patch.crates-io]
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "8f703a6eeaad080045aa4c1b3713a25df2e15529" }
+zenanalyze = { git = "https://github.com/imazen/zenanalyze", rev = "b102fa5f3480f0c3911fa85a8a6ad23c64936f18" }
+
+[profile.release]
+debug = false
