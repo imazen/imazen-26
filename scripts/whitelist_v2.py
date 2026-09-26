@@ -17,7 +17,7 @@ Kept, per the published policy:
               ComponentsConfiguration, ShutterSpeedValue, ApertureValue,
               ExposureBiasValue, MeteringMode, Flash, FocalLength, FlashpixVersion,
               ColorSpace, WhiteBalance, FocalLengthIn35mmFilm, LensSpecification,
-              LensMake, LensModel, SubjectArea, SubjectLocation
+              LensMake, LensModel, SubjectArea, SubjectLocation, PixelX/YDimension
   ICC profiles (every one, in every item)
 Kept because they carry colour or HDR:
   Interop IFD (InteropIndex `R98` = DCF sRGB, InteropVersion)
@@ -37,7 +37,8 @@ Removed:
   else in the HEIC main-image XMP (creator tool version, edit dates, other region types),
   PNG data after IEND. DNGs are not handled here.
 
-Every output is checked before it is written:
+Every output is checked before it is written (and afterwards, independently, by exiftool
+-validate and the zen probes; see benchmarks/metadata_audit_earlier_copies_2026-09-25.md):
   - the coded image data equals the source's (JPEG scan data, PNG IDAT, HEIC items);
   - HEIC item properties equal the source's, and every item's data except Exif and the
     replaced XMP equals the source's;
@@ -65,7 +66,8 @@ KEEP_IFD0 = {0x010F, 0x0110, 0x0112, 0x011A, 0x011B, 0x0128, 0x0132, 0x0213}
 KEEP_EXIF = {0x829A, 0x829D, 0x8822, 0x8827, 0x9000, 0x9003, 0x9004, 0x9101, 0x9201,
              0x9202, 0x9204, 0x9207, 0x9209, 0x920A, 0x9290, 0x9291, 0x9292, 0xA000,
              0xA001, 0xA403, 0xA405, 0xA432, 0xA433, 0xA434,
-             0x9214, 0xA214}  # SubjectArea, SubjectLocation
+             0x9214, 0xA214,  # SubjectArea, SubjectLocation
+             0xA002, 0xA003}  # PixelX/YDimension (ExifImageWidth/Height): required in JPEG
 KEEP_INTEROP = {0x0001, 0x0002}
 APPLE_HDR_TAGS = {0x000A, 0x0021, 0x0030}
 TAG_EXIF, TAG_GPS, TAG_INTEROP, TAG_MAKERNOTE = 0x8769, 0x8825, 0xA005, 0x927C

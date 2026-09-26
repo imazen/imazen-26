@@ -14,6 +14,7 @@ Plain Python 3, standard library only; run from an output directory.
 | `exif_colour.py` | EXIF Make/Model/`ColorSpace`/Interop index for a list of JPEG ids |
 | `tiff_tags.py` | tag-by-tag diff of two TIFF/DNG files |
 | `png_scan.py` | walks roots, records each PNG's size and colour chunks (reads chunk headers only) |
+| `oracle_check.py` | third-party re-check of whitelist-v2 outputs: exiftool tag values and `-validate`, `djpeg` and `heif-dec` pixels, `heif-info` structure, gain-map and motion-photo extraction |
 | `jpeg_segs.py` | a JPEG's APPn/COM/DHT segment list and trailer length, for old-vs-new structure diffs |
 
 ```

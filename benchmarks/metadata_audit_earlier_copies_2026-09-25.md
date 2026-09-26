@@ -213,6 +213,17 @@ Checks, all 316 files:
 | Exif carries only whitelisted tags | 316 / 316 |
 | sensitive source values (serials, unique IDs, HostComputer, Software, GPS values, offsets, MakerNotes; 2,406) found outside the whitelisted Exif | 0 |
 | inputs re-hashed after the run | 638 / 638 unchanged |
+| **third-party:** libjpeg-turbo `djpeg` pixels equal the source's | 216 / 216 JPEG |
+| **third-party:** libheif `heif-dec --with-aux` pixels (primary, gain maps, depth, mattes) and `heif-info` structure equal the source's | 90 / 90 HEIC |
+| **third-party:** exiftool reads every kept tag with the source's value, and finds no tag the source lacks | 316 / 316 |
+| **third-party:** exiftool extracts the UltraHDR gain-map image and 1044's motion-photo video byte-identically | 33 / 33, 1 / 1 |
+| **third-party:** exiftool `-validate` reports no warning the source doesn't have | 314 / 316 |
+
+The two `-validate` exceptions (1407, 1451) lack `YCbCrPositioning`, as their originals
+do; exiftool raises it only once the non-JPEG `ImageWidth`/`ImageHeight` tags are gone,
+and v2 doesn't invent tags. An earlier v2 run also dropped `ExifImageWidth`/`Height`
+(required in JPEG); exiftool caught it and v2 now keeps them. The third-party pass is
+`tools/metadata-loss-audit/oracle_check.py`.
 
 The one HDR-adjacent item v2 drops is Samsung's SEF `Photo_HDR_Info` record (a single zero
 byte in the 33 UltraHDR JPEGs), which goes with the rest of the SEF trailer. No reader we
