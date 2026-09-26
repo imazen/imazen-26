@@ -10,10 +10,12 @@ the four camera classes (1000/1200/1400/1600, `STORAGE-MAP.md`)?
   earlier copy with the same image data, and none of those copies carried a colour tag
   either. Where the corpus file was converted from something else, the source was
   untagged or declared sRGB/grey, with one caveat about the PDF-rendered pages (below).
-- **The HDR loss is the 33 Samsung UltraHDR JPEGs already known.** The pre-rewrite backup
-  has all 33 gain maps, and restore candidates exist (`jpeg_in_jxl_validation_2026-09-22.md`
-  §HDR). 3 GoPro JPEGs also lost an MPF second image, but it is a 960×720 preview, not a
-  gain map.
+- **HDR was lost in 57 files, not 33.** The 33 Samsung UltraHDR JPEGs lost their gain maps.
+  The 24 Apple HEICs whose gain map has no ISO 21496-1 `tmap` (22 iPhone 13 Pro, 2 iPhone
+  15 Pro) kept the gain-map image but lost its parameters. Apple stores those in the EXIF
+  MakerNote (HDRHeadroom/HDRGain), which the whitelist removes; heic reads them from there
+  (`apple_gain_map_params` in heic's `src/codec.rs`), so the corpus files probe as `Unknown`. 3 GoPro JPEGs
+  also lost an MPF second image, but it is a 960×720 thumbnail, not a gain map.
 - **New: the rewrite scrambled the colour profiles of 64 of the 90 HEICs.** The image data is
   untouched, but 22 now carry the wrong profile on the primary image: 19 carry the `tmap`'s
   PQ profile, 3 the gain map's "Linear Gray". Every one was Display P3 in the camera file.
@@ -118,7 +120,8 @@ What the sources said, where the corpus file was converted:
 |---|--:|---|---|
 | Samsung UltraHDR JPEG | 33 | MPF + XMP `hdrgm` + ISO 21496-1 APP2 + gain-map JPEG | all four removed; restore candidates built |
 | GoPro HERO7 JPEG | 3 (1499–1501) | MPF second image, 960×720 preview | removed; not HDR |
-| Apple HEIC with gain map | 43 | gain map, `tmap` for 19 | gain maps and `tmap` kept; their profiles emptied (next section) |
+| Apple HEIC with gain map and `tmap` | 19 | gain map + ISO 21496-1 `tmap` | kept; their profiles emptied or moved (next section) |
+| Apple HEIC with gain map, no `tmap` | 24 | gain map; headroom in the EXIF MakerNote | gain map kept, MakerNote removed: no parameters |
 
 ## HEIC colour profiles after the rewrite
 
@@ -156,18 +159,72 @@ What it changed downstream:
 - 46 camera JPEGs lost the EXIF Interop IFD (`R98`, the DCF sRGB marker). `ColorSpace` is kept.
 - 2 JPEGs (1214, 1407) and the 3 DNGs gained `ColorSpace` = Uncalibrated.
 - 1451 lost its XMP (capture date and IPTC fields).
+- `Flash` is gone from every file although `STORAGE-MAP.md` lists it; so are
+  `SubSecTime` and `SubSecTimeDigitized`.
+- Removed with no whitelist reason given: APP0 JFIF (20 JPEGs), vendor APP4/APP5/APP6/APP13
+  segments, the IFD1 thumbnails, the Samsung SEF trailers (whose `Color_Display_P3` record
+  duplicates the ICC profile; they also hold `MCC_Data` country codes and UTC timestamps).
+- Added: an EXIF-mirror XMP packet in 214 JPEGs, and `ComponentsConfiguration`/
+  `FlashpixVersion` where the camera had none.
+- 1044, a Samsung motion photo: the Google Container XMP that locates the embedded video was
+  replaced by the EXIF mirror. The `mpvd` video box is still there.
 - DNGs: the DNG colour tags (`ColorMatrix1/2`, `AsShotNeutral`, `CalibrationIlluminant1/2`)
   are unchanged. `ImageDescription`, `Software`, `OffsetTime`, `OffsetTimeOriginal` and
   `SubSecTime` were removed, and `SubSecTimeOriginal` shortened.
 
-## What restoring would take
+## Reprocessing: whitelist v2 (2026-09-26)
 
-- **33 UltraHDR JPEGs:** candidates exist, built and verified by
-  `scripts/restore_uhdr_gainmaps.py`.
-- **64 HEICs:** take the backup file's `colr` properties and keep the corpus file's
-  whitelisted Exif. This needs a HEIF-aware rewrite: rebuild `ipco` and shift the `iloc`
-  offsets. Verify it by pixel-identical decode against the backup and an item-property diff
-  showing only the Exif change.
+Instead of grafting repairs onto the rewritten files, `scripts/whitelist_v2.py` re-applies
+the published policy to the **oldest copy** of each camera file (06-04 snapshot for 309,
+the attic copy for the 10 PNGs), in our own container-aware code:
 
-Both are candidates beside the corpus. Swapping them in changes published bytes, so it
-is the owner's decision.
+- **Exif:** rebuilt with the documented keep-list (including `Flash`, which the 2026-08
+  rewrite dropped) plus the Interop IFD (`R98`) and, for Apple, a MakerNote reduced to
+  HDRImageType/HDRHeadroom/HDRGain. GPS, IFD1 thumbnails, `OffsetTime*`, `ImageUniqueID`,
+  serial numbers, `HostComputer`, `Software` and every other MakerNote tag are removed.
+- **JPEG:** APP0 JFIF, ICC and the rebuilt Exif are kept. UltraHDR files also keep their
+  container XMP, the ISO 21496-1 APP2, an MPF APP2 rebuilt from scratch (no ImageUIDList)
+  and the gain-map JPEG verbatim. Vendor APPn, COM, SEF trailers and the GoPro MPF
+  thumbnails are removed. Segments are removed rather than zeroed: zeroing would leave
+  11.6 MiB of dead header bytes (about 54 KiB per file) in the originals, and only the MPF
+  offsets depend on the layout.
+- **HEIC, in place:** nothing moves. The Exif item is rewritten inside its own extent (the
+  slack zeroed, only its `iloc` length field updated), the primary XMP (capture tool,
+  dates, face/pet regions) becomes an empty packet padded to the same length, and `sefd`
+  becomes a zeroed `free` box. Every `colr`, `auxC`, `tmap`, grid, auxiliary image and its
+  XMP, Apple style item, and the motion-photo Container XMP and `mpvd` video stay as the
+  camera wrote them. Output and source have the same length, and the checker confirms they
+  differ only inside those slots. Dead bytes: 344 KiB over 90 files, most of it `free` space
+  the camera files already had.
+- **PNG:** `eXIf` whitelisted, data after `IEND` removed, `iCCP`/`sBIT` kept.
+- **DNG:** not reprocessed. The corpus DNGs keep their DNG colour tags.
+
+Checks, all 316 files:
+
+| check | result |
+|---|---|
+| coded image data equals the source's | 316 / 316 |
+| HEIC item properties and non-metadata item data equal the source's | 90 / 90 |
+| colour/HDR signals (corpus-signal-probe, 42 columns) equal the oldest source's | 316 / 316, except the 3 GoPro MPF thumbnails, dropped on purpose |
+| decodes with zencodecs (corpus-thumbs) | 316 / 316 |
+| Exif carries only whitelisted tags | 316 / 316 |
+| sensitive source values (serials, unique IDs, HostComputer, Software, GPS values, offsets, MakerNotes; 2,406) found outside the whitelisted Exif | 0 |
+| inputs re-hashed after the run | 638 / 638 unchanged |
+
+Against the corpus files, v2 restores the 33 UltraHDR gain maps, the headroom of the 24
+legacy Apple gain maps, the Display P3 primary profile of the 22 HEICs, and 1044's motion
+photo. Sizes: JPEG 793.2 → 766.0 MiB, HEIC 190.0 → 190.0 MiB, PNG 26.9 → 26.9 MiB.
+
+Outputs: `/mnt/v/output/imazen-26-variants/whitelist-v2-2026-09-26/` (`manifest.tsv`,
+`SHA256SUMS`, and `_checks/` with the probe tables and the privacy check). The script
+writes only under `~/tmp` or `/mnt/v/output/imazen-26-variants/`, refuses a non-empty
+output directory, never overwrites a file, and re-hashes its inputs after the run. The
+camera originals it reads (snapshot, iCloud export, backup, attic) are now read-only on
+disk.
+
+`scripts/restore_uhdr_gainmaps.py` and its candidates are superseded by v2.
+
+**Owner decision:** replacing the 316 corpus files with the v2 outputs changes their
+published bytes (sha256, R2 objects, manifests), and `STORAGE-MAP.md`/`ACCESS.md` would
+need their whitelist text updated (Interop IFD, reduced Apple MakerNote, UltraHDR
+structure).

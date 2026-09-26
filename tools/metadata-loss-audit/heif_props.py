@@ -18,7 +18,8 @@ def desc(icc):
             if t[:4] == b"mluc": l, o = struct.unpack(">II", t[20:28]); return t[o:o+l].decode("utf-16-be")
     return "?"
 def props(path):
-    d = open(path, "rb").read()
+    return props_from_bytes(open(path, "rb").read())
+def props_from_bytes(d):
     meta = next(b for b in boxes(d, 0, len(d)) if b[0] == "meta")
     kids = {b[0]: b for b in boxes(d, meta[2] + 4, meta[3])}
     iinf = kids["iinf"]; v = d[iinf[2]]; p = iinf[2] + 4 + (2 if v == 0 else 4)

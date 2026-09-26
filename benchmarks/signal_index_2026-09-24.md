@@ -69,8 +69,10 @@ describes the HDR rendition, and the primary is Display P3; the rewrite moved it
 (`metadata_audit_earlier_copies_2026-09-25.md`). The `tmap` metadata agrees: base
 headroom 0 in all 19 (SDR), alternate headroom 1.31–2.79 stops. A reader that honours the
 corpus file's primary profile misreads the base as PQ. png-v3 tagging them P3 SDR is
-right. For the 24 older Apple gain maps (iPhone 13/15 Pro), heic doesn't read the
-parameters (imazen/heic#50).
+right. For the 24 older Apple gain maps (iPhone 13/15 Pro), heic reads the parameters
+from the EXIF MakerNote, which the corpus files lack (the metadata rewrite removed it), so
+they probe as `Unknown`; the camera files probe fine. (Corrected 2026-09-26: this first
+blamed heic, imazen/heic#50.)
 
 **The zencodecs probe reports effective colour, not signalled colour.** It sets CICP
 1/13/0/1 on any untagged JPEG or PNG (`finalize_implicit_srgb`, on purpose) with nothing

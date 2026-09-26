@@ -4,7 +4,9 @@ Usage: tiff_tags.py a.dng b.dng   → tags only in a, only in b, and changed val
 import sys, struct, hashlib
 SIZES = {1:1,2:1,3:2,4:4,5:8,6:1,7:1,8:2,9:4,10:8,11:4,12:8,13:4,16:8,17:8,18:8}
 def tags(p):
-    d = open(p, "rb").read(); E = "<" if d[:2] == b"II" else ">"; out = {}; seen = set()
+    return tags_from_bytes(open(p, "rb").read())
+def tags_from_bytes(d):
+    E = "<" if d[:2] == b"II" else ">"; out = {}; seen = set()
     def walk(off, path, depth=0):
         while off and off + 2 <= len(d) and off not in seen and depth < 8:
             seen.add(off); n = struct.unpack(E+"H", d[off:off+2])[0]
@@ -22,8 +24,11 @@ def tags(p):
             path = path + "+"
     walk(struct.unpack(E+"I", d[4:8])[0], "ifd0")
     return out
-a, b = tags(sys.argv[1]), tags(sys.argv[2])
-for k in sorted(set(a) | set(b)):
-    if k not in b: print("only-a", k, a[k])
-    elif k not in a: print("only-b", k, b[k])
-    elif a[k] != b[k]: print("changed", k, a[k], "->", b[k])
+def main():
+    a, b = tags(sys.argv[1]), tags(sys.argv[2])
+    for k in sorted(set(a) | set(b)):
+        if k not in b: print("only-a", k, a[k])
+        elif k not in a: print("only-b", k, b[k])
+        elif a[k] != b[k]: print("changed", k, a[k], "->", b[k])
+if __name__ == "__main__":
+    main()
