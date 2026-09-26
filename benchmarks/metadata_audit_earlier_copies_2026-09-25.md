@@ -206,10 +206,15 @@ Checks, all 316 files:
 | coded image data equals the source's | 316 / 316 |
 | HEIC item properties and non-metadata item data equal the source's | 90 / 90 |
 | colour/HDR signals (corpus-signal-probe, 42 columns) equal the oldest source's | 316 / 316, except the 3 GoPro MPF thumbnails, dropped on purpose |
+| full gain-map parameters (every field: per-channel min/max, gamma, offsets, headroom, colour-space flag) equal the oldest source's; JPEG via zenjpeg's UltraHDR reader, HEIC via heic `probe_full` | 76 / 76 (33 UltraHDR JPEG, 19 `tmap` HEIC, 24 legacy Apple HEIC; the corpus files match on only the 19) |
 | decodes with zencodecs (corpus-thumbs) | 316 / 316 |
 | Exif carries only whitelisted tags | 316 / 316 |
 | sensitive source values (serials, unique IDs, HostComputer, Software, GPS values, offsets, MakerNotes; 2,406) found outside the whitelisted Exif | 0 |
 | inputs re-hashed after the run | 638 / 638 unchanged |
+
+The one HDR-adjacent item v2 drops is Samsung's SEF `Photo_HDR_Info` record (a single zero
+byte in the 33 UltraHDR JPEGs), which goes with the rest of the SEF trailer. No reader we
+have takes gain-map parameters from it.
 
 Against the corpus files, v2 restores the 33 UltraHDR gain maps, the headroom of the 24
 legacy Apple gain maps, the Display P3 primary profile of the 22 HEICs, and 1044's motion

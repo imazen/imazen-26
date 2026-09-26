@@ -74,6 +74,7 @@ const COLS: &[&str] = &[
     "heif_tmap",
     "heic_gain_map",
     "gain_map_headroom",
+    "gain_map_params",
     "heic_full_icc",
     "heic_full_cicp",
     "heic_depth",
@@ -406,6 +407,13 @@ fn probe(id: &str, path: &str) -> Row {
                 "jpeg_sofn",
                 p.sof().map_or("-".into(), |f| f.sofn.to_string()),
             );
+            // Full gain-map metadata as zenjpeg's UltraHDR reader parses it (ISO 21496-1
+            // and hdrgm XMP), so two copies of a file can be compared field by field.
+            let params = zenjpeg::decoder::DecodeConfig::new()
+                .ultrahdr_reader(&data, zenjpeg::ultrahdr::UltraHdrReaderConfig::sdr_only())
+                .map(|u| u.metadata().map_or("-".into(), |m| format!("{m:?}")))
+                .unwrap_or_else(|e| format!("reader error: {e}"));
+            r.set("gain_map_params", params);
         }
         Some("heic") => {
             match heic_info {
@@ -450,13 +458,16 @@ fn probe(id: &str, path: &str) -> Row {
                             fi.source_color.cicp.as_ref().map_or("-".into(), cicp_str),
                         );
                         match &fi.gain_map {
-                            GainMapPresence::Available(g) => r.set(
-                                "gain_map_headroom",
-                                format!(
-                                    "base {:.3} alt {:.3}",
-                                    g.params.base_hdr_headroom, g.params.alternate_hdr_headroom
-                                ),
-                            ),
+                            GainMapPresence::Available(g) => {
+                                r.set(
+                                    "gain_map_headroom",
+                                    format!(
+                                        "base {:.3} alt {:.3}",
+                                        g.params.base_hdr_headroom, g.params.alternate_hdr_headroom
+                                    ),
+                                );
+                                r.set("gain_map_params", format!("{:?}", g.params));
+                            }
                             other => r.set("gain_map_headroom", format!("{other:?}")),
                         }
                     }
