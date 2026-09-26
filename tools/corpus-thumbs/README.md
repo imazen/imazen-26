@@ -18,5 +18,6 @@ Writes `sheet_00.webp` and `sheet_00.tsv` (cell and thumbnail size per id). Outp
 Pins match `tools/corpus-signal-probe`. The resolved `Cargo.lock` (46 KB) lives next to
 the output as `corpus-thumbs.Cargo.lock`.
 
-Known gap: the three Galaxy S23 Ultra DNGs (1444, 1455, 1458) decode to wrong colours
-through zencodecs' raw path, so their thumbnails are unusable.
+Known gap: the three Galaxy S23 Ultra DNGs (1444, 1455, 1458) are JPEG-compressed
+LinearRaw files that zenraw decodes to wrong colours in both of its backends
+(imazen/zenraw#17), so their thumbnails are unusable.
