@@ -98,8 +98,8 @@ What the sources said, where the corpus file was converted:
   and CCITT extraction left no colour declaration behind.
 - **Camera JPEGs:** 38 of the 42 are Samsung files whose EXIF `ColorSpace` says sRGB, in the
   camera file and in the corpus file. The other 4 are 3 GoPro files (`ColorSpace` 0, not a
-  defined value) and 1214 (no `ColorSpace` in the camera file). The index doesn't count
-  EXIF `ColorSpace` as a colour signal.
+  defined value) and 1214 (no `ColorSpace` in the camera file). The signal index counts
+  these as sRGB since 2026-09-26 (`exif_colorspace`/`exif_interop` columns).
 - **IA scans:** the six archive.org items' JP2 page scans (1,672) all declare an
   enumerated colour space, sRGB for 1,671 and greyscale for 1. The 8 Trouvelot plates come
   from TIFFs with no ICC profile.
@@ -190,7 +190,7 @@ the attic copy for the 10 PNGs), in our own container-aware code:
   offsets depend on the layout.
 - **HEIC, in place:** nothing moves. The Exif item is rewritten inside its own extent (the
   slack zeroed, only its `iloc` length field updated), the primary XMP (capture tool,
-  dates, face/pet regions) becomes an empty packet padded to the same length, and `sefd`
+  dates, camera focus regions) becomes an empty packet padded to the same length, and `sefd`
   becomes a zeroed `free` box. Every `colr`, `auxC`, `tmap`, grid, auxiliary image and its
   XMP, Apple style item, and the motion-photo Container XMP and `mpvd` video stay as the
   camera wrote them. Output and source have the same length, and the checker confirms they

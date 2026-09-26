@@ -28,7 +28,9 @@ counts describe the corpus files as they are.
 | ↳ Adobe RGB (1998) | 2 | – | – | – | 2 |
 | ↳ the gain map's "Linear Gray" on the primary (rewrite damage; camera file: Display P3) | – | – | 3 | – | 3 |
 | **CICP signalled** (PNG `cICP`, HEIF `nclx`) | n/a | **0** | **0** | n/a | **0** |
-| untagged (no colour signal at all) | 183 | 1,609 | 0 | 3 (camera colour) | 1,795 |
+| sRGB declared only in EXIF (`ColorSpace` = 1, no ICC) | 38 | 0 | 0 | – | 38 |
+| no colour signal at all | 145 | 1,609 | 0 | – | 1,754 |
+| DNG camera colour matrices | – | – | – | 3 | 3 |
 | **HDR: gain map present** | 0 (33 removed, restorable) | 0 | **43** | not probed | **43** (+33) |
 | ↳ ISO 21496-1 `tmap` | – | – | 19 | – | 19 |
 | HDR: PQ or HLG pixels | 0 | 0 | 0 | 0 | 0 |
@@ -46,6 +48,32 @@ HEICs (all in the photo classes 1000–1600), 31 mobile screenshots and 10 PNGs 
 photo classes. The 1,609 untagged PNGs (AI products and clip art, web screenshots, plots,
 park and NOAA documents, scans) carry no `iCCP`, `sRGB`, `gAMA`, `cHRM` or `cICP` chunk;
 an independent chunk scan agrees exactly.
+
+**EXIF colour declarations** (added 2026-09-26, `exif_colorspace`/`exif_interop` columns;
+index re-run at `/mnt/v/output/imazen-26-variants/signal-index-2026-09-26/`). The first
+version of this table counted only ICC, `cICP` and PNG chunks, so 38 camera JPEGs that
+declare sRGB in EXIF were listed as untagged. They are untouched Samsung camera files
+(S21 Ultra, Note 9, S10, S20, and S23 Ultra 16:9 shots) or re-saves of them, and the camera
+wrote them as sRGB. In the camera folders the only JPEGs with no usable declaration are:
+
+- **1499, 1500, 1501 (GoPro HERO7):** the camera declares sRGB through the Interop index
+  `R98` (its `ColorSpace` value, 0, is undefined). The corpus copies lost the Interop IFD
+  in the metadata rewrite; whitelist v2 restores it.
+- **1214 (S23 Ultra, Versailles ceiling):** a 3000×3556 crop re-saved by an unidentified
+  tool (72-dpi JFIF, no Software tag) before the file entered the corpus. The camera
+  original (recovered 2026-09-26, kept read-only at
+  `/mnt/v/output/codec-corpus/camera-originals-recovered-2026-09-26/1214/`) is Display P3:
+  Samsung's P3 profile, the SEF `Color_Display_P3` record, and EXIF `ColorSpace` =
+  Uncalibrated, which the S23 Ultra writes on its P3 shots. The crop is the top 3,556 rows
+  of the rotated original. `tools/resave-colour-check` compared it under three hypotheses:
+  on the 2.86 M pixels where they differ, "treated as sRGB, converted to Display P3" fits
+  within JPEG noise (MAE 2.7/2.5/3.2, bias under 0.5 level), while "values kept, profile
+  dropped" (6.0/2.9/10.5) and "converted P3 → sRGB" (12.6/4.0/24.3) don't. So the corpus
+  file holds P3-encoded values of a desaturated image with no profile saying so.
+
+The 141 other JPEGs with no declaration are museum scans (31), patent scans (74) and AI
+product images (36), whose sources are untagged too
+(`metadata_audit_earlier_copies_2026-09-25.md`).
 
 ## Quirks the index turned up
 
@@ -90,7 +118,8 @@ Joining each source's colour to its png-v3 SDR render's tag
 | source colour | renders | png-v3 tag | verdict |
 |---|--:|---|---|
 | untagged PNG | 1,609 | untagged | ok |
-| untagged JPEG | 183 | `cICP 1/13/0/1` | ok (sRGB assumed) |
+| sRGB in EXIF only (JPEG) | 38 | `cICP 1/13/0/1` | ok |
+| untagged JPEG | 145 | `cICP 1/13/0/1` | ok (sRGB assumed), except 1214 (unknown) |
 | sRGB ICC (JPEG) | 66 | `cICP 1/13/0/1` | ok |
 | Display P3 ICC (PNG) | 41 | `iCCP` | ok |
 | Display P3 on the grid (HEIC) | 26 | `cICP 12/13/0/1` | ok |
@@ -119,8 +148,9 @@ rule set applied to every source type:
 - **Colour explicit, native gamut:** `cICP` where H.273 can say it (sRGB 1/13, Display P3
   12/13), `iCCP` otherwise (the 2 Adobe RGB). Colour is read the way a careful decoder
   reads it: HEIC tile colour when the grid has none, and the profile's matrix/TRC over
-  its `cicp` tag when a `tmap` says the base is SDR. Untagged sources are written as
-  sRGB and marked `assumed` in the manifest.
+  its `cicp` tag when a `tmap` says the base is SDR. EXIF `ColorSpace` = 1 and Interop
+  `R98` count as sRGB declarations. Sources that declare nothing are written as sRGB and
+  marked `assumed` in the manifest.
 - **HDR recorded, never guessed:** the SDR layer is the camera's base image; the HDR
   layer is the gain map applied at a headroom written into the manifest (the `tmap`
   alternate headroom where there is one), as 16-bit PQ with `cICP 12/16/0/1` + `cLLI`.

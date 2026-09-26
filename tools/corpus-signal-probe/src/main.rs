@@ -54,6 +54,8 @@ const COLS: &[&str] = &[
     "gain_map_alt_cicp",
     "depth_map",
     "exif_bytes",
+    "exif_colorspace",
+    "exif_interop",
     "xmp_bytes",
     "sig_icc_bytes",
     "sig_cicp",
@@ -83,6 +85,75 @@ const COLS: &[&str] = &[
     "sig_error",
     "error",
 ];
+
+/// EXIF colour declarations: `ColorSpace` (0xA001 in the Exif IFD: 1 = sRGB,
+/// 2 = Adobe RGB, 0xFFFF = uncalibrated) and the Interop index (0x0001 in the Interop
+/// IFD: "R98" = DCF basic file, sRGB; "R03" = DCF option file, Adobe RGB).
+fn exif_colour(exif: &[u8]) -> (String, String) {
+    let t = exif.strip_prefix(b"Exif\0\0").unwrap_or(exif);
+    let le = match t.get(..4) {
+        Some(b"II*\0") => true,
+        Some(b"MM\0*") => false,
+        _ => return ("-".into(), "-".into()),
+    };
+    let u16_at = |o: usize| {
+        t.get(o..o + 2).map(|b| {
+            if le {
+                u16::from_le_bytes([b[0], b[1]])
+            } else {
+                u16::from_be_bytes([b[0], b[1]])
+            }
+        })
+    };
+    let u32_at = |o: usize| {
+        t.get(o..o + 4).map(|b| {
+            let a = [b[0], b[1], b[2], b[3]];
+            if le {
+                u32::from_le_bytes(a)
+            } else {
+                u32::from_be_bytes(a)
+            }
+        })
+    };
+    // (tag, type, count, entry offset) for each entry of the IFD at `off`
+    let entries = |off: usize| -> Vec<(u16, u16, u32, usize)> {
+        let n = u16_at(off).unwrap_or(0) as usize;
+        (0..n)
+            .filter_map(|k| {
+                let e = off + 2 + 12 * k;
+                Some((u16_at(e)?, u16_at(e + 2)?, u32_at(e + 4)?, e))
+            })
+            .collect()
+    };
+    let find = |off: usize, tag: u16| entries(off).into_iter().find(|x| x.0 == tag);
+    let Some(ifd0) = u32_at(4) else {
+        return ("-".into(), "-".into());
+    };
+    let Some(exif_ifd) = find(ifd0 as usize, 0x8769).and_then(|x| u32_at(x.3 + 8)) else {
+        return ("-".into(), "-".into());
+    };
+    let cs = find(exif_ifd as usize, 0xA001)
+        .and_then(|x| u16_at(x.3 + 8))
+        .map_or("-".into(), |v| v.to_string());
+    let interop = find(exif_ifd as usize, 0xA005)
+        .and_then(|x| u32_at(x.3 + 8))
+        .and_then(|io| find(io as usize, 0x0001))
+        .and_then(|x| {
+            let len = x.2 as usize;
+            let raw = if len <= 4 {
+                t.get(x.3 + 8..x.3 + 8 + len)
+            } else {
+                t.get(u32_at(x.3 + 8)? as usize..)?.get(..len)
+            };
+            raw.map(|b| {
+                String::from_utf8_lossy(b)
+                    .trim_end_matches('\0')
+                    .to_string()
+            })
+        })
+        .unwrap_or_else(|| "-".into());
+    (cs, interop)
+}
 
 fn cicp_str(c: &zenpixels::Cicp) -> String {
     format!(
@@ -351,6 +422,12 @@ fn probe(id: &str, path: &str) -> Row {
     }
     let md = &info.embedded_metadata;
     r.set("exif_bytes", md.exif.as_ref().map_or(0, |e| e.len()));
+    let (cs, interop) = md
+        .exif
+        .as_ref()
+        .map_or(("-".into(), "-".into()), |e| exif_colour(e));
+    r.set("exif_colorspace", cs);
+    r.set("exif_interop", interop);
     r.set("xmp_bytes", md.xmp.as_ref().map_or(0, |x| x.len()));
     r.set("warnings", info.warnings.join(" | "));
 

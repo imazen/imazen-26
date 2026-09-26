@@ -31,7 +31,7 @@ Removed:
   GPS IFD, IFD1 thumbnail, OffsetTime*, ImageUniqueID, serial numbers, HostComputer,
   Software, every other MakerNote tag, vendor APPn segments (APP4/5/6/13), COM,
   Samsung SEF trailers (MCC country code, UTC time), MPF thumbnails (GoPro), the primary
-  HEIC XMP (replaced by an empty packet; it held face/pet regions and tool versions),
+  HEIC XMP (replaced by an empty packet; it held camera focus regions and tool versions),
   PNG data after IEND. DNGs are not handled here.
 
 Every output is checked before it is written:

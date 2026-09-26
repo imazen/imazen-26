@@ -1,0 +1,24 @@
+[package]
+name = "resave-colour-check"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Locate a re-saved crop inside its camera original and test whether the re-save kept the original's colour values or converted them"
+
+# Standalone: not part of any workspace.
+[workspace]
+
+[dependencies]
+# Pins match tools/corpus-thumbs and tools/corpus-signal-probe.
+zencodecs = { git = "https://github.com/imazen/zenpipe", rev = "6a5b052b2c0d398cbd16add420babe246a9638b7", default-features = false, features = ["jpeg"] }
+zencodec = "0.1.26"
+zenpixels = { version = "0.2.16", default-features = false, features = ["std"] }
+zenpixels-convert = { version = "0.2.16" }
+
+[patch.crates-io]
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "e7c53d2e36914989585791b504a957064e0e8d91" }
+zenpixels = { git = "https://github.com/imazen/zenpixels", rev = "3dbf24634fbd854e01d52f524ef87bac85e5507b" }
+zenpixels-convert = { git = "https://github.com/imazen/zenpixels", rev = "3dbf24634fbd854e01d52f524ef87bac85e5507b" }
+
+[profile.release]
+debug = false
