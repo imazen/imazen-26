@@ -13,6 +13,8 @@ Plain Python 3, standard library only; run from an output directory.
 | `heic_diff.py` | per-item property diff of every HEIC against its pre-rewrite backup → `heic_prop_diff.tsv` |
 | `exif_colour.py` | EXIF Make/Model/`ColorSpace`/Interop index for a list of JPEG ids |
 | `tiff_tags.py` | tag-by-tag diff of two TIFF/DNG files |
+| `png_scan.py` | walks roots, records each PNG's size and colour chunks (reads chunk headers only) |
+| `jpeg_segs.py` | a JPEG's APPn/COM/DHT segment list and trailer length, for old-vs-new structure diffs |
 
 ```
 find <canonical tree> -type f | python3 keys.py > canonical_keys.tsv

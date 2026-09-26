@@ -20,15 +20,38 @@ the four camera classes (1000/1200/1400/1600, `STORAGE-MAP.md`)?
   The other items' profiles (gain map, `tmap`, thumbnail) are emptied to 0 bytes or
   overwritten in all 64.
   The published R2 copies are these same files (sha256 checked on 1495, 1540, 1042).
+- **The whitelist rewrite did all of it.** The oldest copies found (a 2026-06-04 snapshot,
+  an iCloud shared-album export, and the camera-named attic tree) agree byte for byte, and
+  still hold the GPS data. One earlier step, before the 2026-06-09 backup, removed only the
+  GPS IFD from 48 files. Every colour and HDR change happens between the backup and the
+  corpus (next section).
 
 Tools: `tools/metadata-loss-audit/`. Per-file data:
 `/mnt/v/output/imazen-26-variants/metadata-audit-2026-09-25/` (`SHA256SUMS`).
+
+## Generations of the camera files
+
+| generation | where | covers | relation to the next |
+|---|---|---|---|
+| oldest | `/mnt/v/zen/lilith-corpus-snapshot-2026-06-4/` (files dated 2026-05-27 to 06-04); `/mnt/v/heic/` iCloud shared-album export (52 HEICs); attic `imazen-26 - Copy (2)` (camera file names) | 309 of 319 by content, and all 319 counting the attic copies | identical bytes wherever two of them hold the same file |
+| GPS removed | `/mnt/v/output/codec-corpus/lilith-photos-backup-2026-06-09/` | all 319 | 48 files differ from the oldest (27 JPEG, 21 HEIC): the GPS IFD is gone, and only Exif pointers and offsets move with it. No other tag, segment, item or property changed. The other 271 are byte-identical to the oldest |
+| whitelist rewrite | the corpus (`imazen-26-unprocessed` on R2) | all 319 | everything in the sections below |
+
+The 10 camera-class PNGs and the 3 DNGs follow the same pattern: the backup equals the oldest
+copy. No script for the whitelist rewrite survives on this machine, and no session
+transcript records the command beyond `STORAGE-MAP.md`'s description, so the mechanism in
+§HEIC below is inferred from the results.
 
 ## What was compared
 
 Earlier copies on `/mnt/v/output/codec-corpus/`: `lilith-photos-backup-2026-06-09/` (all
 319 camera-class files, before the rewrite) and `attic-2026-08-22/` (full earlier corpus
-trees and rejected sets). 5,230 files in all.
+trees and rejected sets), 5,230 files in all. Then every JPEG, HEIC and DNG on local storage
+(4.8 M files) was searched by the camera file names, and 551 image files in the older roots
+this turned up were keyed (the generations above). Every PNG under the older roots (the
+snapshot, `imazen-26-inspo`, `imazen-26-clean*`, `imazen-26-pristine`, the `ai-corpus*`
+trees, `Captures`, `collections`, `input`, `product-images`; 52,439 files) was scanned for
+colour chunks.
 
 Files were paired by content, not by name. The key covers the image data only: JPEG from
 the first non-APPn marker to EOI, PNG `IHDR`+`IDAT`, HEIC the coded bytes of every `hvc1`
@@ -62,6 +85,15 @@ compared with the canonical file's. HEIC item properties were compared item by i
 
 What the sources said, where the corpus file was converted:
 
+- **Older PNG copies:** of the 52,439 scanned PNGs, 157 outside test-input folders carry a colour
+  chunk. 82 of them hold the same image data as a corpus file, and each of those corpus
+  files carries the identical `iCCP` profile. The rest match no corpus file by name or size,
+  or match by size only a corpus file that is itself P3-tagged, with one exception. 9975 (an
+  AI product image) has `sRGB`+`gAMA` in all five `ai-corpus*` copies (RGBA, checked on
+  one), but the corpus file is RGB with neither chunk: the alpha-flattening step dropped
+  them. The displayed colour is the same, since sRGB is also the untagged default.
+- **Patent scans:** the source PDFs declare only DeviceGray/DeviceRGB, so the verbatim JPEG
+  and CCITT extraction left no colour declaration behind.
 - **Camera JPEGs:** 38 of the 42 are Samsung files whose EXIF `ColorSpace` says sRGB, in the
   camera file and in the corpus file. The other 4 are 3 GoPro files (`ColorSpace` 0, not a
   defined value) and 1214 (no `ColorSpace` in the camera file). The index doesn't count
