@@ -54,9 +54,11 @@ jxl-encoder, then decode back and compare before writing.
 
 ## HDR twins
 
-All 76 HDR sources (43 HEIC with Apple gain maps; 33 JPEG once their gain maps are
-restored) are Display-P3 phone photos with an SDR base image and a gain map. None is
-PQ- or HLG-encoded.
+All 76 HDR sources (43 HEIC with Apple gain maps; 33 JPEG) have their HDR intact only in
+the camera originals: the corpus files lack the 33 JPEG gain maps and the MakerNote
+parameters of 24 of the HEIC gain maps, and whitelist v2 restores both
+(`metadata_audit_earlier_copies_2026-09-25.md`). They are Display-P3 phone photos with an
+SDR base image and a gain map. None is PQ- or HLG-encoded.
 
 **HDR "sRGB" doesn't really make sense.** sRGB names an SDR transfer. The HDR version of it
 is BT.709 primaries with PQ (`cICP 1/16/0/1`), which is legal, but it clips the P3 gamut of
