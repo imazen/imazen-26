@@ -8,6 +8,7 @@
 - README / STORAGE-MAP variant tables list both branches with current pointer counts
 
 ### Added
+- `tools/corpus-thumbs` — renders oriented, sRGB thumbnail sprite sheets of every source through zencodecs, zenpixels-convert and zenresize; used for the corpus contact sheet (output on block storage)
 - `benchmarks/layer_repos_2026-09-25.md` — proposal for `imazen-26-originals` plus `-png-srgb`, `-png-p3`, `-jxl-srgb`, `-jxl-p3` repositories with train/validate/test branches (sizes, GitHub fit, rendering rules; HDR only in the P3 layers); measured: progressive→sequential re-encoding is coefficient- and pixel-exact on all 417 JPEGs and makes all 417 JPEG-in-JXL rebuilds exact; coefficient-domain rotation is clean for only 2 of 134 rotated JPEGs (the rest trim 8–12 rows and differ up to 20 levels at the new edge); zenjpeg rotation bugs filed as zenjpeg#204/#205
 - `tools/jpeg-lossless-check` — the measurement tool
 - `benchmarks/signal_index_2026-09-24.md` — orientation, ICC, CICP and HDR signalling of all 2,160 sources by file type: 207 rotated, 365 with ICC (275 Display P3), 0 with CICP, 43 with gain maps (76 once the JPEG ones are restored), no PQ/HLG sources; 42 HEICs carry colour only on their tiles; 210 png-v3 renders are tagged sRGB although the source is wide-gamut; normalization rules and repositories-by-file-type sizing

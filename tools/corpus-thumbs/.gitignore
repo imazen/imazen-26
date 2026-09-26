@@ -1,0 +1,4 @@
+target/
+# 46 KB, over the repo's 30 KB commit limit: kept on block storage instead
+# (/mnt/v/output/imazen-26/gallery-2026-09-25/corpus-thumbs.Cargo.lock).
+Cargo.lock

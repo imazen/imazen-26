@@ -1,0 +1,33 @@
+[package]
+name = "corpus-thumbs"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Render oriented, sRGB thumbnail sprite sheets of corpus sources through zencodecs, zenpixels-convert and zenresize"
+
+# Standalone: not part of any workspace.
+[workspace]
+
+[dependencies]
+# Pins match tools/corpus-signal-probe: zencodecs at zenpipe 6a5b052, git codecs at
+# the revisions zenpipe's Cargo.lock resolves there.
+zencodecs = { git = "https://github.com/imazen/zenpipe", rev = "6a5b052b2c0d398cbd16add420babe246a9638b7", default-features = false, features = ["jpeg", "png", "webp", "heic-decode", "raw-decode", "raw-decode-exif"] }
+zencodec = "0.1.26"
+zenpixels = { version = "0.2.16", default-features = false, features = ["std"] }
+zenpixels-convert = { version = "0.2.16", features = ["rgb", "imgref"] }
+zenresize = "0.3.1"
+imgref = "1.12.3"
+rgb = "0.8.53"
+
+[patch.crates-io]
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "e7c53d2e36914989585791b504a957064e0e8d91" }
+heic = { git = "https://github.com/imazen/heic", rev = "8d40c94e018082f4bffcfc688dfbb8e83925a1b0" }
+zenpixels = { git = "https://github.com/imazen/zenpixels", rev = "3dbf24634fbd854e01d52f524ef87bac85e5507b" }
+zenpixels-convert = { git = "https://github.com/imazen/zenpixels", rev = "3dbf24634fbd854e01d52f524ef87bac85e5507b" }
+ultrahdr-core = { git = "https://github.com/imazen/ultrahdr", rev = "031d4a2070a522f82bd02aee712a2806a2c17bbd" }
+zenpng = { git = "https://github.com/imazen/zenpng", rev = "cfccd88f77cce5836c25bb70534fa49e4a5cd3c0" }
+zenraw = { git = "https://github.com/imazen/zenraw", rev = "a6b78e93c46e32df4eb1bc9066f494a036b36031" }
+zenwebp = { git = "https://github.com/imazen/zenwebp", rev = "47c562b18262a19e7db5b233476fcd3fb59ac91d" }
+
+[profile.release]
+debug = false
