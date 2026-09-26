@@ -179,7 +179,8 @@ the published policy to the **oldest copy** of each camera file (06-04 snapshot 
 the attic copy for the 10 PNGs), in our own container-aware code:
 
 - **Exif:** rebuilt with the documented keep-list (including `Flash`, which the 2026-08
-  rewrite dropped) plus the Interop IFD (`R98`) and, for Apple, a MakerNote reduced to
+  rewrite dropped) plus `SubjectArea` (57 Apple HEICs), the Interop IFD (`R98`) and, for
+  Apple, a MakerNote reduced to
   HDRImageType/HDRHeadroom/HDRGain. GPS, IFD1 thumbnails, `OffsetTime*`, `ImageUniqueID`,
   serial numbers, `HostComputer`, `Software` and every other MakerNote tag are removed.
 - **JPEG:** APP0 JFIF, ICC and the rebuilt Exif are kept. UltraHDR files also keep their
@@ -189,8 +190,9 @@ the attic copy for the 10 PNGs), in our own container-aware code:
   11.6 MiB of dead header bytes (about 54 KiB per file) in the originals, and only the MPF
   offsets depend on the layout.
 - **HEIC, in place:** nothing moves. The Exif item is rewritten inside its own extent (the
-  slack zeroed, only its `iloc` length field updated), the primary XMP (capture tool,
-  dates, camera focus regions) becomes an empty packet padded to the same length, and `sefd`
+  slack zeroed, only its `iloc` length field updated), the primary XMP is regenerated from
+  its parsed focus regions alone (30 files; the creator tool and edit dates beside them
+  are dropped) or emptied, padded to the same length, and `sefd`
   becomes a zeroed `free` box. Every `colr`, `auxC`, `tmap`, grid, auxiliary image and its
   XMP, Apple style item, and the motion-photo Container XMP and `mpvd` video stay as the
   camera wrote them. Output and source have the same length, and the checker confirms they

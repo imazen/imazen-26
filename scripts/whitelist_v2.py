@@ -17,7 +17,7 @@ Kept, per the published policy:
               ComponentsConfiguration, ShutterSpeedValue, ApertureValue,
               ExposureBiasValue, MeteringMode, Flash, FocalLength, FlashpixVersion,
               ColorSpace, WhiteBalance, FocalLengthIn35mmFilm, LensSpecification,
-              LensMake, LensModel
+              LensMake, LensModel, SubjectArea, SubjectLocation
   ICC profiles (every one, in every item)
 Kept because they carry colour or HDR:
   Interop IFD (InteropIndex `R98` = DCF sRGB, InteropVersion)
@@ -27,11 +27,14 @@ Kept because they carry colour or HDR:
     rebuilt from scratch (no ImageUIDList), and the gain-map JPEG verbatim
   HEIC: every item and property as the camera wrote it (`colr`, `auxC`, `tmap`, grids,
     auxiliary images and their XMP, Apple style metadata), `mpvd` motion-photo video
+Kept because they mark the subject (useful for region-weighted quality work):
+  EXIF SubjectArea / SubjectLocation, and the camera's focus regions (MWG regions of type
+  `Focus`): the HEIC main-image XMP is regenerated from the parsed rectangles alone
 Removed:
   GPS IFD, IFD1 thumbnail, OffsetTime*, ImageUniqueID, serial numbers, HostComputer,
   Software, every other MakerNote tag, vendor APPn segments (APP4/5/6/13), COM,
-  Samsung SEF trailers (MCC country code, UTC time), MPF thumbnails (GoPro), the primary
-  HEIC XMP (replaced by an empty packet; it held camera focus regions and tool versions),
+  Samsung SEF trailers (MCC country code, UTC time), MPF thumbnails (GoPro), everything
+  else in the HEIC main-image XMP (creator tool version, edit dates, other region types),
   PNG data after IEND. DNGs are not handled here.
 
 Every output is checked before it is written:
@@ -61,7 +64,8 @@ from heif_props import props_from_bytes  # noqa: E402
 KEEP_IFD0 = {0x010F, 0x0110, 0x0112, 0x011A, 0x011B, 0x0128, 0x0132, 0x0213}
 KEEP_EXIF = {0x829A, 0x829D, 0x8822, 0x8827, 0x9000, 0x9003, 0x9004, 0x9101, 0x9201,
              0x9202, 0x9204, 0x9207, 0x9209, 0x920A, 0x9290, 0x9291, 0x9292, 0xA000,
-             0xA001, 0xA403, 0xA405, 0xA432, 0xA433, 0xA434}
+             0xA001, 0xA403, 0xA405, 0xA432, 0xA433, 0xA434,
+             0x9214, 0xA214}  # SubjectArea, SubjectLocation
 KEEP_INTEROP = {0x0001, 0x0002}
 APPLE_HDR_TAGS = {0x000A, 0x0021, 0x0030}
 TAG_EXIF, TAG_GPS, TAG_INTEROP, TAG_MAKERNOTE = 0x8769, 0x8825, 0xA005, 0x927C
@@ -495,21 +499,110 @@ def heif_info(d):
                 data=data, primary=primary, cdsc=cdsc)
 
 
-def padded_xmp(length):
-    """An empty XMP packet padded with whitespace to exactly `length` bytes."""
-    head, tail = EMPTY_XMP.split(b'<?xpacket end="w"?>')[0], b'<?xpacket end="w"?>'
-    pad = length - len(head) - len(tail)
+NS_RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+NS_MWG = "http://www.metadataworkinggroup.com/schemas/regions/"
+NS_AREA = "http://ns.adobe.com/xmp/sType/Area#"
+NS_DIM = "http://ns.adobe.com/xap/1.0/sType/Dimensions#"
+
+
+def _field(el, ns, name):
+    """An XMP struct field given either as a child element or as an attribute."""
+    child = el.find(f"{{{ns}}}{name}")
+    if child is not None and child.text is not None:
+        return child.text.strip()
+    return el.get(f"{{{ns}}}{name}")
+
+
+def focus_regions(x):
+    """(applied-to dimensions, [focus region areas]) from an XMP packet, values as the
+    original strings after validation; ([], None) when there are none."""
+    import xml.etree.ElementTree as ET
+    body = x.strip().rstrip(b"\0")
+    try:
+        root = ET.fromstring(body)
+    except ET.ParseError as e:
+        raise Reject(f"main-image XMP does not parse: {e}")
+    found, dims = [], None
+    for regions in root.iter(f"{{{NS_MWG}}}Regions"):
+        applied = regions.find(f"{{{NS_MWG}}}AppliedToDimensions")
+        if applied is not None:
+            dw, dh, du = (_field(applied, NS_DIM, k) for k in ("w", "h", "unit"))
+            if dw and dh:
+                int(float(dw)), int(float(dh))
+                dims = (dw, dh, du or "pixel")
+        for li in regions.iter(f"{{{NS_RDF}}}li"):
+            kind = _field(li, NS_MWG, "Type")
+            area = li.find(f"{{{NS_MWG}}}Area")
+            if kind != "Focus" or area is None:
+                continue
+            vals = {k: _field(area, NS_AREA, k) for k in ("x", "y", "w", "h", "d", "unit")}
+            for k in ("x", "y", "w", "h", "d"):
+                if vals[k] is not None:
+                    float(vals[k])  # numbers only; raises on anything else
+            if vals["unit"] not in (None, "normalized") or None in (vals["x"], vals["y"]):
+                continue
+            found.append(vals)
+    return dims, found
+
+
+def focus_xmp(dims, regions):
+    """An XMP packet holding only the focus regions, generated from the parsed values."""
+    from xml.sax.saxutils import escape as esc
+    parts = ['<?xpacket begin="\ufeff" id="W5M0MpCehiHzreSzNTczkc9d"?>',
+             '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="' + NS_RDF + '">',
+             '<rdf:Description rdf:about="" xmlns:mwg-rs="' + NS_MWG + '" xmlns:stArea="' + NS_AREA
+             + '" xmlns:stDim="' + NS_DIM + '"><mwg-rs:Regions rdf:parseType="Resource">']
+    if dims:
+        parts.append('<mwg-rs:AppliedToDimensions rdf:parseType="Resource">'
+                     f'<stDim:w>{esc(dims[0])}</stDim:w><stDim:h>{esc(dims[1])}</stDim:h>'
+                     f'<stDim:unit>{esc(dims[2])}</stDim:unit></mwg-rs:AppliedToDimensions>')
+    parts.append('<mwg-rs:RegionList><rdf:Seq>')
+    for r in regions:
+        area = "".join(f"<stArea:{k}>{esc(r[k])}</stArea:{k}>" for k in ("x", "y", "w", "h", "d")
+                       if r[k] is not None)
+        parts.append('<rdf:li rdf:parseType="Resource"><mwg-rs:Area rdf:parseType="Resource">'
+                     + area + '<stArea:unit>normalized</stArea:unit></mwg-rs:Area>'
+                     '<mwg-rs:Type>Focus</mwg-rs:Type></rdf:li>')
+    parts.append('</rdf:Seq></mwg-rs:RegionList></mwg-rs:Regions></rdf:Description></rdf:RDF>'
+                 '</x:xmpmeta><?xpacket end="w"?>')
+    return "".join(parts).encode("utf-8")
+
+
+XMP_ALLOWED = {"{adobe:ns:meta/}xmpmeta", f"{{{NS_RDF}}}RDF", f"{{{NS_RDF}}}Description",
+               f"{{{NS_RDF}}}Seq", f"{{{NS_RDF}}}li", f"{{{NS_MWG}}}Regions",
+               f"{{{NS_MWG}}}AppliedToDimensions", f"{{{NS_MWG}}}RegionList",
+               f"{{{NS_MWG}}}Area", f"{{{NS_MWG}}}Type"} \
+    | {f"{{{NS_AREA}}}{k}" for k in ("x", "y", "w", "h", "d", "unit")} \
+    | {f"{{{NS_DIM}}}{k}" for k in ("w", "h", "unit")}
+
+
+def check_xmp(x):
+    """The regenerated main-image XMP may hold focus regions and nothing else."""
+    import xml.etree.ElementTree as ET
+    root = ET.fromstring(x.strip())
+    for el in root.iter():
+        if el.tag not in XMP_ALLOWED:
+            raise Reject(f"main-image XMP carries {el.tag}")
+        for k in el.attrib:
+            if k not in (f"{{{NS_RDF}}}about", f"{{{NS_RDF}}}parseType"):
+                raise Reject(f"main-image XMP carries attribute {k}")
+
+
+def padded_xmp(length, packet=EMPTY_XMP):
+    """`packet` padded with whitespace before its end marker to exactly `length` bytes."""
+    end = b'<?xpacket end="w"?>'
+    head = packet[:packet.rindex(end)]
+    pad = length - len(head) - len(end)
     if pad < 1:
-        raise Reject("primary XMP slot too small for an empty packet")
-    body = b"\n" + b" " * (pad - 1)
-    return head + body + tail
+        raise Reject("main-image XMP slot too small for the new packet")
+    return head + b"\n" + b" " * (pad - 1) + end
 
 
 def rewrite_heic(d):
     """Whitelist a HEIF in place: nothing moves; metadata slots are rewritten or zeroed."""
     h = heif_info(d)
     out = bytearray(d)
-    removed, slots, changed = [], [], []
+    removed, slots, changed, n_focus = [], [], [], 0
     v, flags, items = h["iloc"]
     by_id = {it["id"]: it for it in items}
 
@@ -543,9 +636,12 @@ def rewrite_heic(d):
                     raise Reject(f"motion-photo XMP has unexpected namespaces {xmp_prefixes(x)}")
                 continue  # structural: primary/video lengths, unchanged because nothing moves
             removed.append(x)
-            out[a:b] = padded_xmp(len(x))
+            dims, regions = focus_regions(x)
+            packet = focus_xmp(dims, regions) if regions else EMPTY_XMP
+            out[a:b] = padded_xmp(len(x), packet)
             slots.append((a, b))
             changed.append(iid)
+            n_focus += len(regions)
     for ty, s0, bs, e in h["top"]:
         if ty in ("ftyp", "meta", "mdat", "mpvd"):
             continue
@@ -573,7 +669,8 @@ def rewrite_heic(d):
         outside.append(d[pos:a])
         pos = max(pos, b)
     outside.append(d[pos:])
-    return out, removed, kept + outside, {"rewritten_items": "+".join(map(str, sorted(changed))), "slots": edges}
+    return out, removed, kept + outside, {"rewritten_items": "+".join(map(str, sorted(changed))),
+                                          "focus_regions": n_focus, "slots": edges}
 
 
 # ── PNG ───────────────────────────────────────────────────────────────────────────────
@@ -677,6 +774,11 @@ def verify(ext, src, out, removed, kept, notes):
                 for k in range(a, min(a + step, len(src))):
                     if src[k] != out[k] and not any(sa <= k < sb for sa, sb in slots):
                         raise Reject(f"byte {k} changed outside the metadata slots")
+        ho_ = heif_info(out)
+        for iid, ty in ho_["types"].items():
+            if ty == "mime" and ho_["primary"] in ho_["cdsc"].get(iid, []) \
+                    and b"GCamera:MotionPhoto" not in ho_["data"][iid]:
+                check_xmp(ho_["data"][iid])
         if props_from_bytes(src) != props_from_bytes(out):
             raise Reject("item properties differ from the source")
         hs, ho = heif_info(src), heif_info(out)
