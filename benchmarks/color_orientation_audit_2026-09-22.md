@@ -56,13 +56,16 @@ both sides (reference and encodes built from the same render) are internally
 consistent. Anything that claims colour fidelity to the original, or wide-gamut
 evaluation, is not.
 
-The 22 in the other direction are iPhone HEICs. 19 are Apple Adaptive HDR files: their
-primary profile ("Display P3 Primaries; PQ (…)") carries a PQ `cicp` tag, but their ISO
-21496-1 `tmap` puts the base at SDR (headroom 0), so png-v3's P3 tag is right and
-pristine-8th's untagged is not. The other 3 (1495, 1496, 1498) carry a "Linear Gray"
-profile on the primary image itself; which layer is right for those is **not
-verified**. (Corrected 2026-09-24: this paragraph first attributed the profile to the
-gain map, whose `colr` box is in fact empty.)
+The 22 in the other direction are iPhone HEICs. 19 carry an Apple gain map and an ISO
+21496-1 `tmap`: in the corpus files their primary profile ("Display P3 Primaries; PQ
+(…)") carries a PQ `cicp` tag, but the `tmap` puts the base at SDR (headroom 0). The other
+3 (1495, 1496, 1498) carry a "Linear Gray" profile on the primary. Both are damage from
+the camera-class metadata rewrite: in the camera files all 22 primaries are Display P3,
+the PQ profile belongs to the `tmap` and Linear Gray to the gain map
+(`metadata_audit_earlier_copies_2026-09-25.md`). So png-v3's P3 tag is right for all 22
+and pristine-8th's untagged is not. (Corrected twice: 2026-09-24 moved Linear Gray from
+the gain map to the primary, reading the rewritten file; 2026-09-25 compared the camera
+files.)
 
 ## 3. Orientation differs between layers
 

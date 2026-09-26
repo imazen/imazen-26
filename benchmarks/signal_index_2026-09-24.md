@@ -8,6 +8,12 @@ Per-file index (one row per id, 55 columns):
 `/mnt/v/output/imazen-26-variants/signal-index-2026-09-24/sources_signal.tsv`
 (sha256 `68090d17…` in `SHA256SUMS` there), built by `tools/corpus-signal-probe`.
 
+**Correction (2026-09-25):** the 19 PQ-profile and 3 "Linear Gray" HEIC primaries below
+are damage from the camera-class metadata rewrite, not camera behaviour. In the camera
+files all 22 primaries are Display P3; the PQ profile belongs to the `tmap` item and
+Linear Gray to the gain map. See `metadata_audit_earlier_copies_2026-09-25.md`. The
+counts describe the corpus files as they are.
+
 ## Counts
 
 | | JPEG | PNG | HEIC | DNG | all |
@@ -17,10 +23,10 @@ Per-file index (one row per id, 55 columns):
 | ↳ 90° CW (6) / 180° (3) / 270° (8) | 128 / 5 / 1 | – | 66 / 3 / 1 | 2 / 1 / 0 | 196 / 9 / 2 |
 | **ICC profile** | **234** | **41** | **90** | 0 | **365** |
 | ↳ Display P3 | 166 | 41 | 68 | – | 275 |
-| ↳ P3 profile with a PQ `cicp` tag (Apple Adaptive HDR) | – | – | 19 | – | 19 |
+| ↳ the `tmap`'s PQ profile on the primary (rewrite damage; camera file: Display P3) | – | – | 19 | – | 19 |
 | ↳ sRGB | 66 | – | – | – | 66 |
 | ↳ Adobe RGB (1998) | 2 | – | – | – | 2 |
-| ↳ "Linear Gray" on an RGB image | – | – | 3 | – | 3 |
+| ↳ the gain map's "Linear Gray" on the primary (rewrite damage; camera file: Display P3) | – | – | 3 | – | 3 |
 | **CICP signalled** (PNG `cICP`, HEIF `nclx`) | n/a | **0** | **0** | n/a | **0** |
 | untagged (no colour signal at all) | 183 | 1,609 | 0 | 3 (camera colour) | 1,795 |
 | **HDR: gain map present** | 0 (33 removed, restorable) | 0 | **43** | not probed | **43** (+33) |
@@ -50,18 +56,20 @@ image. heic's `ImageInfo` reads only the primary item, so it reports no colour f
 (imazen/heic#49). Every png-v3 render of these 42 is tagged sRGB.
 
 **3 iPhone 13 Pro HEICs (1495, 1496, 1498) carry a "Linear Gray" profile on an RGB
-image.** It is associated with the primary grid and all its tiles, not with the gain map
-(whose `colr` box is empty). `color_orientation_audit_2026-09-22.md` §2 said these
-colour boxes belong to the gain map; the item associations say otherwise. What a
-reader should do with a grey profile on RGB data isn't settled; png-v3 tagged them P3.
+image.** In the corpus files it is associated with the primary grid and all its tiles,
+and the gain map's `colr` box is empty. The pre-rewrite camera files have Display P3 on
+the primary and Linear Gray on the gain map, so png-v3's P3 tag is right
+(`metadata_audit_earlier_copies_2026-09-25.md`).
 
-**19 iPhone 16/17 Pro HEICs are Apple Adaptive HDR.** The primary carries a ~26.7 KB
-profile named "Display P3 Primaries; PQ (Gain Map Preview …)" or "(Adaptive Gain Curve
-…)" whose ICC `cicp` tag says 12/16 (P3, PQ), alongside an Apple gain-map auxiliary
-image and an ISO 21496-1 `tmap` item. The `tmap` metadata settles what the base is:
-base headroom 0 in all 19 (SDR), alternate headroom 1.31–2.79 stops. So a reader that
-honours the profile's `cicp` tag would misread the base as PQ. png-v3 tagging them P3
-SDR is right. For the 24 older Apple gain maps (iPhone 13/15 Pro), heic doesn't read the
+**19 iPhone 16/17 Pro HEICs carry an Apple gain map and an ISO 21496-1 `tmap` item.**
+In the corpus files the primary carries a ~26.7 KB profile named "Display P3 Primaries;
+PQ (Gain Map Preview …)" or "(Adaptive Gain Curve …)" whose ICC `cicp` tag says 12/16
+(P3, PQ). In the pre-rewrite camera files that profile sits on the `tmap` item, which
+describes the HDR rendition, and the primary is Display P3; the rewrite moved it
+(`metadata_audit_earlier_copies_2026-09-25.md`). The `tmap` metadata agrees: base
+headroom 0 in all 19 (SDR), alternate headroom 1.31–2.79 stops. A reader that honours the
+corpus file's primary profile misreads the base as PQ. png-v3 tagging them P3 SDR is
+right. For the 24 older Apple gain maps (iPhone 13/15 Pro), heic doesn't read the
 parameters (imazen/heic#50).
 
 **The zencodecs probe reports effective colour, not signalled colour.** It sets CICP
@@ -84,11 +92,11 @@ Joining each source's colour to its png-v3 SDR render's tag
 | sRGB ICC (JPEG) | 66 | `cICP 1/13/0/1` | ok |
 | Display P3 ICC (PNG) | 41 | `iCCP` | ok |
 | Display P3 on the grid (HEIC) | 26 | `cICP 12/13/0/1` | ok |
-| P3 with a PQ tag, SDR base (HEIC) | 19 | `cICP 12/13/0/1` | ok (base headroom 0 verified) |
+| P3 base, rewritten to the PQ profile (HEIC) | 19 | `cICP 12/13/0/1` | ok (camera file and `tmap` agree) |
 | **Display P3 ICC (JPEG)** | **166** | `cICP 1/13/0/1` | **mislabelled** |
 | **Display P3 on tiles only (HEIC)** | **42** | `cICP 1/13/0/1` | **mislabelled** |
 | **Adobe RGB (JPEG)** | **2** | `cICP 1/13/0/1` | **mislabelled** |
-| Linear Gray on RGB (HEIC) | 3 | `cICP 12/13/0/1` | unverified |
+| P3 base, rewritten to Linear Gray (HEIC) | 3 | `cICP 12/13/0/1` | ok (camera file is Display P3) |
 | DNG | 3 | no render | — |
 
 **210 png-v3 renders are tagged sRGB although their source is wide-gamut.** (The
@@ -118,7 +126,8 @@ rule set applied to every source type:
 - **Signalling columns in the manifests:** the index above, so a consumer can select
   "P3 HEIC with a gain map" without re-probing.
 
-Three sources need a call before they can be normalized: the 3 Linear Gray HEICs.
+The 22 HEICs whose primary profile the rewrite replaced are normalized as the Display P3
+their camera files declare.
 
 ## Repositories by file type
 

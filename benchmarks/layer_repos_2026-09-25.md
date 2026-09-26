@@ -45,13 +45,12 @@ jxl-encoder, then decode back and compare before writing.
     per file in the manifest.
   - **sRGB → P3 at 8 bits is not reversible** (two sRGB colours can land on one P3 code).
   - **Untagged sources** (1,609 PNGs, 183 JPEGs) are treated as sRGB and marked `assumed`.
-  - **HEIC tile colour** counts when the grid has none (42 files). The 19 Adaptive HDR
-    files are converted as P3 SDR, not through their profile's PQ `cicp` tag, because
-    their `tmap` puts the base at SDR.
+  - **HEIC tile colour** counts when the grid has none (42 files). The 22 HEICs whose
+    primary profile the metadata rewrite replaced (19 with the `tmap`'s PQ profile, 3
+    with the gain map's Linear Gray) are converted as the Display P3 SDR their camera
+    files declare (`metadata_audit_earlier_copies_2026-09-25.md`).
 - **Signalling:** `cICP` 1/13/0/1 or 12/13/0/1 in every PNG, the matching colour encoding
   in every JXL. Never untagged.
-
-The 3 "Linear Gray" HEICs (1495, 1496, 1498) need a decision first.
 
 ## HDR twins
 
@@ -156,4 +155,6 @@ converted without leaving the coefficient domain. The `jxl-*` layers are lossles
 3. **HDR only in the P3 repositories** (proposed), or also BT.2020 PQ?
 4. **P3 → sRGB:** relative colorimetric with clipping (proposed), or a gamut-compression
    intent?
-5. **Linear Gray HEICs** (1495, 1496, 1498): treat as P3 like png-v3 did, or exclude?
+5. **HEIC colour profiles:** restore the 64 HEICs' camera `colr` properties in the
+   originals first (`metadata_audit_earlier_copies_2026-09-25.md`), or build the layers
+   from the corpus files with the 22 primaries overridden to Display P3?
