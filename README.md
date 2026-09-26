@@ -47,7 +47,7 @@ attribution; `keyinfo` holds page/variant/camera/iso (f-stops written `f1p8`, no
 | `6600-ia-scans-manuscript-illustrations` | 36 | 1.04 GB | png | 6.0–37 | Internet Archive | PD | PD plate scans (Haeckel, Hokusai, Owen Jones, Redouté, Shin-Bijutsukai, Trouvelot) |
 | `6800-ia-scans-manuscript-text` | 36 | 0.32 GB | png | 6.0–30 | Internet Archive | PD | PD manuscript text-page scans (same works) |
 | `7000-lilith-plots` | 126 | 0.02 GB | png | 1.0 | lilith (generated) | PD-own | Synthetic charts + line/polygon test patterns (hard-edge graphics) |
-| `8000-lilith-mobile-screenshots` | 32 | 0.04 GB | png/jpg | 2.3–5.6 | various web/apps | **screenshot-unverified** | Phone UI/web screenshots — third-party content |
+| `8000-lilith-mobile-screenshots` | 32 | 0.04 GB | png/jpg | 2.3–5.6 | various web/apps | CC0 | Phone UI/web screenshots (own capture); some frames are lilith's own content, rest third-party UI/content under fair use |
 | `8100-lilith-web-screenshots` | 370 | 0.27 GB | png | 0.2–5.2 | various web | PD (PD-filtered) | Website viewport crops at multiple resolutions/dpr |
 | `9000-lilith-ai-clipart` | 86 | 0.04 GB | png | 1.0–1.6 | lilith (AI-gen) | PD-own | AI-generated clipart (flat / transparent) |
 | `9094-lilith-ai-illustrations` | 75 | 0.26 GB | png | 1.6 | lilith (AI-gen) | PD-own | AI-generated illustrations |
@@ -63,16 +63,22 @@ attribution; `keyinfo` holds page/variant/camera/iso (f-stops written `f1p8`, no
 | Unsplash-License | 51 | Free to use; attribution appreciated (photographer in filename). Unsplash terms apply |
 | CC0 | 39 | Met + Art Institute open-access (public-domain dedication) |
 | Mailing-list-PD / PD-tool | 17 | within the web-screenshot set |
-| **screenshot-unverified** | 32 | mobile screenshots of third-party sites — **not cleared for redistribution** |
+| CC0 (maintainer's own capture) | 32 | mobile screenshots; capture is CC0, some frames are lilith's own content, rest show third-party UI/content under fair use |
 
-**~2,128 of 2,160 files are public-domain or PD-own** (freely usable). The 51
-Unsplash images follow the Unsplash License; the 32 mobile screenshots are unverified
-and should be excluded from any redistribution until cleared.
+**All 2,160 files are public-domain, PD-own, CC0 or Unsplash-licensed** (freely
+usable; the 51 Unsplash images under the Unsplash License, attribution
+appreciated). The 8000 mobile-screenshot set's *captures* are CC0; where a
+frame shows third-party app or web content rather than the maintainer's own,
+that content is included under fair use, not relicensed.
 
 Caveats: `license` is **folder-level best-effort, not per-file legal clearance**.
 Artwork "photos" are reproductions of PD works (CC0 on the reproduction). Document
-and screenshot renders may embed third-party logos/photos whose rights differ from the
-page. For redistribution, verify the 8000 set and spot-check embedded media.
+and screenshot renders may embed third-party logos/photos whose rights differ from
+the page; the 8000 mobile-screenshot set's captures are released CC0 by the
+maintainer, but that release covers the capture, not the subject matter — some
+frames are the maintainer's own content, and frames showing third-party app/web
+content are included under fair use, not CC0. Spot-check embedded media before
+redistribution.
 
 ## Variant branches
 
