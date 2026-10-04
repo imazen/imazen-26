@@ -29,6 +29,8 @@ crates.io releases the other mains require: their mains (0.9.31-beta.1, 0.2.0) f
 those version ranges. The 2026-09-25 run used older pinned revisions; its lockfile is
 `corpus-thumbs.Cargo.lock` next to that output.
 
-Known gap: the three Galaxy S23 Ultra DNGs (1444, 1455, 1458) are JPEG-compressed
-LinearRaw files that zenraw decodes to wrong colours in both of its backends
-(imazen/zenraw#17), so their thumbnails are unusable.
+Known gap: the three Galaxy S23 Ultra DNGs (1444, 1455, 1458) store their raw data as
+lossless JPEG with restart intervals, which neither of zenraw's backends handles
+(imazen/zenraw#17): the image turns into a constant after the first interval, so their
+thumbnails are unusable. LibRaw and rawspeed decode them; details in
+`benchmarks/signal_index_2026-09-24.md`.

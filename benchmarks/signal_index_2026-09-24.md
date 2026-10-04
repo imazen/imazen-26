@@ -110,6 +110,20 @@ no gain-map parameters (both: imazen/zenpipe#81). Separately, its JPEG adapter n
 carries the grid's colour and the `tmap` parameters, but it too misses tile-only colour.
 The tool works around all of these by asking each codec crate directly (below).
 
+**The 3 Galaxy S23 Ultra DNGs (1444, 1455, 1458) store their raw data as lossless JPEG
+with restart intervals.** Each is one strip of 3-component lossless JPEG (SOF3, predictor
+1; 16-bit in 1444, 14-bit in the two 8160×6120 files) with a DRI marker: a restart every
+16 rows in 1444, every row in 1455 and 1458. Neither of zenraw's backends handles restart
+intervals (rawler 0.8.0 `decompressors/ljpeg`, rawloader 0.37.2 `decoders/ljpeg`), so
+both decode the first interval and then a constant. rawler 0.8.0 on 1444 gives plausible
+rows 0–15 and [65532, 85, 35] everywhere from row 16 (imazen/zenraw#17, whose first
+root-cause guess, that neither backend JPEG-decodes the strip, was wrong; corrected there
+2026-10-03). LibRaw (through ImageMagick) and darktable 5.4.1 (rawspeed) decode all three,
+and their renders match the cameras' embedded previews. LibRaw warns "Data corrupted" on
+1458, but the oldest copy gives the same warning, all 6,119 restart markers are present
+and in sequence, rawspeed decodes it without a warning, and the rows around the flagged
+byte offset show no defect: the file is sound.
+
 ## Where the png-v3 renders stand
 
 Joining each source's colour to its png-v3 SDR render's tag
@@ -128,7 +142,7 @@ Joining each source's colour to its png-v3 SDR render's tag
 | **Display P3 on tiles only (HEIC)** | **42** | `cICP 1/13/0/1` | **mislabelled** |
 | **Adobe RGB (JPEG)** | **2** | `cICP 1/13/0/1` | **mislabelled** |
 | P3 base, rewritten to Linear Gray (HEIC) | 3 | `cICP 12/13/0/1` | ok (camera file is Display P3) |
-| DNG | 3 | no render | — |
+| DNG | 3 | no render | — (zenraw#17, restart intervals) |
 
 **210 png-v3 renders are tagged sRGB although their source is wide-gamut.** (The
 2026-09-22 audit counted 165 within pristine-8th's 505 renders.) pristine-8th has the
