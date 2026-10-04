@@ -1,0 +1,69 @@
+[package]
+name = "compat-matrix"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Reader-compatibility matrix tooling: fixture generator (zen encoders + byte-level writers) and the zencodecs reader adapter"
+
+# Standalone: not part of any workspace.
+[workspace]
+
+[dependencies]
+# Decode path: same pins as tools/corpus-thumbs (zencodecs at zenpipe 6a5b052,
+# git codecs at the revisions zenpipe's Cargo.lock resolves there), plus
+# avif-decode and jxl-decode for the AVIF/JXL synthetic fixtures.
+zencodecs = { git = "https://github.com/imazen/zenpipe", rev = "6a5b052b2c0d398cbd16add420babe246a9638b7", default-features = false, features = ["jpeg", "jpeg-ultrahdr", "png", "webp", "heic-decode", "raw-decode", "raw-decode-exif", "raw-decode-gainmap", "avif-decode", "jxl-decode"] }
+zencodec = "0.1.26"
+zenpixels = { version = "0.2.16", default-features = false, features = ["std", "icc", "imgref"] }
+zenpixels-convert = { version = "0.2.16", features = ["rgb", "imgref", "cms-moxcms"] }
+enough = "0.4.4"
+almost-enough = "0.4.4"
+imgref = "1.12.3"
+rgb = "0.8.53"
+# Encode path (fixture generator). Versions resolve to the git pins below.
+zenjpeg = { version = "0.9.0", features = ["ultrahdr"] }
+zenpng = "0.2.0"
+zenwebp = "0.5.0"
+zenavif = { version = "0.1.7", features = ["encode", "encode-mono"] }
+zenjxl = { version = "0.3.0", default-features = false, features = ["decode", "encode", "zencodec"] }
+zenresize = "0.3.1"
+# default-features off: its default pulls butteraugli-loop + learned-admission
+# (the latter needs unpublished zenanalyze 0.2.0 internals).
+jxl-encoder = { version = "0.3.2", default-features = false, features = ["std", "convenience", "hdr-gainmap"] }
+heic = { git = "https://github.com/imazen/heic", rev = "8d40c94e018082f4bffcfc688dfbb8e83925a1b0", default-features = false }
+ultrahdr-core = { version = "0.6.0", default-features = false }
+sha2 = "0.11.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+miniz_oxide = "0.8"
+
+[patch.crates-io]
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "e7c53d2e36914989585791b504a957064e0e8d91" }
+heic = { git = "https://github.com/imazen/heic", rev = "8d40c94e018082f4bffcfc688dfbb8e83925a1b0" }
+zenpixels = { git = "https://github.com/imazen/zenpixels", rev = "3dbf24634fbd854e01d52f524ef87bac85e5507b" }
+zenpixels-convert = { git = "https://github.com/imazen/zenpixels", rev = "3dbf24634fbd854e01d52f524ef87bac85e5507b" }
+ultrahdr-core = { git = "https://github.com/imazen/ultrahdr", rev = "031d4a2070a522f82bd02aee712a2806a2c17bbd" }
+zenpng = { git = "https://github.com/imazen/zenpng", rev = "cfccd88f77cce5836c25bb70534fa49e4a5cd3c0" }
+zenraw = { git = "https://github.com/imazen/zenraw", rev = "a6b78e93c46e32df4eb1bc9066f494a036b36031" }
+zenwebp = { git = "https://github.com/imazen/zenwebp", rev = "47c562b18262a19e7db5b233476fcd3fb59ac91d" }
+zenavif = { git = "https://github.com/imazen/zenavif", rev = "11033c957df69dcf37a6820032ed2a64f2f6f213" }
+zenavif-parse = { git = "https://github.com/imazen/zenavif", rev = "11033c957df69dcf37a6820032ed2a64f2f6f213" }
+zenjxl = { git = "https://github.com/imazen/zenjxl", rev = "9226d3a32cfd82f6c079f2921a8237f4ae05ee24" }
+zenjxl-decoder = { git = "https://github.com/imazen/zenjxl-decoder", rev = "f1faec70e41b0c1f31e9db3d2142071bf02d08d5" }
+jxl-encoder = { git = "https://github.com/imazen/jxl-encoder", rev = "cd9a7325f97f5e178863d867c81b694cd8b169aa" }
+zenresize = { git = "https://github.com/imazen/zenresize", rev = "e3975fb9d6d6b7baa96038a0eb8e27febb37c012" }
+# Optional zenanalyze-family deps still resolve; crates.io only has 0.1.0.
+zenanalyze = { git = "https://github.com/imazen/zenanalyze", rev = "13d40c3be60ecfc3e482476ef068ff773b2c5b8d" }
+zenpredict = { git = "https://github.com/imazen/zenanalyze", rev = "9a9be8200f26f643b45338711426cacae820f3a1" }
+zenpicker = { git = "https://github.com/imazen/zenanalyze", rev = "f7fe3435169716579670944d1b2cf1e0132c69db" }
+
+# zenravif (via zenavif encode) pulls zenavif-serialize 0.2.0 from the
+# archived standalone repo (rev 990bd6d) — that serializer writes no `tmap`
+# brand and no grpl/altr group, so libavif ignores the muxed gain map. Fold
+# that git source onto the zenavif workspace member, which has the 2026-07
+# fix (same rev as the zenavif/zenavif-parse pins above).
+[patch."https://github.com/imazen/zenavif-serialize"]
+zenavif-serialize = { git = "https://github.com/imazen/zenavif", rev = "11033c957df69dcf37a6820032ed2a64f2f6f213" }
+
+[profile.release]
+debug = false

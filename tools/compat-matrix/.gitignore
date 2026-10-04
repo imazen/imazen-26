@@ -1,0 +1,7 @@
+target/
+# binaries stay out of git — archives live under /mnt/v/output (see results/*.pointer.md)
+results/**/*.tsv.gz
+
+# repo convention: tool lockfiles are not committed (see corpus-thumbs);
+# a copy + sha256 is stored beside the run output (results/*.pointer.md)
+Cargo.lock
