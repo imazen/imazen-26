@@ -124,6 +124,25 @@ and their renders match the cameras' embedded previews. LibRaw warns "Data corru
 and in sequence, rawspeed decodes it without a warning, and the rows around the flagged
 byte offset show no defect: the file is sound.
 
+**18 of the 19 iPhone 16/17 Pro HEICs won't open in libheif 1.17 (Ubuntu 24.04).** Each
+carries a depth map (`auxC` `urn:mpeg:hevc:2015:auxid:2`) whose `auxl` reference names both
+the primary grid and the ISO 21496-1 `tmap` item. libheif 1.17.6 doesn't know `tmap`
+items, so it reports "Non-existing depth image referenced" and refuses the whole file;
+vips and ImageMagick built on it fail the same way. libheif 1.21.2 decodes them, and so
+does zen's heic. Measured 2026-10-03 on 1497 (the corpus file, its whitelist-v2 version and
+the oldest backup, so the camera export wrote it this way), 1515, 1534 and 1640; 1503, the one
+`tmap` file without a depth map, decodes. Pointing the second reference at the primary
+instead (same size) is rejected by both libheif versions ("'iref' has double
+references"), so a repair has to remove the reference and re-base the `iloc` offsets
+behind it. A scratch prototype doing exactly that on 1497's whitelist-v2 file (2 bytes
+shorter, 50 `iloc` offsets re-based) opens in libheif 1.17.6, decodes to the same pixels as
+the original under libheif 1.21.2, and zen's signal probe reports the same `tmap`, gain
+map, headroom (1.845 stops), depth map and colour.
+
+**heif-dec can't write the 3 Linear Gray HEICs (1495, 1496, 1498).** libheif decodes them
+but its PNG writer rejects a Gray ICC profile on RGB pixels. That profile is the August
+rewrite's damage; whitelist v2 restores the cameras' Display P3.
+
 ## Where the png-v3 renders stand
 
 Joining each source's colour to its png-v3 SDR render's tag
