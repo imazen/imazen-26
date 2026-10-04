@@ -1,0 +1,35 @@
+adapter	version
+avifdec	Version: 1.0.4 (dav1d [dec]:1.4.1, libgav1 [dec]:0.18.0, aom [enc/dec]:v3.8.2, rav1e [enc]:0.7.1 (UNKNOWN), svt [enc]:v1.7.0)
+chromium	chromium-153.0.8010.12-screenshot
+chromium-canvas	chromium-153.0.8010.12-canvas
+djpeg	libjpeg-turbo version 2.1.5 (build 20240408)
+djxl	djxl v0.7.0 [AVX3_ZEN4,AVX3,AVX2,SSE4,SSSE3,SSE2]
+djxl-best	djxl v0.7.0 [AVX3_ZEN4,AVX3,AVX2,SSE4,SSSE3,SSE2]
+dwebp	1.3.2
+ffmpeg	ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers
+firefox	firefox-155.0-screenshot
+firefox-canvas	firefox-155.0-canvas
+firefox-cm2	firefox-155.0-screenshot
+firefox-cm2-canvas	firefox-155.0-canvas
+gdkpixbuf	gdk-pixbuf 2.42.10+dfsg-3ubuntu3.3
+graphicsmagick	GraphicsMagick 1.3.42 2023-09-23 Q16 http://www.GraphicsMagick.org/
+graphicsmagick-best	GraphicsMagick 1.3.42 2023-09-23 Q16 http://www.GraphicsMagick.org/
+heif-dec	1.17.6
+imagemagick	Version: ImageMagick 6.9.12-98 Q16 x86_64 18038 https://legacy.imagemagick.org
+imagemagick-autorot	Version: ImageMagick 6.9.12-98 Q16 x86_64 18038 https://legacy.imagemagick.org
+imagemagick-best	Version: ImageMagick 6.9.12-98 Q16 x86_64 18038 https://legacy.imagemagick.org
+opencv	OpenCV 4.6.0
+opencv-unchanged	OpenCV 4.6.0
+pillow	Pillow 10.2.0
+pillow-best	Pillow 10.2.0-best
+pngtopam	pngtopam: Using libnetpbm from Netpbm Version: Netpbm 11.5.2
+qt	Qt 6.4.2
+qt-best	Qt 6.4.2-best
+ultrahdr_app	v1.4.0
+vips	vips-8.15.1
+vips-best	vips-8.15.1
+vips-raw	vips-8.15.1
+webkit	webkit-26.6-screenshot
+webkit-canvas	webkit-26.6-canvas
+zen	0.1.0
+zen-raw	0.1.0

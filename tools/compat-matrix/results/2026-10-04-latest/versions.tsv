@@ -1,0 +1,24 @@
+adapter	version
+avifdec	Version: 1.4.2 (dav1d [dec]:1.5.4, aom [enc/dec]:v3.15.0, rav1e [enc]:0.8.1 (UNKNOWN), svt [enc]:v4.2.0)
+djpeg	libjpeg-turbo version 3.2.0 (build 20260701)
+djxl	djxl v0.12.0 a7a9c787 [AVX3_DL,AVX2,SSE4,SSE2,unsupported but chosen: AVX3_ZEN4] {GNU 16.1.1}
+djxl-best	djxl v0.12.0 a7a9c787 [AVX3_DL,AVX2,SSE4,SSE2,unsupported but chosen: AVX3_ZEN4] {GNU 16.1.1}
+dwebp	1.6.0
+ffmpeg	ffmpeg version n9.0.1 Copyright (c) 2000-2026 the FFmpeg developers
+gdkpixbuf	gdk-pixbuf
+graphicsmagick	GraphicsMagick 1.3.48 2026-07-23 Q16 http://www.GraphicsMagick.org/
+graphicsmagick-best	GraphicsMagick 1.3.48 2026-07-23 Q16 http://www.GraphicsMagick.org/
+heif-dec	1.23.2
+imagemagick	Version: ImageMagick 7.1.2-30 Q16-HDRI x86_64 7d45ed032:20260823 https://imagemagick.org
+imagemagick-autorot	Version: ImageMagick 7.1.2-30 Q16-HDRI x86_64 7d45ed032:20260823 https://imagemagick.org
+imagemagick-best	Version: ImageMagick 7.1.2-30 Q16-HDRI x86_64 7d45ed032:20260823 https://imagemagick.org
+opencv	OpenCV 5.0.0
+opencv-unchanged	OpenCV 5.0.0
+pillow	Pillow 12.3.0
+pillow-best	Pillow 12.3.0-best
+pngtopam	pngtopam: Using libnetpbm from Netpbm Version: Netpbm 10.86.50
+qt	Qt 6.11.2
+qt-best	Qt 6.11.2-best
+ultrahdr_app	v2.0.2
+zen	0.1.0
+zen-raw	0.1.0
