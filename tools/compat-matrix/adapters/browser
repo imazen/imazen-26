@@ -1,0 +1,29 @@
+#!/bin/bash
+# Browser decode via Playwright. $4 = engine (chromium|firefox|webkit),
+# $5 = mode (screenshot|canvas, default screenshot).
+# Screenshots cannot prove alpha -> alpha_measurable=false in that mode.
+IN="$1" OUT="$2" JSON="$3" ENGINE="${4:-chromium}" MODE="${5:-screenshot}"
+T0=$(date +%s%3N)
+ERR=$(node /opt/adapters/browser_decode.mjs "$IN" "$OUT" "$ENGINE" "$MODE" 2>&1) && ST=ok || ST=error
+T1=$(date +%s%3N)
+STATS=$(grep '^STATS:' <<<"$ERR" | tail -1 | cut -d: -f2-)
+PREFS=$(grep '^PREFS:' <<<"$ERR" | tail -1 | cut -d: -f2-)
+VER=$(grep '^VERSION:' <<<"$ERR" | tail -1 | cut -d: -f2-)
+# full stderr preserved to sidecar; json carries a bounded head
+printf '%s' "$ERR" > "$JSON.stderr"
+ERR=$(grep -v '^\(STATS\|PREFS\|VERSION\):' <<<"$ERR" | head -c 2000 | tr '\n' ' ' | sed 's/"/'"'"'/g')
+if [ "$ST" = "ok" ]; then
+    W=$(node -e "const d=require('fs').readFileSync('$OUT');console.log(d.readUInt32BE(16)+' '+d.readUInt32BE(20))" 2>/dev/null || echo "0 0")
+else W="0 0"; STATS=""; fi
+MSTD=""
+[ -n "$STATS" ] && MSTD=",$(node -e "const s=$STATS;console.log('\"mean\":'+JSON.stringify(s.mean)+',\"std\":'+JSON.stringify(s.std))" 2>/dev/null)"
+PFLD=""
+[ -n "$PREFS" ] && PFLD=",\"prefs\":$PREFS"
+ALPH="true"
+[ "$MODE" = "screenshot" ] && ALPH="false"
+VERSTR="$ENGINE-$MODE"
+[ -n "$VER" ] && VERSTR="$ENGINE-$VER-$MODE"
+# checkpoint identity = image id (from CM_IMAGE_ID) + sha of adapter+mjs
+ADAPTER_SHA=$(sha256sum "$0" /opt/adapters/browser_decode.mjs 2>/dev/null | sha256sum | cut -d' ' -f1)
+printf '{"status":"%s","w":%s,"h":%s,"ms":%.2f,"version":"%s","alpha_measurable":%s,"image_id":"%s","adapter_sha":"%s","fixture_sha":"%s","error_head":"%s"%s%s}\n' \
+    "$ST" ${W% *} ${W#* } $((T1-T0)) "$VERSTR" "$ALPH" "${CM_IMAGE_ID:-}" "$ADAPTER_SHA" "${CM_FIXTURE_SHA:-}" "$ERR" "$MSTD" "$PFLD" > "$JSON"

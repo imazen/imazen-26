@@ -1,0 +1,41 @@
+# libultrahdr: not packaged for Ubuntu 24.04 — build the reference app.
+FROM ubuntu:24.04 AS uhdr-build
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git cmake g++ make libjpeg-turbo8-dev ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+RUN git clone --depth 1 --branch v1.4.0 https://github.com/google/libultrahdr /u \
+    && cmake -S /u -B /u/b -DCMAKE_BUILD_TYPE=Release \
+        -DUHDR_BUILD_TESTS=OFF -DUHDR_BUILD_FUZZERS=OFF -DUHDR_BUILD_BENCHMARK=OFF \
+    && cmake --build /u/b --target ultrahdr_app -j"$(nproc)"
+
+# imazen26-compat:lts — Ubuntu 24.04 LTS, distribution packages only.
+# The "what a conservative distro user gets" reference point.
+FROM ubuntu:24.04
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        # CLI decoders
+        libjpeg-turbo-progs netpbm webp libheif-examples libavif-bin \
+        libjxl-tools imagemagick graphicsmagick libvips-tools ffmpeg \
+        libraw-bin \
+        libheif-plugin-libde265 libheif-plugin-aomdec libheif-plugin-dav1d \
+        # metadata readers
+        libimage-exiftool-perl exiv2 \
+        # python readers
+        python3-pil python3-opencv python3-gi gir1.2-gdkpixbuf-2.0 \
+        python3-pyqt6 \
+        # heif/avif loaders for gdk-pixbuf + qt (best effort)
+        heif-gdk-pixbuf \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=uhdr-build /u/b/ultrahdr_app /usr/local/bin/ultrahdr_app
+COPY --from=uhdr-build /u/b/*.so* /usr/local/lib/
+RUN ldconfig 2>/dev/null || true
+
+COPY adapters/ /opt/adapters/
+RUN chmod +x /opt/adapters/* 2>/dev/null || true
+
+# uniform adapter contract smoke: adapter <in> <out.png> <out.json>
+ENTRYPOINT ["/bin/bash"]

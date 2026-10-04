@@ -1,0 +1,18 @@
+#!/bin/bash
+# ImageMagick best mode: -auto-orient + -profile sRGB.icc when input has ICC
+source "$(dirname "$0")/lib.sh"
+IN="$1" OUT="$2" JSON="$3"
+if command -v magick >/dev/null; then IM="magick"; else IM="convert"; fi
+ADAPTER_VERSION=$($IM -version  </dev/null 2>&1 | head -1)
+export ADAPTER_VERSION
+im_best() {
+    local prof
+    prof=$(identify -format '%[profiles]' "$1" 2>/dev/null)
+    if grep -qi icc <<<"$prof"; then
+        convert "$1" -auto-orient -profile /f/icc/srgb.icc "$2"
+    else
+        convert "$1" -auto-orient "$2"
+    fi
+}
+export -f im_best
+run_adapter "$OUT" "$JSON" im_best "$IN" "$OUT"

@@ -1,0 +1,26 @@
+# imazen26-compat:latest — Arch rolling pinned to an Archive snapshot.
+# The "what a bleeding-edge user gets" reference point. Snapshot date is
+# recorded in arch-snapshot.txt next to this file.
+FROM archlinux:base
+ARG SNAPSHOT=2026/09/01
+
+# Pin pacman to the archive snapshot so builds are reproducible.
+RUN printf 'Server = https://archive.archlinux.org/repos/%s/$repo/os/$arch\n' \
+        "$SNAPSHOT" > /etc/pacman.d/mirrorlist \
+ && pacman -Syyu --noconfirm \
+ && pacman -S --noconfirm --needed \
+        # CLI decoders
+        libjpeg-turbo netpbm libwebp libheif libavif libjxl \
+        imagemagick graphicsmagick libvips ffmpeg libraw libultrahdr libwebp-utils \
+        # metadata readers
+        perl-image-exiftool exiv2 \
+        # python readers
+        python-pillow python-opencv python-gobject gdk-pixbuf2 \
+        python-pyqt6 qt6-base \
+        bash python \
+ && pacman -Scc --noconfirm
+
+COPY adapters/ /opt/adapters/
+RUN chmod +x /opt/adapters/* 2>/dev/null || true
+
+ENTRYPOINT ["/bin/bash"]

@@ -1,0 +1,7 @@
+#!/bin/bash
+source "$(dirname "$0")/lib.sh"
+IN="$1" OUT="$2" JSON="$3"
+# module-load warnings precede the banner; take the version token only
+ADAPTER_VERSION=$(vips --version </dev/null 2>/dev/null | grep -m1 -oE 'vips-[0-9.]+' || echo "vips ?")
+export ADAPTER_VERSION
+run_adapter "$OUT" "$JSON" vips autorot "$IN" "$OUT"

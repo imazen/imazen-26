@@ -1,0 +1,25 @@
+#!/bin/bash
+source "$(dirname "$0")/lib.sh"
+IN="$1" OUT="$2" JSON="$3"
+ADAPTER_VERSION="libraw $(dpkg-query -W -f='${Version}' libraw-bin 2>/dev/null || pacman -Q libraw 2>/dev/null | awk '{print $2}')"
+export ADAPTER_VERSION
+TMPD=$(mktemp -d)
+cp "$IN" "$TMPD/in.raw"
+err=$(cd "$TMPD" && timeout 90 dcraw_emu -w -T in.raw </dev/null 2>&1)
+T=$(ls "$TMPD"/*.tiff "$TMPD"/*.ppm 2>/dev/null | head -1)
+if [ -z "$T" ]; then write_json error "$OUT" "$JSON" 0 "$err"; rm -rf "$TMPD"; exit 0; fi
+run_adapter "$OUT" "$JSON" anytopnm_fallback "$T" "$OUT"
+# dcraw_emu warnings on successful decodes (e.g. LibRaw "data corrupted")
+# are diagnostic data — fold a bounded head into error_head + full sidecar.
+if [ -n "$err" ]; then
+    printf '%s' "$err" >"$JSON.decode.stderr"
+    head=$(head -c 1500 <<<"$err" | tr '\n' ' ' | sed 's/"/'"'"'/g')
+    python3 - "$JSON" "$head" <<'PY'
+import json,sys
+p,h=sys.argv[1],sys.argv[2]
+d=json.load(open(p))
+d['error_head']=((d.get('error_head') or '')+' | '+h).strip(' |')
+json.dump(d,open(p,'w'))
+PY
+fi
+rm -rf "$TMPD"

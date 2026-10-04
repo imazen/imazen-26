@@ -1,0 +1,27 @@
+#!/bin/bash
+source "$(dirname "$0")/lib.sh"
+IN="$1" OUT="$2" JSON="$3"
+ADAPTER_VERSION=$(ultrahdr_app 2>&1 | grep -i "lib version" | head -1 | sed 's/.*version://')
+export ADAPTER_VERSION
+TMPD=$(mktemp -d)
+cp "$IN" "$TMPD/in.jpg"
+# decode mode: -m 1, -o 3 = rgba8888, -O 3 = srgb transfer (SDR rendition)
+err=$(cd "$TMPD" && timeout 90 ultrahdr_app -m 1 -j in.jpg -o 3 -O 3 </dev/null 2>&1)
+RAW="$TMPD/outrgb.raw"
+if [ ! -f "$RAW" ]; then write_json error "$OUT" "$JSON" 0 "$err"; rm -rf "$TMPD"; exit 0; fi
+python3 - "$TMPD/in.jpg" "$RAW" "$OUT" <<'PY'
+import struct, sys
+from PIL import Image
+src, raw, out = sys.argv[1:4]
+im = Image.open(src); w, h = im.size
+d = open(raw, 'rb').read()
+if len(d) == w * h * 4:
+    px = Image.frombytes('RGBA', (w, h), d)
+elif len(d) == w * h * 3:
+    px = Image.frombytes('RGB', (w, h), d)
+else:
+    raise SystemExit(f"unexpected raw size {len(d)} for {w}x{h}")
+px.convert('RGB').save(out)
+PY
+if [ -s "$OUT" ]; then write_json ok "$OUT" "$JSON" 0 ""; else write_json error "$OUT" "$JSON" 0 "raw->png failed"; fi
+rm -rf "$TMPD"

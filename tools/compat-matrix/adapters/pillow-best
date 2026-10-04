@@ -1,0 +1,9 @@
+#!/bin/bash
+# Pillow best mode: exif_transpose + ImageCms -> sRGB when ICC present
+source "$(dirname "$0")/lib.sh"
+ADAPTER_VERSION=$(python3 -c 'import PIL; print("Pillow "+PIL.__version__+"-best")' 2>&1)
+export ADAPTER_VERSION
+T0=$(ms_now)
+ERR=$(python3 /opt/adapters/py/pillow_best.py "$1" "$2" 2>&1) && ST=ok || ST=error
+T1=$(ms_now)
+write_json "$ST" "$2" "$3" $((T1-T0)) "$ERR"

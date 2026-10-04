@@ -1,0 +1,7 @@
+#!/bin/bash
+# djxl best mode: managed render to sRGB (relative colorimetric)
+source "$(dirname "$0")/lib.sh"
+IN="$1" OUT="$2" JSON="$3"
+ADAPTER_VERSION=$(djxl --version  </dev/null 2>&1 | head -1)
+export ADAPTER_VERSION
+run_adapter "$OUT" "$JSON" djxl "$IN" "$OUT" --color_space=RGB_D65_SRG_Rel_SRG

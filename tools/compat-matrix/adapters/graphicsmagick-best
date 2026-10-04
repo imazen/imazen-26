@@ -1,0 +1,15 @@
+#!/bin/bash
+# GraphicsMagick best mode: -auto-orient + -profile sRGB.icc when input has ICC
+source "$(dirname "$0")/lib.sh"
+IN="$1" OUT="$2" JSON="$3"
+ADAPTER_VERSION=$(gm version  </dev/null 2>&1 | head -1)
+export ADAPTER_VERSION
+gm_best() {
+    if gm identify -verbose "$1" 2>/dev/null | grep -qiE 'profile-(color|icc)'; then
+        gm convert "$1" -auto-orient -profile /f/icc/srgb.icc "$2"
+    else
+        gm convert "$1" -auto-orient "$2"
+    fi
+}
+export -f gm_best
+run_adapter "$OUT" "$JSON" gm_best "$IN" "$OUT"

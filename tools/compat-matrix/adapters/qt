@@ -1,0 +1,8 @@
+#!/bin/bash
+source "$(dirname "$0")/lib.sh"
+ADAPTER_VERSION=$(python3 -c 'from PyQt6.QtCore import QT_VERSION_STR; print("Qt "+QT_VERSION_STR)' 2>&1)
+export ADAPTER_VERSION
+T0=$(ms_now)
+ERR=$(python3 /opt/adapters/py/qt_decode.py "$1" "$2" 2>&1) && ST=ok || ST=error
+T1=$(ms_now)
+write_json "$ST" "$2" "$3" $((T1-T0)) "$ERR"

@@ -1,0 +1,25 @@
+#!/bin/bash
+# vips best mode: autorot + icc_transform --embedded -> sRGB
+# Fails loudly: a vips error is a real result, never a byte-copy of input.
+source "$(dirname "$0")/lib.sh"
+IN="$1" OUT="$2" JSON="$3"
+# module-load warnings precede the banner; take the version token only
+ADAPTER_VERSION=$(vips --version </dev/null 2>/dev/null | grep -m1 -oE 'vips-[0-9.]+' || echo "vips ?")
+export ADAPTER_VERSION
+vips_best() {
+    local tmp err
+    tmp=$(mktemp --suffix=.png)
+    if ! err=$(vips autorot "$1" "$tmp" 2>&1); then
+        rm -f "$tmp"
+        echo "vips autorot: $err" >&2
+        return 1
+    fi
+    if ! err=$(vips icc_transform "$tmp" "$2" srgb --embedded 2>&1); then
+        rm -f "$tmp" "$2"
+        echo "vips icc_transform: $err" >&2
+        return 1
+    fi
+    rm -f "$tmp"
+}
+export -f vips_best
+run_adapter "$OUT" "$JSON" vips_best "$IN" "$OUT"

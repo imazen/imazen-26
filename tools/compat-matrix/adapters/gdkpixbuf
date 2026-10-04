@@ -1,0 +1,11 @@
+#!/bin/bash
+source "$(dirname "$0")/lib.sh"
+# dpkg is absent on the latest image; PIXBUF_VERSION is the library's own.
+ADAPTER_VERSION=$(python3 -c "
+import gi; gi.require_version('GdkPixbuf','2.0')
+from gi.repository import GdkPixbuf; print('gdk-pixbuf ' + GdkPixbuf.PIXBUF_VERSION)" 2>/dev/null || echo "gdk-pixbuf ?")
+export ADAPTER_VERSION
+T0=$(ms_now)
+ERR=$(python3 /opt/adapters/py/gdkpixbuf_decode.py "$1" "$2" 2>&1) && ST=ok || ST=error
+T1=$(ms_now)
+write_json "$ST" "$2" "$3" $((T1-T0)) "$ERR"

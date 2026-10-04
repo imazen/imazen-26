@@ -1,0 +1,14 @@
+# imazen26-compat:browsers — pinned Playwright image with all three engines.
+FROM mcr.microsoft.com/playwright:v1.63.0-noble
+
+# playwright npm module matching the preinstalled browser binaries.
+RUN mkdir -p /opt/pw && cd /opt/pw \
+ && npm init -y >/dev/null \
+ && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm i playwright@1.63.0 >/dev/null
+
+COPY adapters/ /opt/adapters/
+RUN chmod +x /opt/adapters/* \
+ && ln -s /opt/pw/node_modules /opt/adapters/node_modules
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+ENTRYPOINT ["/bin/bash"]

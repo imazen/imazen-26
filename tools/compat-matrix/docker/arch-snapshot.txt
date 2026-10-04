@@ -1,0 +1,3 @@
+# Arch Linux Archive snapshot pin — reproducible "latest" image.
+# https://archive.archlinux.org/repos/<YYYY/MM/DD>/
+2026/09/01

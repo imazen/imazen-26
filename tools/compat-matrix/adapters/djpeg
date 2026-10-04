@@ -1,0 +1,21 @@
+#!/bin/bash
+source "$(dirname "$0")/lib.sh"
+IN="$1" OUT="$2" JSON="$3"
+ADAPTER_VERSION=$(djpeg -version  </dev/null 2>&1 | head -1)
+export ADAPTER_VERSION
+TMP=$(mktemp --suffix=.ppm)
+# stderr goes to $err, NOT into the PPM (2>&1 >file order matters).
+err=$(djpeg -rgb -ppm "$IN" 2>&1 >"$TMP") || { write_json error "$OUT" "$JSON" 0 "$err"; rm -f "$TMP"; exit 0; }
+run_adapter "$OUT" "$JSON" pnm_to_png "$TMP" "$OUT"
+if [ -n "$err" ]; then
+    printf '%s' "$err" >"$JSON.decode.stderr"
+    head=$(head -c 1500 <<<"$err" | tr '\n' ' ' | sed 's/"/'"'"'/g')
+    python3 - "$JSON" "$head" <<'PY'
+import json,sys
+p,h=sys.argv[1],sys.argv[2]
+d=json.load(open(p))
+d['error_head']=((d.get('error_head') or '')+' | '+h).strip(' |')
+json.dump(d,open(p,'w'))
+PY
+fi
+rm -f "$TMP"
