@@ -6,7 +6,7 @@ jobs:
     steps:
       # lfs: false is the default — image files land as LFS POINTERS, which is
       # exactly what the variant-branch check below needs to inspect.
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: classify branch
         id: cls
         run: |
