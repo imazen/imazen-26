@@ -90,3 +90,9 @@ Measured 2026-09-22 (`../benchmarks/split_leak_audit_2026-09-22.md`), the family
 same URL captured under two capture-job slugs), photo bursts in 1000–1600 (consecutive
 shots alternate buckets), and multi-page NOAA reports. Group by `sha256`, by the 8100
 `url` + page, and by capture timestamp if your task is near-duplicate-sensitive.
+
+1214 was replaced by its camera original on 2026-10-07 (the earlier file was a 3000×3556
+crop whose colour a re-save tool had mangled; see `../benchmarks/signal_index_2026-09-24.md`).
+Its path is now `…_20240424-123020_4000x3000.jpg`. The dated selections
+`imazen26_representatives_K500_2026-06-14.tsv` and `…_K500_even_2026-06-18.tsv` keep the
+old path as a record of what was picked, as do the registered variant sets.
