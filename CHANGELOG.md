@@ -5,6 +5,7 @@
 ### Changed
 - `tools/corpus-thumbs` builds against the main branch of every imazen crate instead of crates.io releases; `sync-main.sh` supplies zencodec, zenmeta and ultrahdr-core main by path, and the committed `Cargo.lock` records the rest
 - `corpus-guard`: `actions/checkout` v5 -> v7 (a03cc90)
+- `STORAGE-MAP.md` and `ACCESS.md` no longer claim the metadata rewrite left gain maps hash-verified unchanged; they list the colour and HDR structure it removed (33 UltraHDR gain maps, 24 Apple HDR parameter sets, 22 HEIC primary profiles, `Flash`, the Interop sRGB marker)
 - 1214 is now its camera original (`…_20240424-123020_4000x3000.jpg`, Display P3, 4000×3000 stored with orientation 6) in place of a colour-mangled 3000×3556 crop; manifests, split maps, the split link and the png-v3 index point at it (its png-v3 render keeps the old name); the dated K500 selections and registered variant sets keep the old path
 - Git LFS objects for `variant/png-v3` and `variant/pristine-8th` are served from R2 (`codec-corpus/lfs/imazen-26/<sha256>`) through imazen's git-lfs-s3-proxy instance at `imazen-lfs.pages.dev` instead of GitHub's LFS store; a clone needs no credentials and draws no GitHub LFS bandwidth (branch commits 0264d4d, 9a6cf7a)
 - `corpus-guard` requires a credential-free `.lfsconfig` naming the proxy on `variant/*` branches

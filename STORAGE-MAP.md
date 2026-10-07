@@ -73,8 +73,13 @@ WhiteBalance, Flash), capture dates, Orientation, ColorSpace, and the ICC profil
 No location tags, no serial numbers, no device or asset UUIDs — in any tag group, in
 any format (jpg/heic/dng/png). Enforcement is a whitelist rewrite
 (`exiftool -all= -tagsFromFile @ <keep-list> -icc_profile`), so unknown vendor tags fail
-closed rather than silently surviving. Decoded pixel data — including HEIC auxiliary and
-JPEG MPF gain maps — is hash-verified unchanged by the rewrite.
+closed rather than silently surviving. The rewrite left coded image data unchanged, but it
+also removed colour and HDR structure the policy meant to keep: the gain-map images, MPF
+index, `hdrgm` XMP and ISO 21496-1 records of the 33 UltraHDR JPEGs; the HDR headroom values
+Apple stores in the EXIF MakerNote for 24 HEIC gain maps; the `Flash` tag and the EXIF Interop
+sRGB marker; and, in 22 HEICs, the primary image's colour profile, which it replaced with the
+profile of the gain-map or `tmap` item. Details:
+[`benchmarks/metadata_audit_earlier_copies_2026-09-25.md`](benchmarks/metadata_audit_earlier_copies_2026-09-25.md).
 
 Verified 2026-08-22: 0/319 camera-folder files carry location or device-identifying
 metadata, in this tree and in the published R2 copies (spot sha256 match between the
