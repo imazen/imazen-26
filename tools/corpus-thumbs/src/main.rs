@@ -14,6 +14,10 @@
 //! `max`×`max` box (never upscaled), for full-screen viewing:
 //!   corpus-thumbs --preview <max> <quality> <list.tsv> <out-dir>
 //!   →  <out-dir>/<id>.webp, <out-dir>/previews.tsv (id, w, h, bytes, orientation, error)
+//!
+//! dHash mode prints difference hashes of the oriented sRGB image for near-duplicate
+//! search: 64-bit (9×8 luma) and 256-bit (17×16 luma), as hex.
+//!   corpus-thumbs --dhash <list.tsv>   →  stdout: id, dhash64, dhash256, error
 
 #![forbid(unsafe_code)]
 
@@ -221,8 +225,53 @@ fn previews(args: &[String]) {
     fs::write(out.join("previews.tsv"), tsv).expect("write tsv");
 }
 
+/// Difference hash: resize to (w+1)×h luma, one bit per horizontal neighbour pair.
+fn dhash(img: &Rgba, w: usize, h: usize) -> String {
+    let config = ResizeConfig::builder(img.w as u32, img.h as u32, (w + 1) as u32, h as u32)
+        .filter(Filter::Lanczos)
+        .format(zenresize::PixelDescriptor::RGBA8_SRGB)
+        .build();
+    let px = Resizer::new(&config).resize(&img.px);
+    let luma: Vec<f32> = px
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|c| 0.2126 * c[0] as f32 + 0.7152 * c[1] as f32 + 0.0722 * c[2] as f32)
+        .collect();
+    let mut bits = Vec::with_capacity(w * h);
+    for y in 0..h {
+        for x in 0..w {
+            bits.push(luma[y * (w + 1) + x] < luma[y * (w + 1) + x + 1]);
+        }
+    }
+    bits.chunks(4)
+        .map(|n| format!("{:x}", n.iter().fold(0u8, |a, &b| (a << 1) | b as u8)))
+        .collect()
+}
+
+fn dhashes(path: &str, colour: &str) -> Result<(String, String), String> {
+    let data = fs::read(path).map_err(|e| format!("read: {e}"))?;
+    let (img, o) = decode(&data)?;
+    let mut img = orient(img, o);
+    to_srgb(&mut img, colour)?;
+    Ok((dhash(&img, 8, 8), dhash(&img, 16, 16)))
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    if args.len() == 3 && args[1] == "--dhash" {
+        let list = fs::read_to_string(&args[2]).expect("read list");
+        let mut out = std::io::stdout().lock();
+        for line in list.lines().filter(|l| !l.trim().is_empty()) {
+            let f: Vec<&str> = line.split('\t').collect();
+            let (id, path, colour) = (f[0], f.get(1).copied().unwrap_or(""), f.get(2).copied().unwrap_or("srgb"));
+            match dhashes(path, colour) {
+                Ok((a, b)) => writeln!(out, "{id}\t{a}\t{b}\t").unwrap(),
+                Err(e) => writeln!(out, "{id}\t\t\t{}", e.replace(['\t', '\n'], " ")).unwrap(),
+            }
+        }
+        return;
+    }
     if args.len() == 6 && args[1] == "--preview" {
         previews(&args);
         return;
@@ -230,6 +279,7 @@ fn main() {
     if args.len() != 3 {
         eprintln!("usage: corpus-thumbs <list.tsv: id<TAB>path<TAB>colour> <out-prefix>");
         eprintln!("       corpus-thumbs --preview <max> <quality> <list.tsv> <out-dir>");
+        eprintln!("       corpus-thumbs --dhash <list.tsv>");
         std::process::exit(2);
     }
     let list = fs::read_to_string(&args[1]).expect("read list");
