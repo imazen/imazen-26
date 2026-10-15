@@ -24,6 +24,7 @@
 - README / STORAGE-MAP variant tables list both branches with current pointer counts
 
 ### Added
+- `tools/render-v4` (4a5d99d) renders the v4 SDR PNG layers from the originals with zen crates at main: `png-p3` keeps each source's code values and colour signalling, `png-srgb` converts relative colorimetric through linear light and counts clipped pixels; orientation baked in, zenpng effort 22, one ASCII provenance `tEXt` chunk, every file re-decoded and checked; gain-map sources are rendered from the camera's SDR base and named in the report, a dropped all-opaque alpha channel too (593a612). `scripts/render_v4_list.py` (export names with the leading 1, provenance), `scripts/render_v4_run.sh` (render, code values, oracle, commits in `RUN.meta`), `scripts/colour_oracle.py` (textbook matrices and LittleCMS against every wide-gamut `png-srgb` file)
 - Export gates: `scripts/inventory_gate.py` with `manifests/inventory_allowlist.tsv` (unknown parts block unless a reviewed kind), `scripts/byte_scan.py` with `manifests/byte_scan_allowlist.tsv` (nested media and location data, decoder-independent), `scripts/png_readback.py` (Pillow and ImageMagick decode each recompressed PNG to its source's pixels)
 - `scripts/stage_originals.py` and `scripts/apply_originals_pass.py`: build the originals pass in a staging tree, then point every manifest at it
 - `tools/corpus-thumbs --to-jpeg`: a baseline 4:4:4 JPEG of one 8-bit image in stored orientation with its ICC profile and Exif (`libjpeg100`: every quantizer 1)

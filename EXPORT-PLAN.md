@@ -41,6 +41,9 @@ retired, and the review may retire more.
    - Retired ids are listed in `manifests/retired.tsv` and never reused; the gaps stay.
    - At export every id gets a leading `1` (1044 becomes 11044). The last digit doesn't
      change, so neither does any bucket, and the old-to-new mapping is the prefix itself.
+     Class folders take the same prefix (`1000-lilith-photos-general` becomes
+     `11000-lilith-photos-general`). The derived layers drop the sub-folders inside a class:
+     every file name starts with its unique id.
    - The successor family map (`manifests/split_map_family_v2.tsv`) adds sha256, URL-plus-page
      and photo-burst keys. It also keys patent scans by `patent_page`, so a page's 1-bit original
      and both rescans always share a bucket; us3807657's rescans are its pages 1, 3, 5 and 7.
@@ -78,7 +81,9 @@ Git LFS only where GitHub's limits leave no choice.
 
 - **Tooling.** Only zen tools write files, built against the main branch of every imazen
   crate and never crates.io releases (`tools/corpus-thumbs/README.md` shows how). Each
-  manifest row records the tool commits.
+  manifest row records the tool commits. `scripts/render_v4_list.py` lists every image with
+  its export name and provenance; `tools/render-v4` renders the list (its `Cargo.lock` pins
+  the crate commits, `tools/corpus-thumbs/zen-main/COMMITS.tsv` the three taken by path).
 - **Orientation.** It is baked into the pixels and the tag is removed. File names carry the
   displayed size.
 - **Colour.**
@@ -92,7 +97,9 @@ Git LFS only where GitHub's limits leave no choice.
   - Other spaces carry an `iCCP` plus an agreeing `cICP`, so Linux libraries and Windows,
     which ignore `cICP` on its own, still see the right colours.
   - HDR files carry `cICP` and `cLLI`.
-- **HDR (76 images, `p3` layers only).**
+- **HDR (76 images, `p3` layers only).** Each p3 layer holds the camera's SDR base (in P3)
+  and, beside it, the HDR render as `<name>.hdr.<ext>`; the `srgb` layers hold the SDR base
+  converted like any other source. render-v4 finds the gain map with each codec's own probe.
   - Every format gets a 16-bit PQ render: each image's full gain-map headroom, diffuse white
     at 203 nits (BT.2408), measured `cLLI`, and the settings recorded in the manifest.
   - JXL (`jhgm`) and `.imi` also get the gain-map form: the camera's SDR base plus an
@@ -110,8 +117,10 @@ Git LFS only where GitHub's limits leave no choice.
 - **Layout.** Channels and bit depth follow the source. A fully opaque alpha channel is
   dropped, and the manifest records it.
 - **Metadata.** Colour and HDR signalling, plus one provenance text chunk: corpus id,
-  bucket, licence and attribution. In PNG this is an `iTXt` chunk; JXL and `.imi` carry the
-  same text in their own metadata.
+  bucket, licence, attribution and the original's sha256, as JSON. Nothing about where or with
+  what a photo was taken. In PNG this is a `tEXt` chunk (keyword `imazen-26`) holding ASCII
+  JSON, non-ASCII characters escaped, so it reads the same as Latin-1 or UTF-8; JXL and
+  `.imi` carry the same text in their own metadata.
 - **JPEG XL.**
   - JPEG sources ship as JPEG-in-JXL, which rebuilds the original byte for byte, and all
     other sources as lossless renders.
