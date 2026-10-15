@@ -9,6 +9,11 @@
 //! WebP by zencodecs, with a TSV giving each id's cell and thumbnail size.
 //!
 //! Usage: corpus-thumbs <list.tsv> <out-prefix>   →  <out-prefix>.webp, <out-prefix>.tsv
+//!
+//! Preview mode writes one WebP per id instead of a sheet, fitted inside a
+//! `max`×`max` box (never upscaled), for full-screen viewing:
+//!   corpus-thumbs --preview <max> <quality> <list.tsv> <out-dir>
+//!   →  <out-dir>/<id>.webp, <out-dir>/previews.tsv (id, w, h, bytes, orientation, error)
 
 #![forbid(unsafe_code)]
 
@@ -146,13 +151,13 @@ fn to_srgb(img: &mut Rgba, colour: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn thumbnail(path: &str, colour: &str) -> Result<(Rgba, u8), String> {
+fn thumbnail(path: &str, colour: &str, cell: usize) -> Result<(Rgba, u8), String> {
     let data = fs::read(path).map_err(|e| format!("read: {e}"))?;
     let (img, o) = decode(&data)?;
     let mut img = orient(img, o);
     to_srgb(&mut img, colour)?;
-    let scale = (CELL as f64 / img.w as f64)
-        .min(CELL as f64 / img.h as f64)
+    let scale = (cell as f64 / img.w as f64)
+        .min(cell as f64 / img.h as f64)
         .min(1.0);
     let tw = ((img.w as f64 * scale).round() as usize).max(1);
     let th = ((img.h as f64 * scale).round() as usize).max(1);
@@ -164,10 +169,67 @@ fn thumbnail(path: &str, colour: &str) -> Result<(Rgba, u8), String> {
     Ok((Rgba { w: tw, h: th, px }, o))
 }
 
+fn encode_webp(img: &Rgba, quality: f32) -> Result<Vec<u8>, String> {
+    let pixels: Vec<rgb::Rgba<u8>> = img
+        .px
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|c| rgb::Rgba {
+            r: c[0],
+            g: c[1],
+            b: c[2],
+            a: c[3],
+        })
+        .collect();
+    let view = imgref::ImgVec::new(pixels, img.w, img.h);
+    EncodeRequest::new(ImageFormat::WebP)
+        .with_quality(quality)
+        .encode_full_frame_rgba8(view.as_ref())
+        .map(|o| o.data().to_vec())
+        .map_err(|e| format!("encode: {e}"))
+}
+
+fn previews(args: &[String]) {
+    let max: usize = args[2].parse().expect("max");
+    let quality: f32 = args[3].parse().expect("quality");
+    let list = fs::read_to_string(&args[4]).expect("read list");
+    let out = std::path::Path::new(&args[5]);
+    fs::create_dir_all(out).expect("create out dir");
+    let mut tsv = String::from("id\tw\th\tbytes\torientation_applied\terror\n");
+    let lines: Vec<&str> = list.lines().filter(|l| !l.trim().is_empty()).collect();
+    for (n, line) in lines.iter().enumerate() {
+        let f: Vec<&str> = line.split('\t').collect();
+        let (id, path, colour) = (
+            f[0],
+            f.get(1).copied().unwrap_or(""),
+            f.get(2).copied().unwrap_or("srgb"),
+        );
+        match thumbnail(path, colour, max).and_then(|(t, o)| encode_webp(&t, quality).map(|b| (t, o, b))) {
+            Ok((t, o, bytes)) => {
+                fs::write(out.join(format!("{id}.webp")), &bytes).expect("write preview");
+                tsv.push_str(&format!("{id}\t{}\t{}\t{}\t{o}\t\n", t.w, t.h, bytes.len()));
+                eprintln!("[{}/{}] {id} {}x{} {} B", n + 1, lines.len(), t.w, t.h, bytes.len());
+            }
+            Err(e) => {
+                let e = e.replace(['\t', '\n'], " ");
+                tsv.push_str(&format!("{id}\t0\t0\t0\t\t{e}\n"));
+                eprintln!("[{}/{}] {id} {e}", n + 1, lines.len());
+            }
+        }
+    }
+    fs::write(out.join("previews.tsv"), tsv).expect("write tsv");
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    if args.len() == 6 && args[1] == "--preview" {
+        previews(&args);
+        return;
+    }
     if args.len() != 3 {
         eprintln!("usage: corpus-thumbs <list.tsv: id<TAB>path<TAB>colour> <out-prefix>");
+        eprintln!("       corpus-thumbs --preview <max> <quality> <list.tsv> <out-dir>");
         std::process::exit(2);
     }
     let list = fs::read_to_string(&args[1]).expect("read list");
@@ -184,7 +246,7 @@ fn main() {
             f.get(2).copied().unwrap_or("srgb"),
         );
         let (col, row) = (n % COLS, n / COLS);
-        match thumbnail(path, colour) {
+        match thumbnail(path, colour, CELL) {
             Ok((t, o)) => {
                 let (ox, oy) = (col * CELL + (CELL - t.w) / 2, row * CELL + (CELL - t.h) / 2);
                 for y in 0..t.h {

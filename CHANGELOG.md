@@ -10,6 +10,7 @@
 - README / STORAGE-MAP variant tables list both branches with current pointer counts
 
 ### Added
+- `tools/corpus-thumbs --preview <max> <quality>`: one WebP per image instead of a sheet, for full-screen viewing
 - `scripts/build_removal_review.py` — the removal review page: the contact sheet with click-to-mark removals saved in the page's database, retired duplicates dropped, 1214 as its camera original, DNGs by their embedded previews, and the 28 empty or broken entries flagged
 - `tools/corpus-signal-probe`: `gain_map_params` column with every gain-map parameter (zenjpeg UltraHDR reader for JPEG, heic `probe_full` for HEIC); confirms whitelist v2 keeps all 76 HDR files' parameters identical to the camera originals
 - `scripts/whitelist_v2.py` — re-applies the camera-class metadata whitelist to the oldest copies with container-aware code: same privacy policy, but every colour/HDR structure kept (per-item HEIC `colr`, UltraHDR MPF + gain map + ISO 21496-1, Apple MakerNote reduced to its three HDR tags, Interop `R98`, motion-photo XMP); HEIC rewritten in place (nothing moves), JPEG segments removed with MPF rebuilt; all 316 outputs match the oldest sources on every probed colour/HDR signal, decode, and carry no removed value; outputs on block storage, swapping them in is an owner decision
