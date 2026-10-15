@@ -836,11 +836,11 @@ id	split	family	path
 7112	train		7000-lilith-plots/real-charts/7112_plots_chart-horizontalbar-02-slate_1024x1024.png
 7113	validate		7000-lilith-plots/real-charts/7113_plots_chart-line-03-solarized_1024x1024.png
 7114	train		7000-lilith-plots/real-charts/7114_plots_chart-ohlc-18-slate_1024x1024.png
-7115	validate		7000-lilith-plots/real-charts/7115_plots_chart-pie-01-light_1024x1024.png
-7116	train		7000-lilith-plots/real-charts/7116_plots_chart-pie-02-slate_1024x1024.png
-7117	test		7000-lilith-plots/real-charts/7117_plots_chart-pie-03-solarized_1024x1024.png
-7118	train		7000-lilith-plots/real-charts/7118_plots_chart-pie-07-sunset_1024x1024.png
-7119	test		7000-lilith-plots/real-charts/7119_plots_chart-pie-08-forest_1024x1024.png
+7115	validate	7115:chart	7000-lilith-plots/real-charts/7115_plots_chart-pie-01-light_1024x1024.png
+7116	validate	7115:chart	7000-lilith-plots/real-charts/7116_plots_chart-pie-02-slate_1024x1024.png
+7117	validate	7115:chart	7000-lilith-plots/real-charts/7117_plots_chart-pie-03-solarized_1024x1024.png
+7118	validate	7115:chart	7000-lilith-plots/real-charts/7118_plots_chart-pie-07-sunset_1024x1024.png
+7119	validate	7115:chart	7000-lilith-plots/real-charts/7119_plots_chart-pie-08-forest_1024x1024.png
 7120	train		7000-lilith-plots/real-charts/7120_plots_chart-polararea-07-sunset_1024x1024.png
 7121	validate		7000-lilith-plots/real-charts/7121_plots_chart-radar-08-forest_1024x1024.png
 7122	train		7000-lilith-plots/real-charts/7122_plots_chart-sankey-19-solarized_1024x1024.png

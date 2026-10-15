@@ -15,6 +15,7 @@
 - README / STORAGE-MAP variant tables list both branches with current pointer counts
 
 ### Added
+- `benchmarks/dhash_census_2026-10-15.md`: dHash census of all 2,149 images (`tools/corpus-thumbs --dhash`); no cross-bucket duplicates; the five pie-chart theme variants (7115–7119) become one family in `split_map_family_v2.tsv`
 - Removal review full-screen viewer: swipe between 1280 px previews of every image, mark from there, open the original; previews packed into 18 files of about 12 MB
 - `tools/corpus-thumbs --preview <max> <quality>`: one WebP per image instead of a sheet, for full-screen viewing
 - `scripts/build_removal_review.py` — the removal review page: the contact sheet with click-to-mark removals saved in the page's database, retired duplicates dropped, 1214 as its camera original, DNGs by their embedded previews, and the 28 empty or broken entries flagged

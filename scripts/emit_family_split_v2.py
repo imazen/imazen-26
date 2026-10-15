@@ -9,6 +9,8 @@ lowest id. What changes is which images count as one family. These keys are unio
                pages, whose names say "1bit" rather than "original", and us3807657's
                rescans are its odd pages (patent_page, not the scan's page number).
   plots-run    the v1 key: kind variants of one generator run share content.
+  chart        real-charts theme variants: chart-<kind>-<NN>-<theme> files of one kind
+               draw the same data in different palettes (the five pie charts).
   screen-page  the v1 key (site slug + page) and, from the 8100 manifest, url + page,
                which also joins one URL captured under two slugs. The placeholder url
                "local-capture" is skipped: five unrelated terminal screenshots share it.
@@ -92,6 +94,12 @@ def main():
         m = re.search(r"_plots_([a-z-]+?)-(\d+)-s([0-9a-f]+)_", os.path.basename(path))
         return ("plots-run", m.group(2), m.group(3)) if m else None
     groups(((plot_key(r["path"]), r["number"]) for r in corpus if plot_key(r["path"])), "plots-run")
+
+    # real-charts: one chart kind in several themes is one chart
+    def chart_key(path):
+        m = re.search(r"/\d{4}_plots_chart-([a-z]+)-\d+-[a-z]+_", path)
+        return ("chart", m.group(1)) if m else None
+    groups(((chart_key(r["path"]), r["number"]) for r in corpus if chart_key(r["path"])), "chart")
 
     # web captures: v1 slug key and url + page
     shots = tsv("8100-lilith-web-screenshots/MANIFEST.tsv")
