@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- `EXPORT-PLAN.md`: the originals pass also swaps in background-cleaned 9231, 9869 and 9874, the three product images the 2026-05-31 flatten pass missed
 - `manifests/split_map_family_v2.tsv` (successor family map) keeps every patent page's 1-bit original and rescans in one bucket, and adds url + page, sha256 and photo-burst families; the v1 map left all 36 three-variant patent pages straddling buckets
 - `6000-lilith-scans-public-patents/MANIFEST.tsv` gains `patent_page`, the patent page each scan shows: us3807657's rescans are its pages 1, 3, 5 and 7 (`benchmarks/patent_page_alignment_2026-10-15.md`)
 - 11 byte-identical duplicates retired: each group keeps its lowest id, the others leave every manifest, split map and split link and are listed in the new `manifests/retired.tsv`; 2,160 → 2,149 images, buckets 1,078 / 654 / 417

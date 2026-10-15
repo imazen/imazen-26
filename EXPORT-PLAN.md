@@ -12,6 +12,10 @@ retired, and the review may retire more.
      colour and HDR structure kept.
    - Replace 1214 with its camera original.
    - Re-encode 1044 as a quality-100 JPEG, dropping its motion-photo clip.
+   - Replace 9231, 9869 and 9874 with background-cleaned versions. They were regenerated after
+     the white-background flatten pass, so they are the only white-background product images
+     still uncleaned. zenfilters' `ai_corpus_flatten` at main reproduces the original pass byte
+     for byte (checked on 9226).
    - Strip the SEFT trailers (32 screenshots), the IPTC zTXt chunks (3 AI PNGs) and the C2PA
      stores (115 AI images), with our own code.
    - Keep the museum metadata.
