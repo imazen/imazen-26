@@ -28,6 +28,7 @@ run_heavy() {
 }
 (cd "$repo/tools/render-v4" && run_heavy 16 20G cargo build --release --locked) > "$out/build.log" 2>&1 \
   || { tail -n 20 "$out/build.log" >&2; exit 1; }
+bin="${CARGO_TARGET_DIR:-$repo/tools/render-v4/target}/release/render-v4"
 python3 "$repo/scripts/render_v4_list.py" "$originals" "$@" > "$out/list.tsv"
 {
   echo "date	$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -45,7 +46,7 @@ python3 "$repo/scripts/render_v4_list.py" "$originals" "$@" > "$out/list.tsv"
 } > "$out/RUN.meta"
 cp "$repo/tools/render-v4/Cargo.lock" "$out/render-v4.Cargo.lock"
 status=0
-run_heavy "$((jobs * 2))" 40G "$repo/tools/render-v4/target/release/render-v4" png-sdr --jobs "$jobs" \
+run_heavy "$((jobs * 2))" 40G "$bin" png-sdr --jobs "$jobs" \
   "$out/list.tsv" "$out" > "$out/report.unsorted.tsv" 2> "$out/progress.log" || status=$?
 { head -n 1 "$out/report.unsorted.tsv"; tail -n +2 "$out/report.unsorted.tsv" | sort -t$'\t' -k1,1 -k2,2; } > "$out/report.tsv"
 rm "$out/report.unsorted.tsv"

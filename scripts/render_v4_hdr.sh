@@ -30,7 +30,7 @@ run_heavy() {
 }
 (cd "$repo/tools/render-v4" && run_heavy 16 20G cargo build --release --locked) > "$out/hdr-build.log" 2>&1 \
   || { tail -n 20 "$out/hdr-build.log" >&2; exit 1; }
-bin="$repo/tools/render-v4/target/release/render-v4"
+bin="${CARGO_TARGET_DIR:-$repo/tools/render-v4/target}/release/render-v4"
 awk -F'\t' 'NR == 1 { for (i = 1; i <= NF; i++) if ($i == "gain_map") c = i; next }
             c && $c != "" { print $1 }' "$out/report.tsv" | sort -u > "$out/hdr-ids.txt"
 awk -F'\t' 'NR == FNR { keep[$1] = 1; next } keep[$1]' "$out/hdr-ids.txt" "$out/list.tsv" > "$out/hdr-list.tsv"

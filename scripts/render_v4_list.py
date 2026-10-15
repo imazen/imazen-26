@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Write render-v4's input list from the manifests (EXPORT-PLAN.md, "Render v4").
 
-One row per manifest image:
+One row per manifest image, except the DNGs, which stay in the originals only (EXPORT-PLAN.md,
+"DNGs"):
 
     id <TAB> source path <TAB> out stem <TAB> provenance JSON
 
@@ -105,9 +106,12 @@ def main():
     a = ap.parse_args()
     keep = set(a.ids.split(",")) if a.ids else None
     folders = folder_rows()
-    n = 0
+    n = dngs = 0
     for r in manifest_rows():
         if keep is not None and r["id"] not in keep:
+            continue
+        if r["path"].lower().endswith(".dng"):
+            dngs += 1
             continue
         f = folders.get(r["path"])
         if f is None:
@@ -125,9 +129,9 @@ def main():
             raise SystemExit(f"a field for {r['id']} holds a tab or newline")
         sys.stdout.write("\t".join(fields) + "\n")
         n += 1
-    if keep is not None and n != len(keep):
-        raise SystemExit(f"{len(keep) - n} of the requested ids are not in the manifests")
-    print(f"{n} rows", file=sys.stderr)
+    if keep is not None and n + dngs != len(keep):
+        raise SystemExit(f"{len(keep) - n - dngs} of the requested ids are not in the manifests")
+    print(f"{n} rows; {dngs} DNGs left out (originals only)", file=sys.stderr)
 
 
 if __name__ == "__main__":
