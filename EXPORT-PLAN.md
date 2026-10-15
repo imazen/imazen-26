@@ -95,7 +95,15 @@ Git LFS only where GitHub's limits leave no choice.
   - JXL (`jhgm`) and `.imi` also get the gain-map form: the camera's SDR base plus an
     ISO 21496-1 gain map.
   - The 24 Apple legacy gain maps are re-encoded in ISO form (within 0.006 stops).
-  - Check `jhgm` support in libjxl, jxl-rs and zenjxl-decoder.
+  - `jhgm` support, checked 2026-10-15 on each project's main:
+    - libjxl reads and writes the gain-map bundle since v0.11.0 (`jxl/gain_map.h`, "utility
+      functions to manipulate jhgm boxes"; `jxlinfo` reports it). Applying it is left to
+      the application.
+    - jxl-rs recognises the box (`JxlAuxBoxType::HDR_GAIN_MAP`) and returns its raw bytes.
+      It parses nothing inside it.
+    - zenjxl-decoder parses the bundle (`container/gain_map.rs`). zenjxl decodes the gain-map
+      codestream (`GainMapRender::Components`) and applies it with its `reconstruct-hdr`
+      feature (`tests/gain_map_render.rs`). jxl-encoder writes the box.
 - **Layout.** Channels and bit depth follow the source. A fully opaque alpha channel is
   dropped, and the manifest records it.
 - **Metadata.** Colour and HDR signalling, plus one provenance text chunk: corpus id,
