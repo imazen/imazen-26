@@ -369,9 +369,7 @@ id	split	content_class	path
 2407	test	2400-unsplash-textures	2400-unsplash-textures/2407_textures_blue-wabring-threads_by-pawel-czerwinski-kra9zndplra-unsplash_4000x6000.jpg
 2408	train	2400-unsplash-textures	2400-unsplash-textures/2408_textures_marble-slab-artillery_by-teresa-xchefhoppxe-unsplash_2048x2732.jpg
 2409	test	2400-unsplash-textures	2400-unsplash-textures/2409_textures_blue-abstract-texture_by-tim-mossholder-shmrlyrv-s0-unsplash_5504x8256.jpg
-3000	train	3000-art-institute-of-chicago-photos	3000-art-institute-of-chicago-photos/3000_aic_for-sunday-s-dinner_111377_1269x2250.jpg
 3001	validate	3000-art-institute-of-chicago-photos	3000-art-institute-of-chicago-photos/3001_aic_self-portrait_11_4000x5226.jpg
-3002	train	3000-art-institute-of-chicago-photos	3000-art-institute-of-chicago-photos/3002_aic_the-irish-question_181777_4000x4860.jpg
 3003	validate	3000-art-institute-of-chicago-photos	3000-art-institute-of-chicago-photos/3003_aic_village-among-the-trees_23119_4000x2832.jpg
 3004	train	3000-art-institute-of-chicago-photos	3000-art-institute-of-chicago-photos/3004_aic_hydria-water-jar_253_1169x1559.jpg
 3005	validate	3000-art-institute-of-chicago-photos	3000-art-institute-of-chicago-photos/3005_aic_mitsuke-ferries-crossing-the-tenryu-river-mitsuk_4368_3000x2240.jpg
@@ -594,7 +592,6 @@ id	split	content_class	path
 6055	validate	6000-lilith-scans-public-patents	6000-lilith-scans-public-patents/lynn_conway_us5046022_printrescancolor300/6055_scans-patents_lynn-conway-us5046022-rescan-color_p027_2479x3230.jpg
 6056	train	6000-lilith-scans-public-patents	6000-lilith-scans-public-patents/lynn_conway_us5046022_printrescancolor300/6056_scans-patents_lynn-conway-us5046022-rescan-color_p028_2479x3230.jpg
 6057	test	6000-lilith-scans-public-patents	6000-lilith-scans-public-patents/lynn_conway_us5046022_printrescancolor300/6057_scans-patents_lynn-conway-us5046022-rescan-color_p029_2479x3230.jpg
-6058	train	6000-lilith-scans-public-patents	6000-lilith-scans-public-patents/lynn_conway_us5046022_printrescancolor300/6058_scans-patents_lynn-conway-us5046022-rescan-color_p030_2479x3230.jpg
 6059	test	6000-lilith-scans-public-patents	6000-lilith-scans-public-patents/lynn_conway_us5046022_printrescangray300/6059_scans-patents_lynn-conway-us5046022-rescan-gray_p001_2479x3230.jpg
 6060	train	6000-lilith-scans-public-patents	6000-lilith-scans-public-patents/lynn_conway_us5046022_printrescangray300/6060_scans-patents_lynn-conway-us5046022-rescan-gray_p002_2479x3230.jpg
 6061	validate	6000-lilith-scans-public-patents	6000-lilith-scans-public-patents/lynn_conway_us5046022_printrescangray300/6061_scans-patents_lynn-conway-us5046022-rescan-gray_p003_2479x3230.jpg
@@ -624,7 +621,6 @@ id	split	content_class	path
 6085	validate	6000-lilith-scans-public-patents	6000-lilith-scans-public-patents/lynn_conway_us5046022_printrescangray300/6085_scans-patents_lynn-conway-us5046022-rescan-gray_p027_2479x3230.jpg
 6086	train	6000-lilith-scans-public-patents	6000-lilith-scans-public-patents/lynn_conway_us5046022_printrescangray300/6086_scans-patents_lynn-conway-us5046022-rescan-gray_p028_2479x3230.jpg
 6087	test	6000-lilith-scans-public-patents	6000-lilith-scans-public-patents/lynn_conway_us5046022_printrescangray300/6087_scans-patents_lynn-conway-us5046022-rescan-gray_p029_2479x3230.jpg
-6088	train	6000-lilith-scans-public-patents	6000-lilith-scans-public-patents/lynn_conway_us5046022_printrescangray300/6088_scans-patents_lynn-conway-us5046022-rescan-gray_p030_2479x3230.jpg
 6089	test	6000-lilith-scans-public-patents	6000-lilith-scans-public-patents/martha_jones_us77494_1bitoriginal/6089_scans-patents_martha-jones-us77494-1bit_p001_2320x3408.png
 6090	train	6000-lilith-scans-public-patents	6000-lilith-scans-public-patents/martha_jones_us77494_1bitoriginal/6090_scans-patents_martha-jones-us77494-1bit_p002_2320x3408.png
 6091	validate	6000-lilith-scans-public-patents	6000-lilith-scans-public-patents/martha_jones_us77494_1bitoriginal/6091_scans-patents_martha-jones-us77494-1bit_p003_2320x3408.png
@@ -710,8 +706,6 @@ id	split	content_class	path
 6822	train	6800-ia-scans-manuscript-text	6800-ia-scans-manuscript-text/6822_scans-text_redoute-fr-description_p0046_2415x3528.png
 6823	validate	6800-ia-scans-manuscript-text	6800-ia-scans-manuscript-text/6823_scans-text_redoute-fr-description_p0051_2387x3519.png
 6824	train	6800-ia-scans-manuscript-text	6800-ia-scans-manuscript-text/6824_scans-text_redoute-fr-description_p0052_2415x3528.png
-6825	validate	6800-ia-scans-manuscript-text	6800-ia-scans-manuscript-text/6825_scans-text_redoute-fr-description_p0060_2415x3528.png
-6826	train	6800-ia-scans-manuscript-text	6800-ia-scans-manuscript-text/6826_scans-text_redoute-fr-description_p0066_2415x3528.png
 6827	test	6800-ia-scans-manuscript-text	6800-ia-scans-manuscript-text/6827_scans-text_redoute-fr-description_p0079_2445x3519.png
 6828	train	6800-ia-scans-manuscript-text	6800-ia-scans-manuscript-text/6828_scans-text_redoute-fr-description_p0095_2445x3519.png
 6829	test	6800-ia-scans-manuscript-text	6800-ia-scans-manuscript-text/6829_scans-text_redoute-fr-description_p0121_2445x3519.png
@@ -882,7 +876,6 @@ id	split	content_class	path
 8100	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1440x900/8100_web-screenshots_archive-wayback-search_dpr1_page1_1440x900.png
 8101	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1440x900/8101_web-screenshots_archives-exhibits_dpr1_page1_1440x900.png
 8102	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1440x900/8102_web-screenshots_archives-exhibits_dpr1_page2_1440x900.png
-8103	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1440x900/8103_web-screenshots_bls-employment-situation_dpr1_page1_1440x900.png
 8104	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1440x900/8104_web-screenshots_climate-gov-home_dpr1_page1_1440x900.png
 8105	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1440x900/8105_web-screenshots_climate-gov-home_dpr1_page2_1440x900.png
 8106	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1440x900/8106_web-screenshots_climate-news_dpr1_page1_1440x900.png
@@ -939,7 +932,6 @@ id	split	content_class	path
 8159	test	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1920x1080/8159_web-screenshots_archive-wayback-search_dpr1_page1_1920x1080.png
 8160	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1920x1080/8160_web-screenshots_archives-exhibits_dpr1_page1_1920x1080.png
 8161	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1920x1080/8161_web-screenshots_archives-exhibits_dpr1_page2_1920x1080.png
-8162	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1920x1080/8162_web-screenshots_bls-employment-situation_dpr1_page1_1920x1080.png
 8163	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1920x1080/8163_web-screenshots_climate-gov-home_dpr1_page1_1920x1080.png
 8164	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1920x1080/8164_web-screenshots_climate-gov-home_dpr1_page2_1920x1080.png
 8165	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1920x1080/8165_web-screenshots_datagov-catalog_dpr1_page1_1920x1080.png
@@ -997,7 +989,6 @@ id	split	content_class	path
 8219	test	8100-lilith-web-screenshots	8100-lilith-web-screenshots/2880x1800/8219_web-screenshots_archive-wayback-search_dpr2_page1_2880x1800.png
 8220	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/2880x1800/8220_web-screenshots_archives-exhibits_dpr2_page1_2880x1800.png
 8221	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/2880x1800/8221_web-screenshots_archives-exhibits_dpr2_page2_2880x1800.png
-8222	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/2880x1800/8222_web-screenshots_bls-employment-situation_dpr2_page1_2880x1800.png
 8223	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/2880x1800/8223_web-screenshots_climate-gov-home_dpr2_page1_2880x1800.png
 8224	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/2880x1800/8224_web-screenshots_climate-gov-home_dpr2_page2_2880x1800.png
 8225	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/2880x1800/8225_web-screenshots_datagov-catalog_dpr2_page1_2880x1800.png
@@ -1048,7 +1039,6 @@ id	split	content_class	path
 8271	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8271_web-screenshots_archive-wayback-search_dpr1_page1_375x667.png
 8272	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8272_web-screenshots_archives-exhibits_dpr1_page1_375x667.png
 8273	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8273_web-screenshots_archives-exhibits_dpr1_page2_375x667.png
-8274	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8274_web-screenshots_bls-employment-situation_dpr1_page1_375x667.png
 8275	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8275_web-screenshots_climate-gov-home_dpr1_page1_375x667.png
 8276	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8276_web-screenshots_climate-gov-home_dpr1_page2_375x667.png
 8277	test	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8277_web-screenshots_datagov-catalog_dpr1_page1_375x667.png
@@ -1059,11 +1049,9 @@ id	split	content_class	path
 8282	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8282_web-screenshots_lkml-lists-index_dpr1_page1_375x667.png
 8283	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8283_web-screenshots_lkml-lists-index_dpr1_page2_375x667.png
 8284	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8284_web-screenshots_loc-exhibits_dpr1_page1_375x667.png
-8285	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8285_web-screenshots_loc-exhibits_dpr1_page2_375x667.png
 8286	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8286_web-screenshots_loc-free-to-use_dpr1_page1_375x667.png
 8287	test	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8287_web-screenshots_loc-free-to-use_dpr1_page2_375x667.png
 8288	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8288_web-screenshots_loc-pictures_dpr1_page1_375x667.png
-8289	test	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8289_web-screenshots_loc-pictures_dpr1_page2_375x667.png
 8290	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8290_web-screenshots_nasa-artemis_dpr1_page1_375x667.png
 8291	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8291_web-screenshots_nasa-artemis_dpr1_page2_375x667.png
 8292	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8292_web-screenshots_nasa-home_dpr1_page1_375x667.png
@@ -1105,7 +1093,6 @@ id	split	content_class	path
 8330	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8330_web-screenshots_archive-wayback-search_dpr1_page1_768x1024.png
 8331	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8331_web-screenshots_archives-exhibits_dpr1_page1_768x1024.png
 8332	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8332_web-screenshots_archives-exhibits_dpr1_page2_768x1024.png
-8333	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8333_web-screenshots_bls-employment-situation_dpr1_page1_768x1024.png
 8334	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8334_web-screenshots_climate-gov-home_dpr1_page1_768x1024.png
 8335	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8335_web-screenshots_climate-gov-home_dpr1_page2_768x1024.png
 8336	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8336_web-screenshots_datagov-catalog_dpr1_page1_768x1024.png
@@ -1165,8 +1152,6 @@ id	split	content_class	path
 8393	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8393_web-screenshots_archives-home_dpr1_page1_1280x800.png
 8394	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8394_web-screenshots_archives-home_dpr1_page1_414x896.png
 8395	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8395_web-screenshots_archives-home_dpr1_page2_414x896.png
-8396	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8396_web-screenshots_bls-employment-situation_dpr1_page1_1280x800.png
-8397	test	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8397_web-screenshots_bls-employment-situation_dpr1_page1_414x896.png
 8398	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8398_web-screenshots_cdc-home_dpr1_page1_1280x800.png
 8399	test	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8399_web-screenshots_cdc-home_dpr1_page2_1280x800.png
 8400	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8400_web-screenshots_cdc-home_dpr1_page1_2560x1440.png
@@ -1186,15 +1171,12 @@ id	split	content_class	path
 8414	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8414_web-screenshots_lkml-lists-index_dpr1_page1_1280x800.png
 8415	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8415_web-screenshots_lkml-lists-index_dpr1_page2_1280x800.png
 8416	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8416_web-screenshots_loc-pictures_dpr1_page1_360x640.png
-8417	test	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8417_web-screenshots_loc-pictures_dpr1_page2_360x640.png
 8418	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8418_web-screenshots_nasa-artemis_dpr1_page1_1280x800.png
 8419	test	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8419_web-screenshots_nasa-artemis_dpr1_page2_1280x800.png
 8420	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8420_web-screenshots_nasa-missions_dpr1_page1_1024x768.png
 8421	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8421_web-screenshots_nasa-missions_dpr1_page2_1024x768.png
 8422	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8422_web-screenshots_nasa-missions_dpr1_page1_2560x1440.png
-8423	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8423_web-screenshots_nasa-missions_dpr1_page2_2560x1440.png
 8424	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8424_web-screenshots_nasa-missions_dpr1_page1_667x375.png
-8425	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8425_web-screenshots_nasa-missions_dpr1_page2_667x375.png
 8426	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8426_web-screenshots_nasa-news_dpr1_page1_414x896.png
 8427	test	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8427_web-screenshots_nasa-news_dpr1_page2_414x896.png
 8428	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/other/8428_web-screenshots_nasa-voyager_dpr1_page1_1280x800.png
@@ -1405,7 +1387,6 @@ id	split	content_class	path
 9228	train	9226-lilith-ai-products	9226-lilith-ai-products/accessories/9228_gen_products-accessories_cateye-sunglasses_p0003_3840x2160.png
 9229	test	9226-lilith-ai-products	9226-lilith-ai-products/accessories/9229_gen_products-accessories_chunky-gold-statement-necklace_p0004_2880x2880.png
 9230	train	9226-lilith-ai-products	9226-lilith-ai-products/accessories/9230_gen_products-accessories_chunky-resin-bangle-stack_p0005_1024x1024.png
-9231	validate	9226-lilith-ai-products	9226-lilith-ai-products/accessories/9231_gen_products-accessories_cognac-crossbody_p0006_1024x1536.png
 9232	train	9226-lilith-ai-products	9226-lilith-ai-products/accessories/9232_gen_products-accessories_cognac-crossbody_detail_p0006_3840x2160.png
 9233	validate	9226-lilith-ai-products	9226-lilith-ai-products/accessories/9233_gen_products-accessories_enamel-pin-set-product_p0007_1024x1024.png
 9234	train	9226-lilith-ai-products	9226-lilith-ai-products/accessories/9234_gen_products-accessories_fuchsia-shoulder-bag_p0008_2160x3840.png
@@ -1420,7 +1401,6 @@ id	split	content_class	path
 9243	validate	9226-lilith-ai-products	9226-lilith-ai-products/accessories/9243_gen_products-accessories_pearl-pendant-asymmetric_p0017_1024x1024.png
 9244	train	9226-lilith-ai-products	9226-lilith-ai-products/accessories/9244_gen_products-accessories_red-butterfly-shield-sunglasses_p0018_3840x2160.png
 9245	validate	9226-lilith-ai-products	9226-lilith-ai-products/accessories/9245_gen_products-accessories_ruby-croc-bowler-bag_p0019_2160x3840.png
-9246	train	9226-lilith-ai-products	9226-lilith-ai-products/accessories/9246_gen_products-accessories_ruby-croc-bowler-bag_detail_p0019_3840x2160.png
 9247	test	9226-lilith-ai-products	9226-lilith-ai-products/accessories/9247_gen_products-accessories_sculptural-gold-hoops_p0020_2880x2880.png
 9248	train	9226-lilith-ai-products	9226-lilith-ai-products/accessories/9248_gen_products-accessories_sticker-pack-flatlay_p0021_1024x1024.png
 9249	test	9226-lilith-ai-products	9226-lilith-ai-products/accessories/9249_gen_products-accessories_straw-sun-hat_p0022_2048x2048.png
@@ -1469,8 +1449,6 @@ id	split	content_class	path
 9293	validate	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9293_gen_products-beauty_bryn-birch-charcoal-clay-mask_p0064_1024x1024.png
 9294	train	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9294_gen_products-beauty_bryn-birch-scalp-hair-oil_p0065_1024x1536.png
 9295	validate	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9295_gen_products-beauty_ceramic-cream-jar_spec_p0066_1024x1536.png
-9296	train	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9296_gen_products-beauty_dewmark_feature_p0067_1024x1536.png
-9297	test	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9297_gen_products-beauty_dewmark-aqua-peptide-back_ingredients_p0068_1024x1536.png
 9298	train	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9298_gen_products-beauty_dewmark-aqua-peptide-gel-cream_p0069_1024x1024.png
 9299	test	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9299_gen_products-beauty_dewmark-brand-set_flat_p0070_1536x1024.png
 9300	train	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9300_gen_products-beauty_dewmark-glass-mist-setting-spray_p0071_1024x1536.png
@@ -1482,14 +1460,9 @@ id	split	content_class	path
 9306	train	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9306_gen_products-beauty_florwell-mineral-bath-soak_p0077_1024x1024.png
 9307	test	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9307_gen_products-beauty_florwell-rose-oat-bar-soap_p0078_1024x1024.png
 9308	train	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9308_gen_products-beauty_ingredients-back-rosehip-oil_ingredients_p0079_1024x1536.png
-9309	test	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9309_gen_products-beauty_lip-balm-trio-product_p0080_1536x1024.png
 9310	train	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9310_gen_products-beauty_lip-mask-pot-overnight_p0081_1024x1024.png
 9311	validate	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9311_gen_products-beauty_makeup-brush-set_flat_p0082_1536x1024.png
-9312	train	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9312_gen_products-beauty_makeup-sponge-pair_p0083_1536x1024.png
-9313	validate	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9313_gen_products-beauty_moisturizer-back-sage_ingredients_p0084_2048x2048.png
 9314	train	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9314_gen_products-beauty_skin-cleanser_p0085_2048x2048.jpg
-9315	validate	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9315_gen_products-beauty_tintwell_feature_p0086_1024x1536.png
-9316	train	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9316_gen_products-beauty_tintwell-brand-set_flat_p0087_1536x1024.png
 9317	test	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9317_gen_products-beauty_tintwell-cheek-lip-tint-back_ingredients_p0088_1024x1536.png
 9318	train	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9318_gen_products-beauty_tintwell-cheek-lip-tint-stick_p0089_1024x1024.png
 9319	test	9226-lilith-ai-products	9226-lilith-ai-products/beauty/9319_gen_products-beauty_tintwell-nail-polish-duo_p0090_1536x1024.png
@@ -1760,13 +1733,11 @@ id	split	content_class	path
 9584	train	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9584_gen_products-electronics_axion-smart-speaker_p0348_1024x1536.png
 9585	validate	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9585_gen_products-electronics_axion-usbc-dock_p0349_1536x1024.png
 9586	train	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9586_gen_products-electronics_axion-webcam_p0350_1536x1024.png
-9587	test	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9587_gen_products-electronics_axion-wireless-mouse_p0351_1024x1024.png
 9588	train	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9588_gen_products-electronics_halcyon-phone-case_p0352_1024x1536.png
 9589	test	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9589_gen_products-electronics_halcyon-phone-holder_p0353_1024x1024.png
 9590	train	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9590_gen_products-electronics_halcyon-screen-protector-pack_p0354_1024x1536.png
 9591	validate	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9591_gen_products-electronics_harmonix-av-receiver_p0355_1536x1024.png
 9592	train	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9592_gen_products-electronics_harmonix-bluetooth-speaker_p0356_1024x1024.png
-9593	validate	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9593_gen_products-electronics_harmonix-bookshelf-speakers_p0357_1536x1024.png
 9594	train	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9594_gen_products-electronics_harmonix-gaming-headset_p0358_1024x1536.png
 9595	validate	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9595_gen_products-electronics_harmonix-over-ear-headphones_p0359_1024x1536.png
 9596	train	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9596_gen_products-electronics_harmonix-soundbar_p0360_1536x1024.png
@@ -1781,7 +1752,6 @@ id	split	content_class	path
 9605	validate	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9605_gen_products-electronics_lumen-ring-light_p0369_1024x1024.png
 9606	train	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9606_gen_products-electronics_lumen-stylus_p0370_1536x1024.png
 9607	test	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9607_gen_products-electronics_meridian-earbuds-case-open_p0371_1536x1024.png
-9608	train	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9608_gen_products-electronics_meridian-single-earbud_p0372_1024x1024.png
 9609	test	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9609_gen_products-electronics_meridian-smartphone-back_p0373_1024x1536.png
 9610	train	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9610_gen_products-electronics_meridian-smartphone-front_p0373_1024x1536.png
 9611	validate	9226-lilith-ai-products	9226-lilith-ai-products/electronics/9611_gen_products-electronics_meridian-tablet-front_p0374_1536x1024.png
@@ -1909,7 +1879,6 @@ id	split	content_class	path
 9733	validate	9226-lilith-ai-products	9226-lilith-ai-products/home/decor/9733_gen_products-home-decor_brass-arc-floor-lamp_p0494_1024x1536.png
 9734	train	9226-lilith-ai-products	9226-lilith-ai-products/home/decor/9734_gen_products-home-decor_brass-candleholder-set_p0495_1536x1024.png
 9735	validate	9226-lilith-ai-products	9226-lilith-ai-products/home/decor/9735_gen_products-home-decor_brass-geometric-bookends_p0496_1536x1024.png
-9736	train	9226-lilith-ai-products	9226-lilith-ai-products/home/decor/9736_gen_products-home-decor_brass-table-clock_p0497_1024x1024.png
 9737	test	9226-lilith-ai-products	9226-lilith-ai-products/home/decor/9737_gen_products-home-decor_brass-wall-sconce_p0498_1024x1536.png
 9738	train	9226-lilith-ai-products	9226-lilith-ai-products/home/decor/9738_gen_products-home-decor_candle-tobacco-vetiver-product_p0499_1024x1536.png
 9739	test	9226-lilith-ai-products	9226-lilith-ai-products/home/decor/9739_gen_products-home-decor_ceramic-table-lamp-linen-shade_p0500_1024x1536.png
@@ -2024,7 +1993,6 @@ id	split	content_class	path
 9848	train	9226-lilith-ai-products	9226-lilith-ai-products/home/small-appliances/9848_gen_products-home-small-appliances_kettlebay-centrifugal-juicer_p0609_1024x1536.png
 9849	test	9226-lilith-ai-products	9226-lilith-ai-products/home/small-appliances/9849_gen_products-home-small-appliances_kettlebay-electric-griddle_p0610_1536x1024.png
 9850	train	9226-lilith-ai-products	9226-lilith-ai-products/home/small-appliances/9850_gen_products-home-small-appliances_kettlebay-espresso-machine_p0611_1024x1536.png
-9851	validate	9226-lilith-ai-products	9226-lilith-ai-products/home/small-appliances/9851_gen_products-home-small-appliances_kettlebay-handheld-mixer_p0612_1536x1024.png
 9852	train	9226-lilith-ai-products	9226-lilith-ai-products/home/small-appliances/9852_gen_products-home-small-appliances_kettlebay-ice-cream-maker_p0613_1024x1536.png
 9853	validate	9226-lilith-ai-products	9226-lilith-ai-products/home/small-appliances/9853_gen_products-home-small-appliances_kettlebay-immersion-blender_p0614_1024x1536.png
 9854	train	9226-lilith-ai-products	9226-lilith-ai-products/home/small-appliances/9854_gen_products-home-small-appliances_kettlebay-milk-frother_p0615_1024x1536.png
@@ -2077,7 +2045,6 @@ id	split	content_class	path
 9901	validate	9226-lilith-ai-products	9226-lilith-ai-products/toys/9901_gen_products-toys_wooden-building-blocks-set_p0662_1024x1024.png
 9902	train	9226-lilith-ai-products	9226-lilith-ai-products/toys/9902_gen_products-toys_wooden-dollhouse_p0663_1024x1536.png
 9903	validate	9226-lilith-ai-products	9226-lilith-ai-products/toys/9903_gen_products-toys_wooden-stacking-rings_p0664_1024x1536.png
-9904	train	9226-lilith-ai-products	9226-lilith-ai-products/toys/9904_gen_products-toys_wooden-toddler-tricycle_p0665_1024x1536.png
 9905	validate	9226-lilith-ai-products	9226-lilith-ai-products/toys/9905_gen_products-toys_wooden-train-set-box_p0666_1536x1024.png
 9906	train	9226-lilith-ai-products	9226-lilith-ai-products/whitelabeled-beauty/9906_gen_products-whitelabeled-beauty_amber-face-oil-dropper_p0667_1024x1536.png
 9907	test	9226-lilith-ai-products	9226-lilith-ai-products/whitelabeled-beauty/9907_gen_products-whitelabeled-beauty_amber-glass-serum-bottle_p0668_1024x1536.png
@@ -2128,7 +2095,6 @@ id	split	content_class	path
 9952	train	9226-lilith-ai-products	9226-lilith-ai-products/whitelabeled-beverages/9952_gen_products-whitelabeled-beverages_beverage-kombucha-bottle_p0710_1024x1536.png
 9953	validate	9226-lilith-ai-products	9226-lilith-ai-products/whitelabeled-beverages/9953_gen_products-whitelabeled-beverages_beverage-lemonade-carton_p0711_1024x1536.png
 9954	train	9226-lilith-ai-products	9226-lilith-ai-products/whitelabeled-beverages/9954_gen_products-whitelabeled-beverages_beverage-mixer-can_p0712_1024x1536.png
-9955	validate	9226-lilith-ai-products	9226-lilith-ai-products/whitelabeled-beverages/9955_gen_products-whitelabeled-beverages_beverage-oat-milk-carton_p0713_1024x1536.png
 9956	train	9226-lilith-ai-products	9226-lilith-ai-products/whitelabeled-beverages/9956_gen_products-whitelabeled-beverages_beverage-plant-milk-carton_p0714_1024x1536.png
 9957	test	9226-lilith-ai-products	9226-lilith-ai-products/whitelabeled-beverages/9957_gen_products-whitelabeled-beverages_beverage-prosecco-bottle_p0715_1024x1536.png
 9958	train	9226-lilith-ai-products	9226-lilith-ai-products/whitelabeled-beverages/9958_gen_products-whitelabeled-beverages_beverage-smoothie-bottle_p0716_1024x1536.png
