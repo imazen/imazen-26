@@ -1,0 +1,45 @@
+[package]
+name = "png-crush"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Losslessly recompress corpus PNGs with zenpng (Crush preset), carrying colour, EXIF, XMP and pHYs, and verify the pixels"
+
+# Standalone: not part of any workspace. It shares ../corpus-thumbs/zen-main (run its sync-main.sh).
+[workspace]
+exclude = []
+
+[dependencies]
+# Built against the main branch of every imazen crate, never crates.io releases
+# (owner rule, 2026-10-15). Cargo.lock records the commits a run used.
+zenpng = { git = "https://github.com/imazen/zenpng", branch = "main", features = ["zopfli"] }
+zencodec = { git = "https://github.com/imazen/zencodec", branch = "main" }
+zenpixels = { git = "https://github.com/imazen/zenpixels", branch = "main", default-features = false, features = ["std"] }
+zenpixels-convert = { git = "https://github.com/imazen/zenpixels", branch = "main", features = ["rgb", "imgref"] }
+enough = "0.4.5"
+imgref = "1.12.3"
+rgb = "0.8.53"
+
+# Every imazen crate reached through zencodecs resolves to main as well, except archmage,
+# magetypes (main is 0.9.31-beta.1) and zentone (main is 0.2.0): the other mains require
+# their crates.io releases, and Cargo only substitutes a version inside the requested range.
+[patch.crates-io]
+zencodec = { path = "../corpus-thumbs/zen-main/zencodec" }
+whereat = { git = "https://github.com/lilith/whereat", branch = "main" }
+zenpixels = { git = "https://github.com/imazen/zenpixels", branch = "main" }
+zenpixels-convert = { git = "https://github.com/imazen/zenpixels", branch = "main" }
+zenpng = { git = "https://github.com/imazen/zenpng", branch = "main" }
+zenflate = { git = "https://github.com/imazen/zenflate", branch = "main" }
+enough = { git = "https://github.com/imazen/enough", branch = "main" }
+zenzop = { git = "https://github.com/imazen/zenzop", branch = "main" }
+zenquant = { git = "https://github.com/imazen/zenquant", branch = "main" }
+almost-enough = { git = "https://github.com/imazen/enough", branch = "main" }
+
+# Several mains pin older zencodec, zenmeta and ultrahdr-core commits. Cargo can't patch a git
+# source with the same URL, so all of them resolve to the main checkouts in zen-main/
+# (../corpus-thumbs/sync-main.sh clones them and records the commits).
+[patch."https://github.com/imazen/zencodec"]
+zencodec = { path = "../corpus-thumbs/zen-main/zencodec" }
+
+[profile.release]
+debug = false
