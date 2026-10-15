@@ -12,7 +12,11 @@ cd tools/corpus-thumbs
 target/release/corpus-thumbs list.tsv sheet_00   # list: id<TAB>path<TAB>srgb|p3|adobe
 ```
 
-Writes `sheet_00.webp` and `sheet_00.tsv` (cell and thumbnail size per id). Output of the
+Writes `sheet_00.webp` and `sheet_00.tsv` (cell and thumbnail size per id). Three more
+modes are documented at the top of `src/main.rs`: `--preview` (one full-screen WebP per id),
+`--dhash` (64- and 256-bit difference hashes) and `--to-jpeg` (a baseline 4:4:4 JPEG of one
+8-bit image in stored orientation, with its ICC profile and EXIF; `libjpeg100` sets every
+quantizer to 1). `--to-jpeg` re-encoded 1044 for the 2026-10-15 originals pass. Output of the
 2026-09-25 run: `/mnt/v/output/imazen-26/gallery-2026-09-25/` (with the page, its data and
 `SHA256SUMS`). `DEBUG_DECODE=1` prints each decode's pixel descriptor and channel means.
 

@@ -18,13 +18,24 @@
 //! dHash mode prints difference hashes of the oriented sRGB image for near-duplicate
 //! search: 64-bit (9×8 luma) and 256-bit (17×16 luma), as hex.
 //!   corpus-thumbs --dhash <list.tsv>   →  stdout: id, dhash64, dhash256, error
+//!
+//! To-JPEG mode re-encodes one 8-bit image as a baseline 4:4:4 JPEG with zenjpeg, keeping its
+//! stored orientation and its code values (no colour management), and carrying only its ICC
+//! profile and EXIF (which keeps the orientation tag). A HEIC grid whose colour sits only on
+//! its tiles gets the tiles' ICC profile, provided every tile carries the same one. Tables:
+//! `libjpeg100` is libjpeg's quality-100 scaling (every quantizer 1), `jpegli<q>` jpegli's
+//! perceptual tables at quality q; adaptive quantization and deringing are off. It prints the
+//! largest per-channel difference and the PSNR against the source's code values, and fails
+//! unless the source (with its own HEIC transforms applied) and the JPEG (with its EXIF
+//! orientation applied) display at the same size with the same pixels.
+//!   corpus-thumbs --to-jpeg <libjpeg100|jpegli<q>> <in> <out.jpg>
 
 #![forbid(unsafe_code)]
 
 use std::fs;
 use std::io::Write;
 
-use zencodec::{Orientation, OrientationHint};
+use zencodec::{Metadata, Orientation, OrientationHint};
 use zencodecs::{DecodeRequest, EncodeRequest, ImageFormat, Limits};
 use zenpixels::{ColorPrimaries, PixelDescriptor, TransferFunction};
 use zenpixels_convert::{ConvertOptions, PixelBufferConvertTypedExt, RowConverter};
@@ -209,11 +220,20 @@ fn previews(args: &[String]) {
             f.get(1).copied().unwrap_or(""),
             f.get(2).copied().unwrap_or("srgb"),
         );
-        match thumbnail(path, colour, max).and_then(|(t, o)| encode_webp(&t, quality).map(|b| (t, o, b))) {
+        match thumbnail(path, colour, max)
+            .and_then(|(t, o)| encode_webp(&t, quality).map(|b| (t, o, b)))
+        {
             Ok((t, o, bytes)) => {
                 fs::write(out.join(format!("{id}.webp")), &bytes).expect("write preview");
                 tsv.push_str(&format!("{id}\t{}\t{}\t{}\t{o}\t\n", t.w, t.h, bytes.len()));
-                eprintln!("[{}/{}] {id} {}x{} {} B", n + 1, lines.len(), t.w, t.h, bytes.len());
+                eprintln!(
+                    "[{}/{}] {id} {}x{} {} B",
+                    n + 1,
+                    lines.len(),
+                    t.w,
+                    t.h,
+                    bytes.len()
+                );
             }
             Err(e) => {
                 let e = e.replace(['\t', '\n'], " ");
@@ -257,14 +277,180 @@ fn dhashes(path: &str, colour: &str) -> Result<(String, String), String> {
     Ok((dhash(&img, 8, 8), dhash(&img, 16, 16)))
 }
 
+/// Decode in stored orientation to 8-bit RGB code values, without colour management: the
+/// buffer is relabelled sRGB before the layout conversion, so no gamut or transfer conversion
+/// runs. Sources deeper than 8 bits or with alpha are refused.
+fn decode_stored(data: &[u8]) -> Result<(Vec<u8>, usize, usize, Metadata), String> {
+    decode_code_values(data, OrientationHint::Preserve)
+}
+
+fn decode_code_values(
+    data: &[u8],
+    orientation: OrientationHint,
+) -> Result<(Vec<u8>, usize, usize, Metadata), String> {
+    let limits = Limits::none()
+        .with_max_pixels(400_000_000)
+        .with_max_memory(12 << 30);
+    let out = DecodeRequest::new(data)
+        .with_limits(&limits)
+        .with_orientation(orientation)
+        .decode_full_frame()
+        .map_err(|e| format!("decode: {e}"))?;
+    let meta = out.metadata();
+    let buf = out.into_buffer();
+    let desc = buf.descriptor();
+    if desc.channel_type() != zenpixels::ChannelType::U8 || desc.alpha.is_some() {
+        return Err(format!("not 8-bit RGB without alpha: {desc:?}"));
+    }
+    let buf = buf
+        .with_primaries(zenpixels::ColorPrimaries::Bt709)
+        .with_transfer(zenpixels::TransferFunction::Srgb)
+        .to_rgb8();
+    let (w, h) = (buf.width() as usize, buf.height() as usize);
+    Ok((buf.copy_to_contiguous_bytes(), w, h, meta))
+}
+
+fn to_jpeg(input: &str, output: &str, tables: &str) -> Result<String, String> {
+    use zencodecs::config::jpeg::{
+        ChromaSubsampling, EncoderConfig, Exif, JpegPixelLayout, Quality,
+    };
+    let config = if tables == "libjpeg100" {
+        EncoderConfig::ycbcr(Quality::ApproxMozjpeg(100), ChromaSubsampling::None)
+            .quant_table_config(zenjpeg::encoder::QuantTableConfig::MozjpegRobidoux {
+                chroma_quality: None,
+            })
+    } else if let Some(q) = tables.strip_prefix("jpegli") {
+        let q: f32 = q.parse().map_err(|_| format!("bad quality in {tables}"))?;
+        EncoderConfig::ycbcr(q, ChromaSubsampling::None)
+    } else {
+        return Err(format!("unknown tables {tables}"));
+    }
+    .force_baseline()
+    .aq_enabled(false)
+    .deringing(false);
+
+    let data = fs::read(input).map_err(|e| format!("read: {e}"))?;
+    let (rgb, w, h, meta) = decode_stored(&data)?;
+    let (icc, icc_note) = match meta.icc_profile.as_deref() {
+        Some(icc) => (Some(icc.to_vec()), "icc from primary"),
+        None => match heic_tile_icc(&data)? {
+            Some(icc) => (Some(icc), "icc from tiles"),
+            None => (None, "no icc"),
+        },
+    };
+    let mut request = config.request();
+    if let Some(icc) = &icc {
+        request = request.icc_profile(icc);
+    }
+    if let Some(exif) = meta.exif.as_deref() {
+        request = request.exif(Exif::raw(exif.to_vec()));
+    }
+    let jpg = request
+        .encode_bytes(&rgb, w as u32, h as u32, JpegPixelLayout::Rgb8Srgb)
+        .map_err(|e| format!("encode: {e}"))?;
+    fs::write(output, &jpg).map_err(|e| format!("write: {e}"))?;
+
+    let (back, bw, bh, back_meta) = decode_stored(&jpg)?;
+    if (bw, bh) != (w, h) {
+        return Err(format!("size changed: {w}x{h} -> {bw}x{bh}"));
+    }
+    if back_meta.icc_profile.as_deref() != icc.as_deref() || back_meta.exif != meta.exif {
+        return Err("ICC or EXIF not carried".into());
+    }
+    let mut max = 0u8;
+    let mut se = 0f64;
+    for (a, b) in rgb.iter().zip(back.iter()) {
+        let d = a.abs_diff(*b);
+        max = max.max(d);
+        se += (d as f64) * (d as f64);
+    }
+    let mse = se / rgb.len() as f64;
+    let psnr = if mse == 0.0 {
+        f64::INFINITY
+    } else {
+        10.0 * (255.0f64 * 255.0 / mse).log10()
+    };
+
+    // Both files must display the same way: the source with its own transforms (HEIC
+    // irot/imir) applied, the JPEG with its EXIF orientation applied.
+    let (src_shown, sw, sh, _) = decode_code_values(&data, OrientationHint::Correct)?;
+    let (jpg_shown, jw, jh, _) = decode_code_values(&jpg, OrientationHint::Correct)?;
+    if (sw, sh) != (jw, jh) {
+        return Err(format!(
+            "displayed size differs: source {sw}x{sh}, jpeg {jw}x{jh}"
+        ));
+    }
+    let shown_max = src_shown
+        .iter()
+        .zip(&jpg_shown)
+        .map(|(a, b)| a.abs_diff(*b))
+        .max()
+        .unwrap_or(0);
+    if shown_max != max {
+        return Err(format!(
+            "displayed pixels differ by up to {shown_max}, stored by {max}"
+        ));
+    }
+    Ok(format!(
+        "{w}x{h} stored, {sw}x{sh} displayed, {} bytes, {icc_note}, max diff {max}, PSNR {psnr:.2} dB",
+        jpg.len()
+    ))
+}
+
+/// The ICC profile shared by every tile of a HEIC grid primary, when the grid item itself
+/// has none. `Ok(None)` for non-HEIC input, a non-grid primary, or tiles without an ICC
+/// profile; an error when the tiles disagree.
+fn heic_tile_icc(data: &[u8]) -> Result<Option<Vec<u8>>, String> {
+    use heic::heif::{ColorInfo, FourCC};
+    let Ok(container) = heic::heif::parse(data, &heic::Unstoppable) else {
+        return Ok(None);
+    };
+    let Some(primary) = container.primary_item() else {
+        return Ok(None);
+    };
+    let tiles = container.get_item_references(primary.id, FourCC(*b"dimg"));
+    let mut found: Option<Vec<u8>> = None;
+    for id in &tiles {
+        let icc = match container.get_item(*id).and_then(|t| t.color_info) {
+            Some(ColorInfo::IccProfile(icc)) => icc,
+            _ => return Ok(None),
+        };
+        match &found {
+            None => found = Some(icc),
+            Some(f) if *f == icc => {}
+            Some(_) => {
+                return Err(format!(
+                    "tiles of item {} carry different ICC profiles",
+                    primary.id
+                ));
+            }
+        }
+    }
+    Ok(found)
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    if args.len() == 5 && args[1] == "--to-jpeg" {
+        match to_jpeg(&args[3], &args[4], &args[2]) {
+            Ok(s) => println!("{s}"),
+            Err(e) => {
+                eprintln!("{e}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
     if args.len() == 3 && args[1] == "--dhash" {
         let list = fs::read_to_string(&args[2]).expect("read list");
         let mut out = std::io::stdout().lock();
         for line in list.lines().filter(|l| !l.trim().is_empty()) {
             let f: Vec<&str> = line.split('\t').collect();
-            let (id, path, colour) = (f[0], f.get(1).copied().unwrap_or(""), f.get(2).copied().unwrap_or("srgb"));
+            let (id, path, colour) = (
+                f[0],
+                f.get(1).copied().unwrap_or(""),
+                f.get(2).copied().unwrap_or("srgb"),
+            );
             match dhashes(path, colour) {
                 Ok((a, b)) => writeln!(out, "{id}\t{a}\t{b}\t").unwrap(),
                 Err(e) => writeln!(out, "{id}\t\t\t{}", e.replace(['\t', '\n'], " ")).unwrap(),

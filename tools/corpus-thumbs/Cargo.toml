@@ -17,6 +17,8 @@ zencodec = { git = "https://github.com/imazen/zencodec", branch = "main" }
 zenpixels = { git = "https://github.com/imazen/zenpixels", branch = "main", default-features = false, features = ["std"] }
 zenpixels-convert = { git = "https://github.com/imazen/zenpixels", branch = "main", features = ["rgb", "imgref"] }
 zenresize = { git = "https://github.com/imazen/zenresize", branch = "main" }
+heic = { git = "https://github.com/imazen/heic", branch = "main" }
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", branch = "main" }
 imgref = "1.12.3"
 rgb = "0.8.53"
 
