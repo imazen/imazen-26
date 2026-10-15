@@ -1,3 +1,4 @@
 format	kind	tag	label_prefix	reason
 heic	property	pixi		Pixel information property (ISO/IEC 23008-12): the bit depth of each channel of an item, a few bytes, nothing beyond what the coded image states. The heic walker has no parser for it.
 jpg	segment	FFE5	MEDIABIN_DIDB	APP5 asset-manager record in Met Museum JPEGs: the museum's own digital-asset id, kept with the rest of the museum's published metadata (EXPORT-PLAN: keep the museum metadata).
+jpg	segment	FFE2	urn:iso:std:iso:ts:21496:-1	ISO 21496-1 gain-map metadata (APP2) of the 33 UltraHDR JPEGs: a version record in the primary image and the gain-map parameters in the gain-map image. HDR structure the originals keep (whitelist v2); zenjpeg's UltraHDR reader parses both, the 2026-10-10 inventory walker has no parser for them.
