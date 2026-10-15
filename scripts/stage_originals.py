@@ -337,10 +337,16 @@ def main():
     with open(os.path.join(out, "crush.tsv"), "w") as f:
         f.write("id\tin_bytes\tout_bytes\tms\tin_layout\tout_layout\tdropped\terror\n")
         f.writelines(line + "\n" for line in crush)
+    rel_of = {rid: rel for rid, _, rel in crush_items}
     for line in crush:
         f_ = line.split("\t")
         if f_[7]:
             failures.append((f_[0], "png-crush: " + f_[7]))
+            # A failed write (a full disk) can leave a partial file behind.
+            partial = os.path.join(out, rel_of[f_[0]])
+            if os.path.exists(partial):
+                os.remove(partial)
+    failed_ids = {rid for rid, _ in failures}
 
     sums = []
     with open(os.path.join(out, "changes.tsv"), "w") as f:
@@ -349,7 +355,7 @@ def main():
         f.write("\t".join(cols) + "\n")
         for c in changes:
             p = os.path.join(out, c["new_path"])
-            if not os.path.exists(p):
+            if c["id"] in failed_ids or not os.path.exists(p):
                 continue
             c["new_sha256"], c["new_bytes"] = sha(p), str(os.path.getsize(p))
             sums.append(f"{c['new_sha256']}  {c['new_path']}\n")
