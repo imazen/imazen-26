@@ -1,0 +1,65 @@
+[package]
+name = "render-v4"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Render the imazen-26 v4 layers (EXPORT-PLAN.md) from the originals with zen crates at main"
+
+# Standalone: not part of any workspace. The zencodec/ultrahdr main checkouts are shared with
+# tools/corpus-thumbs (run its sync-main.sh).
+[workspace]
+
+[dependencies]
+# Built against the main branch of every imazen crate, never crates.io releases (owner rule,
+# 2026-10-15). Cargo.lock records the commits a run used.
+zencodecs = { git = "https://github.com/imazen/zenpipe", branch = "main", default-features = false, features = ["jpeg", "png", "webp", "heic-decode"] }
+zencodec = { git = "https://github.com/imazen/zencodec", branch = "main" }
+zenpixels = { git = "https://github.com/imazen/zenpixels", branch = "main", default-features = false, features = ["std", "icc"] }
+zenpixels-convert = { git = "https://github.com/imazen/zenpixels", branch = "main", features = ["rgb", "imgref"] }
+zenpng = { git = "https://github.com/imazen/zenpng", branch = "main" }
+heic = { git = "https://github.com/imazen/heic", branch = "main" }
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", branch = "main" }
+enough = { git = "https://github.com/imazen/enough", branch = "main" }
+imgref = "1.12.3"
+rgb = "0.8.53"
+sha2 = "0.11.1"
+bytemuck = "1.25.2"
+
+[patch.crates-io]
+zencodec = { path = "../corpus-thumbs/zen-main/zencodec" }
+zenmeta = { path = "../corpus-thumbs/zen-main/zencodec/zenmeta" }
+ultrahdr-core = { path = "../corpus-thumbs/zen-main/ultrahdr/ultrahdr-core" }
+whereat = { git = "https://github.com/lilith/whereat", branch = "main" }
+zenpixels = { git = "https://github.com/imazen/zenpixels", branch = "main" }
+zenpixels-convert = { git = "https://github.com/imazen/zenpixels", branch = "main" }
+zenresize = { git = "https://github.com/imazen/zenresize", branch = "main" }
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", branch = "main" }
+heic = { git = "https://github.com/imazen/heic", branch = "main" }
+zenpng = { git = "https://github.com/imazen/zenpng", branch = "main" }
+zenraw = { git = "https://github.com/imazen/zenraw", branch = "main" }
+zenwebp = { git = "https://github.com/imazen/zenwebp", branch = "main" }
+zenflate = { git = "https://github.com/imazen/zenflate", branch = "main" }
+zenanalyze = { git = "https://github.com/imazen/zenanalyze", branch = "main" }
+enough = { git = "https://github.com/imazen/enough", branch = "main" }
+how-far = { git = "https://github.com/imazen/how-far", branch = "main" }
+linear-srgb = { git = "https://github.com/imazen/linear-srgb", branch = "main" }
+garb = { git = "https://github.com/imazen/garb", branch = "main" }
+winarm-cpufeatures = { git = "https://github.com/imazen/winarm-cpufeatures", branch = "main" }
+zenblend = { git = "https://github.com/imazen/zenblend", branch = "main" }
+zenquant = { git = "https://github.com/imazen/zenquant", branch = "main" }
+zenyuv = { git = "https://github.com/imazen/zenjpeg", branch = "main" }
+zenzop = { git = "https://github.com/imazen/zenzop", branch = "main" }
+almost-enough = { git = "https://github.com/imazen/enough", branch = "main" }
+
+# Several mains pin older zencodec, zenmeta and ultrahdr-core commits. Cargo can't patch a git
+# source with the same URL, so all of them resolve to the main checkouts in
+# ../corpus-thumbs/zen-main/ (its sync-main.sh clones them and records the commits).
+[patch."https://github.com/imazen/zencodec"]
+zencodec = { path = "../corpus-thumbs/zen-main/zencodec" }
+zenmeta = { path = "../corpus-thumbs/zen-main/zencodec/zenmeta" }
+
+[patch."https://github.com/imazen/ultrahdr"]
+ultrahdr-core = { path = "../corpus-thumbs/zen-main/ultrahdr/ultrahdr-core" }
+
+[profile.release]
+debug = false
