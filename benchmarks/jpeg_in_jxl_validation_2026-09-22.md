@@ -135,7 +135,8 @@ the 33 also have orientation 6.
 For naive readers nothing changes: without gain-map support, either format shows the
 SDR base image, which is the camera's own SDR rendering.
 
-**Restore candidates exist.** `scripts/restore_uhdr_gainmaps.py` rebuilds each of the 33
+**Restore candidates exist.** `restore_uhdr_gainmaps.py` (since removed: whitelist v2,
+`scripts/whitelist_v2.py`, supersedes it) rebuilds each of the 33
 from the canonical file (its whitelisted Exif, ICC and image data) plus the original's
 container XMP, ISO 21496-1 marker, MPF (sizes and offset recomputed) and gain-map JPEG.
 It leaves out the original's APP4 segment, full Exif and vendor trailer (191–256 bytes).

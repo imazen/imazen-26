@@ -241,7 +241,8 @@ writes only under `~/tmp` or `/mnt/v/output/imazen-26-variants/`, refuses a non-
 output directory, never overwrites a file, and re-hashes its inputs after the run. The
 oldest copies it reads are now read-only on disk.
 
-`scripts/restore_uhdr_gainmaps.py` and its candidates are superseded by v2.
+The earlier restore script (`restore_uhdr_gainmaps.py`, since removed) and its candidates are
+superseded by v2.
 
 **Owner decision:** replacing the 316 corpus files with the v2 outputs changes their
 published bytes (sha256, R2 objects, manifests), and `STORAGE-MAP.md`/`ACCESS.md` would
