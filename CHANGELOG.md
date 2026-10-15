@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- `6000-lilith-scans-public-patents/MANIFEST.tsv` gains `patent_page`, the patent page each scan shows: us3807657's rescans are its pages 1, 3, 5 and 7 (`benchmarks/patent_page_alignment_2026-10-15.md`)
 - 11 byte-identical duplicates retired: each group keeps its lowest id, the others leave every manifest, split map and split link and are listed in the new `manifests/retired.tsv`; 2,160 → 2,149 images, buckets 1,078 / 654 / 417
 - `tools/corpus-thumbs` builds against the main branch of every imazen crate instead of crates.io releases; `sync-main.sh` supplies zencodec, zenmeta and ultrahdr-core main by path, and the committed `Cargo.lock` records the rest
 - `corpus-guard`: `actions/checkout` v5 -> v7 (a03cc90)
