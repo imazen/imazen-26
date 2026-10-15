@@ -2,7 +2,6 @@
 """Check a png-srgb render of a wide-gamut source against two independent conversions.
 
     colour_oracle.py <report.tsv> <render-dir> <originals-dir> <list.tsv> [--ids 11044,13005]
-                     [--code-values <code-values report.tsv>]
 
 For every `png-srgb` row of render-v4's report whose colour is display-p3 or adobe-rgb, the
 source's code values (decoded by Pillow, or by ImageMagick/libheif for HEIC, displayed
@@ -14,12 +13,9 @@ orientation, no colour conversion) are converted to sRGB twice:
 - LittleCMS, through ImageMagick: relative colorimetric to sRGB from the source's own profile.
 
 and compared with the render. The textbook comparison is also made on the render's own
-`png-p3` twin when there is one (same decoder as the render, so decoder differences drop out),
-and a row fails when the render differs from that result by more than 1 code value.
-Gain-map sources have no `png-p3` twin (their p3 layers are the PQ renders): for them, pass
-the report of a `render-v4 code-values` run (same list, its files under <render-dir>), whose
-files hold the same decoded code values. A row with neither compares only against
-third-party decodes and is printed as `info`, ungated, and counted.
+`png-p3` twin (same decoder as the render, so decoder differences drop out), and a row fails
+when the render differs from that result by more than 1 code value. A row without a twin
+compares only against third-party decodes and is printed as `info`, ungated, and counted.
 Prints one line per file and exits 1 on any failure.
 """
 import argparse
@@ -78,7 +74,6 @@ def main():
     ap.add_argument("originals")
     ap.add_argument("list")
     ap.add_argument("--ids")
-    ap.add_argument("--code-values")
     a = ap.parse_args()
     keep = set(a.ids.split(",")) if a.ids else None
     with open(a.list) as f:
@@ -86,11 +81,6 @@ def main():
     with open(a.report, newline="") as f:
         rows = [r for r in csv.DictReader(f, delimiter="\t") if not r["error"]]
     p3 = {r["id"]: r["path"] for r in rows if r["layer"] == "png-p3"}
-    if a.code_values:
-        with open(a.code_values, newline="") as f:
-            for r in csv.DictReader(f, delimiter="\t"):
-                if r["layer"] == "code-values" and not r["error"]:
-                    p3.setdefault(r["id"], r["path"])
     failed = ungated = 0
     for r in rows:
         if r["layer"] != "png-srgb" or r["colour"] not in TO_XYZ or (keep and r["id"] not in keep):
@@ -116,7 +106,7 @@ def main():
         print({None: "info ", True: "FAIL ", False: "ok   "}[bad] + line, flush=True)
         failed += bad is True
         ungated += bad is None
-    print(f"{failed} failed, {ungated} ungated (no own decode)")
+    print(f"{failed} failed, {ungated} ungated (no png-p3 twin)")
     sys.exit(1 if failed else 0)
 
 

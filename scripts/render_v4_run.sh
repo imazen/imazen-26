@@ -8,8 +8,6 @@
 #   list.tsv      render-v4's input (scripts/render_v4_list.py)
 #   report.tsv    one row per written file (render-v4's report), sorted by id and layer
 #   progress.log  render-v4's per-file progress
-#   code-values/, code-values.tsv
-#                 the decoded code values of the gain-map sources (no png-p3 file here)
 #   oracle.log    scripts/colour_oracle.py over every wide-gamut png-srgb file
 #   RUN.meta      the imazen-26 commit, the crate commits (render-v4's Cargo.lock and
 #                 tools/corpus-thumbs/zen-main/COMMITS.tsv), host, date and command
@@ -53,13 +51,8 @@ run_heavy "$((jobs * 2))" 40G "$repo/tools/render-v4/target/release/render-v4" p
 rm "$out/report.unsorted.tsv"
 echo "exit	$status" >> "$out/RUN.meta"
 grep -E '^run-heavy: done' "$out/progress.log" | sed 's/^/run_heavy	/' >> "$out/RUN.meta" || true
-# Gain-map sources: their code values, so the oracle compares them on our own decode too.
-awk -F'\t' 'NR > 1 && $8 != "" { print $1 }' "$out/report.tsv" | sort -u > "$out/gain-map-ids.txt"
-awk -F'\t' 'NR == FNR { keep[$1] = 1; next } keep[$1]' "$out/gain-map-ids.txt" "$out/list.tsv" > "$out/gain-map-list.tsv"
-run_heavy "$((jobs * 2))" 40G "$repo/tools/render-v4/target/release/render-v4" code-values --jobs "$jobs" \
-  "$out/gain-map-list.tsv" "$out" > "$out/code-values.tsv" 2>> "$out/progress.log" || status=$?
 python3 "$repo/scripts/colour_oracle.py" "$out/report.tsv" "$out" "$originals" "$out/list.tsv" \
-  --code-values "$out/code-values.tsv" > "$out/oracle.log" 2>&1 || status=$?
+  > "$out/oracle.log" 2>&1 || status=$?
 tail -n 1 "$out/oracle.log" | sed 's/^/oracle	/' >> "$out/RUN.meta"
 echo "final_exit	$status" >> "$out/RUN.meta"
 exit "$status"

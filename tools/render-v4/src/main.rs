@@ -7,23 +7,23 @@
 //!   An sRGB source's `png-srgb` file is byte-identical to its `png-p3` file.
 //!
 //! For both: orientation baked into the pixels; channels follow the source (8-bit; every
-//! original decodes to 8 bits), a fully opaque alpha channel dropped; colour signalling as the
+//! original decodes to 8 bits), a fully opaque alpha channel dropped and reported; colour signalling as the
 //! plan says (an `sRGB` chunk for sRGB, the source's `iCCP` plus an agreeing `cICP` where H.273
 //! has a code, `iCCP` alone for Adobe RGB); one provenance `tEXt` chunk (keyword `imazen-26`,
 //! the row's JSON, ASCII so it reads the same as Latin-1 or UTF-8) before the image data; zenpng
 //! at effort 22. Every output is decoded again and must hold exactly the pixels it was written
 //! from and that one text chunk. DNGs are not rendered.
 //!
-//! A source with a gain map gets only its `png-srgb` file here (the camera's SDR base): its
-//! `p3` layers hold the 16-bit PQ render instead, which a later chunk writes.
+//! A source with a gain map is rendered from the camera's SDR base image like any other, and
+//! the report names its gain map; its 16-bit PQ render (`.hdr.png` beside the `png-p3` file)
+//! comes from the HDR pass.
 //!
 //! Usage: render-v4 png-sdr [--jobs N] <list.tsv> <out-dir>
-//!        render-v4 code-values [--jobs N] <list.tsv> <out-dir>   (see `write_code_values`)
 //!   list: id<TAB>source path<TAB>out stem (class/newid_name, no _WxH)<TAB>provenance JSON
 //!   → <out-dir>/png-p3/<stem>_<W>x<H>.png and <out-dir>/png-srgb/<stem>_<W>x<H>.png, and a
-//!     report on stdout: id, layer, path, width, height, layout, colour, gain_map, clipped,
-//!     bytes, sha256, rgba_sha256, error, in the order files finish (`--jobs` renders that many
-//!     at once; progress goes to stderr)
+//!     report on stdout: id, layer, path, width, height, layout, source_alpha (none, kept or
+//!     dropped-opaque), colour, gain_map, clipped, bytes, sha256, rgba_sha256, error, in the
+//!     order files finish (`--jobs` renders that many at once; progress goes to stderr)
 
 #![forbid(unsafe_code)]
 
@@ -180,8 +180,9 @@ impl Pixels {
 }
 
 /// The decoded buffer's code values in a kept layout, without colour management: the buffer
-/// is relabelled sRGB first so the typed conversions only change the layout.
-fn code_values(buf: PixelBuffer) -> Result<Pixels, String> {
+/// is relabelled sRGB first so the typed conversions only change the layout. Also says what
+/// happened to the source's alpha: `none`, `kept`, or `dropped-opaque` (every value 255).
+fn code_values(buf: PixelBuffer) -> Result<(Pixels, &'static str), String> {
     let desc = buf.descriptor();
     if desc.channel_type() != zenpixels::ChannelType::U8 {
         return Err(format!("not an 8-bit decode: {desc:?}"));
@@ -190,12 +191,22 @@ fn code_values(buf: PixelBuffer) -> Result<Pixels, String> {
         desc.format,
         zenpixels::PixelFormat::Gray8 | zenpixels::PixelFormat::GrayA8
     );
+    // Straight, premultiplied or opaque-declared alpha; padding bytes (RGBX) are not alpha.
+    let has_alpha = desc.has_alpha();
+    if desc.alpha() == Some(zenpixels::AlphaMode::Premultiplied) {
+        return Err("premultiplied decode".into());
+    }
     let buf = buf
         .with_primaries(ColorPrimaries::Bt709)
         .with_transfer(TransferFunction::Srgb);
     let rgba = buf.to_rgba8().copy_to_contiguous_bytes();
-    let opaque = rgba.as_chunks::<4>().0.iter().all(|c| c[3] == 255);
-    Ok(match (gray, opaque) {
+    let opaque = !has_alpha || rgba.as_chunks::<4>().0.iter().all(|c| c[3] == 255);
+    let alpha = match (has_alpha, opaque) {
+        (false, _) => "none",
+        (true, true) => "dropped-opaque",
+        (true, false) => "kept",
+    };
+    let px = match (gray, opaque) {
         (true, true) => Pixels::Gray(rgba.as_chunks::<4>().0.iter().map(|c| c[0]).collect()),
         (_, true) => Pixels::Rgb(
             rgba.as_chunks::<4>()
@@ -205,7 +216,8 @@ fn code_values(buf: PixelBuffer) -> Result<Pixels, String> {
                 .collect(),
         ),
         (_, false) => Pixels::Rgba(rgba),
-    })
+    };
+    Ok((px, alpha))
 }
 
 /// Convert code values from `colour` to sRGB: linear light, the gamut matrix, clip, encode.
@@ -412,6 +424,7 @@ struct Row<'a> {
 /// A source decoded for rendering: displayed orientation, code values, colour space.
 struct Source {
     gain_map: Option<String>,
+    alpha: &'static str,
     colour: Colour,
     icc: Option<Vec<u8>>,
     px: Pixels,
@@ -442,9 +455,10 @@ fn load(row: &Row) -> Result<Source, String> {
         .map(<[u8]>::to_vec)
         .or_else(|| heic_tile_icc(&data));
     let colour = classify(icc.as_deref())?;
-    let px = code_values(buf)?;
+    let (px, alpha) = code_values(buf)?;
     Ok(Source {
         gain_map,
+        alpha,
         colour,
         icc,
         px,
@@ -453,61 +467,13 @@ fn load(row: &Row) -> Result<Source, String> {
     })
 }
 
-/// The decoded code values as a quickly compressed PNG without colour chunks or text: what
-/// `scripts/colour_oracle.py` converts itself for sources that get no `png-p3` file here.
-fn write_code_values(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
-    let Source {
-        px,
-        w,
-        h,
-        colour,
-        gain_map,
-        ..
-    } = load(row)?;
-    let cfg = EncodeConfig::default().with_compression(Compression::Effort(1));
-    let meta = Metadata::default();
-    let rgba: Vec<rgb::Rgba<u8>> = px
-        .rgba()
-        .as_chunks::<4>()
-        .0
-        .iter()
-        .map(|c| rgb::Rgba {
-            r: c[0],
-            g: c[1],
-            b: c[2],
-            a: c[3],
-        })
-        .collect();
-    let png = zenpng::encode_rgba8(
-        imgref::Img::new(&rgba[..], w, h),
-        Some(&meta),
-        &cfg,
-        &Unstoppable,
-        &Unstoppable,
-    )
-    .map_err(|e| format!("encode: {e:?}"))?;
-    let name = format!("{}_{w}x{h}.png", row.stem);
-    let path = out_dir.join("code-values").join(&name);
-    fs::create_dir_all(path.parent().unwrap()).map_err(|e| format!("mkdir: {e}"))?;
-    fs::write(&path, &png).map_err(|e| format!("write: {e}"))?;
-    Ok(vec![format!(
-        "{}\tcode-values\tcode-values/{name}\t{w}\t{h}\t{}\t{}\t{}\t\t{}\t{}\t{}\t",
-        row.id,
-        px.layout(),
-        colour.name(),
-        gain_map.as_deref().unwrap_or(""),
-        png.len(),
-        hex(&Sha256::digest(&png)),
-        hex(&Sha256::digest(px.rgba())),
-    )])
-}
-
 fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
     if !row.provenance.is_ascii() {
         return Err("provenance JSON must be ASCII (escape the rest as \\uXXXX)".into());
     }
     let Source {
         gain_map,
+        alpha,
         colour,
         icc,
         px,
@@ -519,25 +485,19 @@ fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
 
     // (layer, file, layout, rgba sha256, clipped pixels)
     let mut files: Vec<(&str, Vec<u8>, &str, String, String)> = Vec::new();
+    let png = encode_png(&px, w, h, colour, icc.as_deref(), row.provenance)?;
+    let hash = check(&png, &px, w, h, row.provenance)?;
     if colour.is_srgb() {
-        let png = encode_png(&px, w, h, colour, icc.as_deref(), row.provenance)?;
-        let hash = check(&png, &px, w, h, row.provenance)?;
-        if gain_map.is_none() {
-            files.push((
-                "png-p3",
-                png.clone(),
-                px.layout(),
-                hash.clone(),
-                String::new(),
-            ));
-        }
+        files.push((
+            "png-p3",
+            png.clone(),
+            px.layout(),
+            hash.clone(),
+            String::new(),
+        ));
         files.push(("png-srgb", png, px.layout(), hash, "0".into()));
     } else {
-        if gain_map.is_none() {
-            let png = encode_png(&px, w, h, colour, icc.as_deref(), row.provenance)?;
-            let hash = check(&png, &px, w, h, row.provenance)?;
-            files.push(("png-p3", png, px.layout(), hash, String::new()));
-        }
+        files.push(("png-p3", png, px.layout(), hash, String::new()));
         let (spx, clipped) = to_srgb(&px, w, colour)?;
         let png = encode_png(&spx, w, h, Colour::Srgb, None, row.provenance)?;
         let hash = check(&png, &spx, w, h, row.provenance)?;
@@ -550,7 +510,7 @@ fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
         fs::create_dir_all(path.parent().unwrap()).map_err(|e| format!("mkdir: {e}"))?;
         fs::write(&path, png).map_err(|e| format!("write: {e}"))?;
         rows.push(format!(
-            "{}\t{layer}\t{layer}/{name}\t{w}\t{h}\t{layout}\t{}\t{gm}\t{clip}\t{}\t{}\t{hash}\t",
+            "{}\t{layer}\t{layer}/{name}\t{w}\t{h}\t{layout}\t{alpha}\t{}\t{gm}\t{clip}\t{}\t{}\t{hash}\t",
             row.id,
             colour.name(),
             png.len(),
@@ -571,12 +531,9 @@ fn main() {
             .unwrap_or_else(|| usage());
         args.drain(i..i + 2);
     }
-    let command: fn(&Row, &Path) -> Result<Vec<String>, String> =
-        match args.first().map(String::as_str) {
-            Some("png-sdr") if args.len() == 3 => render,
-            Some("code-values") if args.len() == 3 => write_code_values,
-            _ => usage(),
-        };
+    if args.len() != 3 || args[0] != "png-sdr" {
+        usage();
+    }
     let list = fs::read_to_string(&args[1]).expect("read list");
     let out_dir = Path::new(&args[2]);
     let rows: Vec<Row> = list
@@ -593,7 +550,7 @@ fn main() {
         })
         .collect();
     println!(
-        "id\tlayer\tpath\twidth\theight\tlayout\tcolour\tgain_map\tclipped\tbytes\tsha256\trgba_sha256\terror"
+        "id\tlayer\tpath\twidth\theight\tlayout\tsource_alpha\tcolour\tgain_map\tclipped\tbytes\tsha256\trgba_sha256\terror"
     );
     let next = AtomicUsize::new(0);
     let failed = AtomicUsize::new(0);
@@ -607,12 +564,12 @@ fn main() {
                     let i = next.fetch_add(1, Ordering::Relaxed);
                     let Some(row) = rows.get(i) else { break };
                     let t = Instant::now();
-                    let lines = match command(row, out_dir) {
+                    let lines = match render(row, out_dir) {
                         Ok(lines) => lines,
                         Err(e) => {
                             failed.fetch_add(1, Ordering::Relaxed);
                             vec![format!(
-                                "{}\t\t\t\t\t\t\t\t\t\t\t\t{}",
+                                "{}\t\t\t\t\t\t\t\t\t\t\t\t\t{}",
                                 row.id,
                                 e.replace(['\t', '\n'], " ")
                             )]
@@ -646,7 +603,64 @@ fn main() {
 
 fn usage() -> ! {
     eprintln!(
-        "usage: render-v4 <png-sdr|code-values> [--jobs N] <list.tsv: id, source, out stem, provenance JSON> <out-dir>"
+        "usage: render-v4 png-sdr [--jobs N] <list.tsv: id, source, out stem, provenance JSON> <out-dir>"
     );
     std::process::exit(2);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn buf(bytes: &[u8], w: u32, desc: PixelDescriptor) -> PixelBuffer {
+        PixelBuffer::from_vec(bytes.to_vec(), w, 1, desc).unwrap()
+    }
+
+    #[test]
+    fn translucent_alpha_is_kept() {
+        let (px, alpha) = code_values(buf(
+            &[1, 2, 3, 255, 4, 5, 6, 128],
+            2,
+            PixelDescriptor::RGBA8_SRGB,
+        ))
+        .unwrap();
+        assert_eq!(alpha, "kept");
+        assert_eq!(px.layout(), "rgba8");
+        assert_eq!(px.rgba(), [1, 2, 3, 255, 4, 5, 6, 128]);
+    }
+
+    #[test]
+    fn opaque_alpha_is_dropped_and_reported() {
+        let (px, alpha) = code_values(buf(
+            &[1, 2, 3, 255, 4, 5, 6, 255],
+            2,
+            PixelDescriptor::RGBA8_SRGB,
+        ))
+        .unwrap();
+        assert_eq!(alpha, "dropped-opaque");
+        assert_eq!(px.layout(), "rgb8");
+        assert_eq!(px.rgba(), [1, 2, 3, 255, 4, 5, 6, 255]);
+    }
+
+    #[test]
+    fn padding_is_not_alpha() {
+        let (px, alpha) = code_values(buf(
+            &[1, 2, 3, 0, 4, 5, 6, 7],
+            2,
+            PixelDescriptor::RGBX8_SRGB,
+        ))
+        .unwrap();
+        assert_eq!(alpha, "none");
+        assert_eq!(px.layout(), "rgb8");
+        assert_eq!(px.rgba(), [1, 2, 3, 255, 4, 5, 6, 255]);
+    }
+
+    #[test]
+    fn opaque_gray_alpha_becomes_gray() {
+        let (px, alpha) =
+            code_values(buf(&[9, 255, 200, 255], 2, PixelDescriptor::GRAYA8_SRGB)).unwrap();
+        assert_eq!(alpha, "dropped-opaque");
+        assert_eq!(px.layout(), "gray8");
+        assert_eq!(px.rgba(), [9, 9, 9, 255, 200, 200, 200, 255]);
+    }
 }
