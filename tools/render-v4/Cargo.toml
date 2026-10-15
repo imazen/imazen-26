@@ -12,13 +12,14 @@ description = "Render the imazen-26 v4 layers (EXPORT-PLAN.md) from the original
 [dependencies]
 # Built against the main branch of every imazen crate, never crates.io releases (owner rule,
 # 2026-10-15). Cargo.lock records the commits a run used.
-zencodecs = { git = "https://github.com/imazen/zenpipe", branch = "main", default-features = false, features = ["jpeg", "png", "webp", "heic-decode"] }
+zencodecs = { git = "https://github.com/imazen/zenpipe", branch = "main", default-features = false, features = ["jpeg", "jpeg-ultrahdr", "png", "webp", "heic-decode"] }
 zencodec = { git = "https://github.com/imazen/zencodec", branch = "main" }
 zenpixels = { git = "https://github.com/imazen/zenpixels", branch = "main", default-features = false, features = ["std", "icc"] }
 zenpixels-convert = { git = "https://github.com/imazen/zenpixels", branch = "main", features = ["rgb", "imgref"] }
 zenpng = { git = "https://github.com/imazen/zenpng", branch = "main" }
 heic = { git = "https://github.com/imazen/heic", branch = "main" }
 zenjpeg = { git = "https://github.com/imazen/zenjpeg", branch = "main" }
+ultrahdr-core = { git = "https://github.com/imazen/ultrahdr", branch = "main" }
 enough = { git = "https://github.com/imazen/enough", branch = "main" }
 imgref = "1.12.3"
 rgb = "0.8.53"

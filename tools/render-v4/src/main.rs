@@ -19,6 +19,8 @@
 //! comes from the HDR pass.
 //!
 //! Usage: render-v4 png-sdr [--jobs N] <list.tsv> <out-dir>
+//!        render-v4 png-hdr [--jobs N] <list.tsv> <out-dir>    (the gain-map sources; see `hdr`)
+//!        render-v4 hdr-info [--jobs N] <list.tsv> <out-dir>   (what png-hdr would use; writes nothing)
 //!   list: id<TAB>source path<TAB>out stem (class/newid_name, no _WxH)<TAB>provenance JSON
 //!   → <out-dir>/png-p3/<stem>_<W>x<H>.png and <out-dir>/png-srgb/<stem>_<W>x<H>.png, and a
 //!     report on stdout: id, layer, path, width, height, layout, source_alpha (none, kept or
@@ -26,6 +28,8 @@
 //!     order files finish (`--jobs` renders that many at once; progress goes to stderr)
 
 #![forbid(unsafe_code)]
+
+mod hdr;
 
 use std::fs;
 use std::io::Write as _;
@@ -46,6 +50,8 @@ use zenpixels_convert::{
 use zenpng::{Compression, EncodeConfig};
 
 const EFFORT: u32 = 22;
+/// The report columns of `png-sdr`.
+const SDR_HEADER: &str = "id\tlayer\tpath\twidth\theight\tlayout\tsource_alpha\tcolour\tgain_map\tclipped\tbytes\tsha256\trgba_sha256\terror";
 const TEXT_KEYWORD: &str = "imazen-26";
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -531,9 +537,14 @@ fn main() {
             .unwrap_or_else(|| usage());
         args.drain(i..i + 2);
     }
-    if args.len() != 3 || args[0] != "png-sdr" {
-        usage();
-    }
+    type Command = fn(&Row, &Path) -> Result<Vec<String>, String>;
+    let (command, header): (Command, &str) = match (args.first().map(String::as_str), args.len()) {
+        (Some("png-sdr"), 3) => (render, SDR_HEADER),
+        (Some("png-hdr"), 3) => (hdr::render, hdr::HDR_HEADER),
+        (Some("hdr-info"), 3) => (hdr::info, hdr::INFO_HEADER),
+        _ => usage(),
+    };
+    let columns = header.split('\t').count();
     let list = fs::read_to_string(&args[1]).expect("read list");
     let out_dir = Path::new(&args[2]);
     let rows: Vec<Row> = list
@@ -549,9 +560,7 @@ fn main() {
             }
         })
         .collect();
-    println!(
-        "id\tlayer\tpath\twidth\theight\tlayout\tsource_alpha\tcolour\tgain_map\tclipped\tbytes\tsha256\trgba_sha256\terror"
-    );
+    println!("{header}");
     let next = AtomicUsize::new(0);
     let failed = AtomicUsize::new(0);
     let done = AtomicUsize::new(0);
@@ -564,13 +573,14 @@ fn main() {
                     let i = next.fetch_add(1, Ordering::Relaxed);
                     let Some(row) = rows.get(i) else { break };
                     let t = Instant::now();
-                    let lines = match render(row, out_dir) {
+                    let lines = match command(row, out_dir) {
                         Ok(lines) => lines,
                         Err(e) => {
                             failed.fetch_add(1, Ordering::Relaxed);
                             vec![format!(
-                                "{}\t\t\t\t\t\t\t\t\t\t\t\t\t{}",
+                                "{}{}{}",
                                 row.id,
+                                "\t".repeat(columns - 1),
                                 e.replace(['\t', '\n'], " ")
                             )]
                         }
@@ -603,7 +613,7 @@ fn main() {
 
 fn usage() -> ! {
     eprintln!(
-        "usage: render-v4 png-sdr [--jobs N] <list.tsv: id, source, out stem, provenance JSON> <out-dir>"
+        "usage: render-v4 <png-sdr|png-hdr|hdr-info> [--jobs N] <list.tsv: id, source, out stem, provenance JSON> <out-dir>"
     );
     std::process::exit(2);
 }

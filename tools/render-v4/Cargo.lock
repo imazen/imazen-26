@@ -365,6 +365,7 @@ dependencies = [
  "imgref",
  "rgb",
  "sha2",
+ "ultrahdr-core",
  "zencodec",
  "zencodecs",
  "zenjpeg",
@@ -573,6 +574,7 @@ dependencies = [
  "linear-srgb",
  "rgb",
  "thiserror",
+ "ultrahdr-core",
  "whereat",
  "zencodec",
  "zenjpeg",
@@ -601,6 +603,7 @@ dependencies = [
  "bytemuck",
  "enough",
  "garb",
+ "half",
  "imgref",
  "linear-srgb",
  "magetypes",
@@ -616,6 +619,7 @@ dependencies = [
  "zenmeta",
  "zenpixels",
  "zenpixels-convert",
+ "zentone",
  "zenyuv",
 ]
 
