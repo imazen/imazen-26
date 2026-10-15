@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- `tools/corpus-thumbs` builds against the main branch of every imazen crate instead of crates.io releases; `sync-main.sh` supplies zencodec, zenmeta and ultrahdr-core main by path, and the committed `Cargo.lock` records the rest
 - `corpus-guard`: `actions/checkout` v5 -> v7 (a03cc90)
 - Git LFS objects for `variant/png-v3` and `variant/pristine-8th` are served from R2 (`codec-corpus/lfs/imazen-26/<sha256>`) through imazen's git-lfs-s3-proxy instance at `imazen-lfs.pages.dev` instead of GitHub's LFS store; a clone needs no credentials and draws no GitHub LFS bandwidth (branch commits 0264d4d, 9a6cf7a)
 - `corpus-guard` requires a credential-free `.lfsconfig` naming the proxy on `variant/*` branches
