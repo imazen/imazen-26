@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- 11 byte-identical duplicates retired: each group keeps its lowest id, the others leave every manifest, split map and split link and are listed in the new `manifests/retired.tsv`; 2,160 → 2,149 images, buckets 1,078 / 654 / 417
 - `tools/corpus-thumbs` builds against the main branch of every imazen crate instead of crates.io releases; `sync-main.sh` supplies zencodec, zenmeta and ultrahdr-core main by path, and the committed `Cargo.lock` records the rest
 - `corpus-guard`: `actions/checkout` v5 -> v7 (a03cc90)
 - `STORAGE-MAP.md` and `ACCESS.md` no longer claim the metadata rewrite left gain maps hash-verified unchanged; they list the colour and HDR structure it removed (33 UltraHDR gain maps, 24 Apple HDR parameter sets, 22 HEIC primary profiles, `Flash`, the Interop sRGB marker)

@@ -915,8 +915,6 @@ id	split	content_class	path
 8133	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1440x900/8133_web-screenshots_noaa-home_dpr1_page1_1440x900.png
 8134	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1440x900/8134_web-screenshots_nps-grand-canyon_dpr1_page1_1440x900.png
 8135	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1440x900/8135_web-screenshots_nps-grand-canyon_dpr1_page2_1440x900.png
-8136	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1440x900/8136_web-screenshots_nps-grca_dpr1_page1_1440x900.png
-8137	test	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1440x900/8137_web-screenshots_nps-grca_dpr1_page2_1440x900.png
 8138	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1440x900/8138_web-screenshots_nps-yellowstone_dpr1_page1_1440x900.png
 8139	test	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1440x900/8139_web-screenshots_nps-yellowstone_dpr1_page2_1440x900.png
 8140	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1440x900/8140_web-screenshots_nps-yosemite_dpr1_page1_1440x900.png
@@ -990,8 +988,6 @@ id	split	content_class	path
 8208	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1920x1080/8208_web-screenshots_usaspending-explorer_dpr1_page1_1920x1080.png
 8209	test	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1920x1080/8209_web-screenshots_usgs-main-home_dpr1_page1_1920x1080.png
 8210	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1920x1080/8210_web-screenshots_usgs-main-home_dpr1_page2_1920x1080.png
-8211	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1920x1080/8211_web-screenshots_usgs-home_dpr1_page1_1920x1080.png
-8212	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1920x1080/8212_web-screenshots_usgs-home_dpr1_page2_1920x1080.png
 8213	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1920x1080/8213_web-screenshots_usgs-topoview_dpr1_page1_1920x1080.png
 8214	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1920x1080/8214_web-screenshots_weather-forecast-nyc_dpr1_page1_1920x1080.png
 8215	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/1920x1080/8215_web-screenshots_weather-forecast-nyc_dpr1_page2_1920x1080.png
@@ -1012,7 +1008,6 @@ id	split	content_class	path
 8230	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/2880x1800/8230_web-screenshots_lkml-lists-index_dpr2_page1_2880x1800.png
 8231	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/2880x1800/8231_web-screenshots_lkml-lists-index_dpr2_page2_2880x1800.png
 8232	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/2880x1800/8232_web-screenshots_loc-exhibitions_dpr2_page1_2880x1800.png
-8233	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/2880x1800/8233_web-screenshots_loc-exhibits_dpr2_page1_2880x1800.png
 8234	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/2880x1800/8234_web-screenshots_loc-pictures_dpr2_page1_2880x1800.png
 8235	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/2880x1800/8235_web-screenshots_loc-pictures_dpr2_page2_2880x1800.png
 8236	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/2880x1800/8236_web-screenshots_nasa-artemis_dpr2_page1_2880x1800.png
@@ -1092,8 +1087,6 @@ id	split	content_class	path
 8310	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8310_web-screenshots_nps-yellowstone_dpr1_page2_375x667.png
 8311	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8311_web-screenshots_nps-yose_dpr1_page1_375x667.png
 8312	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8312_web-screenshots_nps-yose_dpr1_page2_375x667.png
-8313	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8313_web-screenshots_nps-yosemite_dpr1_page1_375x667.png
-8314	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8314_web-screenshots_nps-yosemite_dpr1_page2_375x667.png
 8315	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8315_web-screenshots_nps-zion_dpr1_page1_375x667.png
 8316	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8316_web-screenshots_nps-zion_dpr1_page2_375x667.png
 8317	test	8100-lilith-web-screenshots	8100-lilith-web-screenshots/375x667/8317_web-screenshots_si-edu-exhibitions_dpr1_page1_375x667.png
@@ -1123,7 +1116,6 @@ id	split	content_class	path
 8341	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8341_web-screenshots_lkml-lists-index_dpr1_page1_768x1024.png
 8342	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8342_web-screenshots_lkml-lists-index_dpr1_page2_768x1024.png
 8343	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8343_web-screenshots_loc-exhibitions_dpr1_page1_768x1024.png
-8344	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8344_web-screenshots_loc-exhibits_dpr1_page1_768x1024.png
 8345	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8345_web-screenshots_loc-pictures_dpr1_page1_768x1024.png
 8346	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8346_web-screenshots_loc-pictures_dpr1_page2_768x1024.png
 8347	test	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8347_web-screenshots_nasa-artemis_dpr1_page1_768x1024.png
@@ -1160,8 +1152,6 @@ id	split	content_class	path
 8378	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8378_web-screenshots_usaspending-explorer_dpr1_page2_768x1024.png
 8379	test	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8379_web-screenshots_usgs-main-home_dpr1_page1_768x1024.png
 8380	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8380_web-screenshots_usgs-main-home_dpr1_page2_768x1024.png
-8381	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8381_web-screenshots_usgs-home_dpr1_page1_768x1024.png
-8382	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8382_web-screenshots_usgs-home_dpr1_page2_768x1024.png
 8383	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8383_web-screenshots_usgs-topoview_dpr1_page1_768x1024.png
 8384	train	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8384_web-screenshots_usgs-topoview_dpr1_page2_768x1024.png
 8385	validate	8100-lilith-web-screenshots	8100-lilith-web-screenshots/768x1024/8385_web-screenshots_weather-forecast-nyc_dpr1_page1_768x1024.png
@@ -2155,7 +2145,6 @@ id	split	content_class	path
 9969	test	9226-lilith-ai-products	9226-lilith-ai-products/products-with-callouts/9969_gen_products-with-callouts_moisturizer-jar-sage_feature_p0687_5504x3072.jpg
 9970	train	9226-lilith-ai-products	9226-lilith-ai-products/products-with-callouts/9970_gen_products-with-callouts_sculpt-leggings_feature_p0227_2160x3840.png
 9971	validate	9226-lilith-ai-products	9226-lilith-ai-products/products-with-callouts/9971_gen_products-with-callouts_sculpt-leggings_spec_p0227_3840x2160.png
-9972	train	9226-lilith-ai-products	9226-lilith-ai-products/products-with-callouts/9972_gen_products-with-callouts_serum-dropper-blush_feature_p0691_5504x3072.jpg
 9973	validate	9226-lilith-ai-products	9226-lilith-ai-products/products-with-callouts/9973_gen_products-with-callouts_silver-metallic-statement-puffer_feature_p0284_3840x2160.png
 9974	train	9226-lilith-ai-products	9226-lilith-ai-products/products-with-callouts/9974_gen_products-with-callouts_spec-sneaker-cutaway_spec_p0724_1536x1024.png
 9975	validate	9226-lilith-ai-products	9226-lilith-ai-products/products-with-callouts/9975_gen_products-with-callouts_womens-packable-down-jacket-teal_feature_p0231_3072x3106.png

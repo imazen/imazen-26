@@ -19,10 +19,11 @@ variant name).
 
 | file | rows | what |
 |---|---|---|
-| `split_map.tsv` | 2,160 | bare `id → split` map (plus class + path) |
-| `train.tsv` | 1,084 | full rows for the train bucket |
-| `validate.tsv` | 658 | full rows for the validate bucket |
-| `test.tsv` | 418 | full rows for the test bucket |
+| `split_map.tsv` | 2,149 | bare `id → split` map (plus class + path) |
+| `train.tsv` | 1,078 | full rows for the train bucket |
+| `validate.tsv` | 654 | full rows for the validate bucket |
+| `test.tsv` | 417 | full rows for the test bucket |
+| `retired.tsv` | 11 | ids removed from the corpus: path, sha256, date, reason, and the id a duplicate repeats |
 
 Columns: `id, split, content_class, path, width, height, format, bytes_manifest,
 bytes_actual, sha256, raw_url, png_v3_sdr_url, png_v3_hdr_url`. `sha256`/`bytes_actual` are computed
@@ -46,6 +47,15 @@ python3 imazen-26/scripts/make_canonical_split.py --repo-im26 imazen-26 --check-
 
 Browsable per-bucket folder views (relative symlinks, no byte duplication) live under
 [`../splits/`](../splits/).
+
+## Retired ids
+
+An id in `retired.tsv` has left the corpus and is never reused, so results that cite it
+stay unambiguous. Its rows are gone from every manifest and split link; registered variant
+sets and dated selections keep it as a record of what they used. The first 11 (2026-10-15)
+are byte-identical duplicates: 10 web pages captured twice by capture jobs with different
+slugs, and one AI product image filed in two categories. Each group keeps its lowest id.
+The family map drops them without re-bucketing anyone; its successor recomputes buckets.
 
 ## Supersedes
 
