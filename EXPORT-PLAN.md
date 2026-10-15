@@ -19,8 +19,9 @@ retired, and the review may retire more.
    - Strip the SEFT trailers (32 screenshots), the IPTC zTXt chunks (3 AI PNGs) and the C2PA
      stores (115 AI images), with our own code.
    - Keep the museum metadata.
-   - Crush every PNG before final storage, in the originals and in every PNG layer. Use zenpng
-     at main with its Crush preset or higher. Re-encoding is lossless (pixel hash checked) and
+   - Crush every PNG before final storage, in the originals and in every PNG layer, with zenpng
+     at main, effort 22 (owner choice; `benchmarks/png_crush_effort_2026-10-15.md`: Crush adds
+     0.3–1.2 points for 7–18× the time). Re-encoding is lossless (pixel hash checked) and
      replaces the PNGs written by third-party code (the product images' white-background pass
      used the `image` crate). Colour (ICC, gamma, sRGB, chromaticities), EXIF and XMP are
      carried over, and so is `pHYs` (the scan resolution of 175 scans and documents).
