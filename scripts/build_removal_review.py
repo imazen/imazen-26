@@ -46,6 +46,9 @@ def main():
     ap.add_argument("--extra-tsv", required=True)
     ap.add_argument("--dupes", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--previews", help="corpus-thumbs --preview output dir (<id>.webp + previews.tsv)")
+    ap.add_argument("--packs-out", help="where to write packs/pack_NN.webp (concatenated previews) for the full-screen viewer")
+    ap.add_argument("--pack-mb", type=float, default=12.0)
     a = ap.parse_args()
 
     page = open(a.contact_sheet, encoding="utf-8").read()
@@ -86,7 +89,28 @@ def main():
     missing = set(SUGGEST) - {r[ix["id"]] for r in items}
     assert not missing, f"suggested ids not in the set: {sorted(missing)}"
 
-    out_meta = {"cols": cols + ["suggest"], "items": items, "prefix": meta["prefix"], "retired": retired}
+    extra_cols = ["suggest"]
+    if a.previews:
+        import os
+        dims = {r["id"]: (int(r["w"]), int(r["h"])) for r in csv.DictReader(open(os.path.join(a.previews, "previews.tsv")), delimiter="\t")}
+        os.makedirs(a.packs_out, exist_ok=True)
+        cap = int(a.pack_mb * 1e6)
+        pack, buf, index = 0, bytearray(), {}
+        for row in sorted(items, key=lambda r: r[ix["id"]]):
+            i = row[ix["id"]]
+            data = open(os.path.join(a.previews, f"{i}.webp"), "rb").read()
+            if buf and len(buf) + len(data) > cap:
+                open(os.path.join(a.packs_out, f"pack_{pack:02d}.webp"), "wb").write(buf)
+                pack, buf = pack + 1, bytearray()
+            index[i] = (pack, len(buf), len(data)) + dims[i]
+            buf += data
+        if buf:
+            open(os.path.join(a.packs_out, f"pack_{pack:02d}.webp"), "wb").write(buf)
+        for row in items:
+            row.extend(index[row[ix["id"]]])
+        extra_cols += ["pk", "po", "pl", "pw", "ph"]
+        print(f"{pack + 1} packs -> {a.packs_out}")
+    out_meta = {"cols": cols + extra_cols, "items": items, "prefix": meta["prefix"], "retired": retired}
     blob = json.dumps(out_meta, separators=(",", ":"), ensure_ascii=False).replace("</", "<\\/")
     html = TEMPLATE.replace("@@META@@", blob).replace("@@N@@", f"{len(items):,}").replace("@@R@@", str(len(retired)))
     open(a.out, "w", encoding="utf-8").write(html)
@@ -104,6 +128,7 @@ TEMPLATE = r"""<title>imazen-26 Removal Review</title>
   --accent:#1D5FA8; --accent-soft:#DCE8F5; --accent-ink:#FFFFFF;
   --p3:#7A45C7; --p3-soft:#EDE4FA; --hdr:#A8650D; --hdr-soft:#F8ECD9; --lost:#B23A2B; --lost-soft:#F7E0DC; --lost-ink:#FFFFFF; --rot:#3F6B5B; --rot-soft:#DDEDE6;
   --sug:#7A5A00; --sug-soft:#FBF0CF;
+  --v-bg:#000000; --v-bar:rgb(0 0 0 / .6); --v-ink:#FFFFFF; --v-dim:#B4BCC2; --v-line:rgb(255 255 255 / .32); --v-btn:rgb(255 255 255 / .1); --v-mark:#C9372C;
   --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --cond:"IBM Plex Sans Condensed","IBM Plex Sans","Arial Narrow",system-ui,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
@@ -183,6 +208,26 @@ dt{color:var(--muted)} dd{margin:0;overflow-wrap:anywhere}
 .note{color:var(--muted);font-size:.8rem;margin:0}
 .keys{color:var(--muted);font-size:.78rem;margin:0}
 .copybox{width:100%;min-height:140px;font:12px/1.45 var(--mono);border:1px solid var(--rule);border-radius:4px;padding:8px;background:var(--surface);color:var(--ink)}
+.vopen{font:500 .8rem var(--sans);background:var(--accent);color:var(--accent-ink);border:0;border-radius:999px;padding:5px 11px;cursor:pointer}
+.viewer{position:fixed;inset:0;z-index:20;background:var(--v-bg);color:var(--v-ink);display:grid;grid-template-rows:auto minmax(0,1fr) auto}
+.vtop,.vbot{display:flex;align-items:center;gap:10px;background:var(--v-bar);z-index:3}
+.vtop{padding:calc(env(safe-area-inset-top,0px) + 8px) max(12px, env(safe-area-inset-right,0px)) 8px max(12px, env(safe-area-inset-left,0px))}
+.vbot{padding:8px max(12px, env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 10px) max(12px, env(safe-area-inset-left,0px));justify-content:space-between;flex-wrap:wrap}
+.vtitle{flex:1;min-width:0;font:500 .9rem/1.3 var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vpos{font:500 .8rem var(--mono);color:var(--v-dim);font-variant-numeric:tabular-nums}
+.vbtn{font:600 .9rem var(--sans);border:1px solid var(--v-line);background:var(--v-btn);color:var(--v-ink);border-radius:8px;padding:9px 14px;cursor:pointer;text-decoration:none;display:inline-block}
+.vbtn.mark[aria-pressed="true"]{background:var(--v-mark);border-color:var(--v-mark)}
+.vbtn:focus-visible,.vnav:focus-visible{outline:2px solid var(--v-ink);outline-offset:2px}
+.vstage{position:relative;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+.vstage img{position:absolute;left:50%;top:50%;max-width:100%;max-height:100%;transform:translate(-50%,-50%);transform-origin:center;-webkit-user-drag:none}
+.vmsg{position:absolute;inset:0;display:grid;place-items:center;color:var(--v-dim);font-size:.9rem;pointer-events:none}
+.vframe{position:absolute;inset:0;border:5px solid var(--v-mark);pointer-events:none;display:none;z-index:2}
+.vflag{position:absolute;top:14px;left:14px;z-index:2;display:none;font:600 .75rem/1 var(--sans);letter-spacing:.06em;text-transform:uppercase;background:var(--v-mark);color:var(--v-ink);padding:5px 8px;border-radius:3px;pointer-events:none}
+.viewer.is-marked .vframe,.viewer.is-marked .vflag{display:block}
+.vhint{color:var(--v-dim);font-size:.75rem}
+.vnav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:72px;border:0;background:var(--v-btn);color:var(--v-ink);font-size:1.6rem;cursor:pointer;z-index:2;border-radius:6px}
+.vnav.prev{left:max(8px, env(safe-area-inset-left,0px))} .vnav.next{right:max(8px, env(safe-area-inset-right,0px))}
+@media (hover:none){.vnav{display:none}}
 @media (max-width:560px){:root{--s:104px} input[type=search]{width:100%} .panel{top:auto;height:82%;width:100%;border-left:0;border-top:1px solid var(--rule);border-radius:10px 10px 0 0} .flag{top:10px;left:10px}}
 @media (prefers-reduced-motion:no-preference){.pick{transition:border-color .12s,background-color .12s}}
 </style>
@@ -190,7 +235,7 @@ dt{color:var(--muted)} dd{margin:0;overflow-wrap:anywhere}
 <div class="wrap">
   <header class="top">
     <h1>imazen-26 Removal Review</h1>
-    <p class="lede">The @@N@@ images planned for render v4, thumbnailed from the originals with orientation applied and colour converted to sRGB. Click a tile to mark it for removal, and click again to unmark it. Marks save to this page as you go; nothing is removed until they're processed. The <b>i</b> button opens details and the full-size files, where <kbd>x</kbd> marks and the arrow keys move on.</p>
+    <p class="lede">The @@N@@ images planned for render v4, thumbnailed from the originals with orientation applied and colour converted to sRGB. Click a tile to mark it for removal, and click again to unmark it. Marks save to this page as you go; nothing is removed until they're processed. The <b>⤢</b> button opens a full-screen viewer: swipe or use the arrow keys to move, <kbd>x</kbd> or the button marks, double-tap zooms, and <b>Original</b> opens the file itself.</p>
     <details class="retired"><summary>@@R@@ byte-identical duplicates already retired (each group keeps its lowest id)</summary><ul id="retired"></ul></details>
   </header>
 
@@ -211,6 +256,7 @@ dt{color:var(--muted)} dd{margin:0;overflow-wrap:anywhere}
       </select>
       <span class="count" id="count" aria-live="polite"></span>
       <button class="linkbtn" id="reset" type="button">Clear filters</button>
+      <button class="vopen" id="viewall" type="button">View full screen</button>
       <button class="linkbtn" id="copy" type="button">Copy marked list</button>
       <span class="store" id="store" data-s="connecting"><span class="dot"></span><span id="store-text">Connecting to saved marks…</span></span>
     </div>
@@ -229,6 +275,12 @@ dt{color:var(--muted)} dd{margin:0;overflow-wrap:anywhere}
 </div>
 
 <aside class="panel" id="panel" hidden aria-label="Image details"></aside>
+
+<div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-label="Full-screen view">
+  <div class="vtop"><span class="vtitle" id="vtitle"></span><span class="vpos" id="vpos"></span><button class="vbtn" id="vclose" type="button">Close</button></div>
+  <div class="vstage" id="vstage"><img id="vimg" alt=""><div class="vmsg" id="vmsg">Loading…</div><div class="vframe"></div><span class="vflag">Remove</span><button class="vnav prev" id="vprev" type="button" aria-label="Previous image">‹</button><button class="vnav next" id="vnext" type="button" aria-label="Next image">›</button></div>
+  <div class="vbot"><button class="vbtn mark" id="vmark" type="button" aria-pressed="false">Mark for removal</button><span class="vhint">Swipe to move · double-tap to zoom · swipe down to close</span><span style="display:flex;gap:8px"><button class="vbtn" id="vinfo" type="button">Details</button><a class="vbtn" id="vorig" target="_blank" rel="noopener">Original ↗</a></span></div>
+</div>
 
 <script id="meta" type="application/json">@@META@@</script>
 <script>
@@ -354,9 +406,9 @@ dt{color:var(--muted)} dd{margin:0;overflow-wrap:anywhere}
     pick.append(th, cap, ttl, flag);
     pick.addEventListener('click', () => toggleMark(o.id));
     const info = document.createElement('button');
-    info.type = 'button'; info.className = 'info'; info.textContent = 'i';
-    info.setAttribute('aria-label', `Details for ${o.id}`);
-    info.addEventListener('click', e => { e.stopPropagation(); openDetail(o.id); });
+    info.type = 'button'; info.className = 'info'; info.textContent = '⤢';
+    info.setAttribute('aria-label', `View ${o.id} full screen`);
+    info.addEventListener('click', e => { e.stopPropagation(); openViewer(o.id); });
     wrap.append(pick, info);
     tiles.set(o.id, wrap);
     if (io) io.observe(th); else th.style.backgroundImage = `url("${th.dataset.url}")`;
@@ -433,6 +485,7 @@ dt{color:var(--muted)} dd{margin:0;overflow-wrap:anywhere}
     else MARKS.delete(id);
     paintTile(id); updateCount();
     if (current === id) paintPanelMark();
+    if (vId === id) paintViewerMark();
     persist(id);
   }
   function persist(id) {
@@ -472,6 +525,7 @@ dt{color:var(--muted)} dd{margin:0;overflow-wrap:anywhere}
     }
     updateCount();
     if (current) paintPanelMark();
+    if (vId) paintViewerMark();
     if (state.review.size) apply();
   }
 
@@ -514,6 +568,7 @@ dt{color:var(--muted)} dd{margin:0;overflow-wrap:anywhere}
     mk.style.display = 'grid'; mk.style.gap = '6px';
     mk.innerHTML = `${o.suggest ? `<p class="sugnote">Suggested: ${esc(o.suggest)}</p>` : ''}
       <button class="markbtn" type="button" aria-pressed="false">Mark for removal</button>
+      <button class="pbtn" type="button" data-view>View full screen</button>
       <input class="reason" type="text" placeholder="Reason (optional, saved with the mark)" aria-label="Reason for removal">
       <p class="keys"><kbd>x</kbd> marks or keeps · <kbd>←</kbd> <kbd>→</kbd> move · <kbd>Esc</kbd> closes</p>`;
     panel.append(mk);
@@ -538,6 +593,7 @@ dt{color:var(--muted)} dd{margin:0;overflow-wrap:anywhere}
     panel.querySelector('[data-close]').addEventListener('click', closeDetail);
     panel.querySelectorAll('[data-nav]').forEach(b => b.addEventListener('click', () => step(+b.dataset.nav)));
     panel.querySelector('.markbtn').addEventListener('click', () => toggleMark(current));
+    panel.querySelector('[data-view]').addEventListener('click', () => { const id = current; closeDetail(); openViewer(id); });
     const r = panel.querySelector('.reason');
     r.addEventListener('input', () => {
       const m = MARKS.get(current); if (!m) return;
@@ -560,12 +616,144 @@ dt{color:var(--muted)} dd{margin:0;overflow-wrap:anywhere}
     if (next) openDetail(next.id);
   }
   document.addEventListener('keydown', e => {
-    if (panel.hidden) return;
+    if (panel.hidden || !viewer.hidden) return;
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) { if (e.key === 'Escape') e.target.blur(); return; }
     if (e.key === 'Escape') closeDetail();
     else if (e.key === 'ArrowRight') step(1);
     else if (e.key === 'ArrowLeft') step(-1);
     else if (e.key === 'x' || e.key === 'X') toggleMark(current);
+  });
+
+  // ---------- full-screen viewer ----------
+  const viewer = $('viewer'), vstage = $('vstage'), vimg = $('vimg'), vmsg = $('vmsg');
+  let vList = [], vI = 0, vId = null, vLoad = 0, z = 1, dx = 0, dy = 0, lastFocus = null;
+  const PACKS = new Map(), URLS = new Map();
+  const hasPreviews = items.length && items[0].pk !== undefined;
+  function packBuf(pk) {
+    if (PACKS.has(pk)) { const p = PACKS.get(pk); PACKS.delete(pk); PACKS.set(pk, p); return p; }
+    const p = fetch(`packs/pack_${String(pk).padStart(2, '0')}.webp`).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); });
+    p.catch(() => PACKS.delete(pk));
+    PACKS.set(pk, p);
+    while (PACKS.size > 3) PACKS.delete(PACKS.keys().next().value);
+    return p;
+  }
+  async function previewUrl(o) {
+    if (URLS.has(o.id)) { const u = URLS.get(o.id); URLS.delete(o.id); URLS.set(o.id, u); return u; }
+    const buf = await packBuf(o.pk);
+    const url = URL.createObjectURL(new Blob([buf.slice(o.po, o.po + o.pl)], { type: 'image/webp' }));
+    URLS.set(o.id, url);
+    while (URLS.size > 16) { const k = URLS.keys().next().value; if (k === vId) { const u = URLS.get(k); URLS.delete(k); URLS.set(k, u); continue; } URL.revokeObjectURL(URLS.get(k)); URLS.delete(k); }
+    return url;
+  }
+  const setT = (anim) => { vimg.style.transition = anim ? 'transform .18s ease' : 'none'; vimg.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(${z})`; };
+  function paintViewerMark() {
+    const on = MARKS.has(vId);
+    viewer.classList.toggle('is-marked', on);
+    const b = $('vmark'); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.textContent = on ? 'Marked for removal' : 'Mark for removal';
+    b.disabled = storeState === 'readonly';
+  }
+  async function vShow(i) {
+    if (!vList.length) return;
+    vI = (i + vList.length) % vList.length;
+    const o = vList[vI]; vId = o.id;
+    z = 1; dx = 0; dy = 0; setT(false);
+    $('vtitle').innerHTML = `<span class="mono">${esc(o.id)}</span> · ${esc(o.title || o.folder)}`;
+    $('vpos').textContent = `${(vI + 1).toLocaleString()} / ${vList.length.toLocaleString()}`;
+    const orig = $('vorig');
+    if (o.raw && o.id !== '1214') { orig.hidden = false; orig.href = P.raw + encodeURI(o.raw); orig.textContent = (o.format === 'heic' || o.format === 'dng') ? 'Original ↗ (downloads)' : 'Original ↗'; }
+    else orig.hidden = true;
+    paintViewerMark();
+    try { history.replaceState(null, '', '#' + o.id); } catch (e) {}
+    if (!hasPreviews) { vimg.removeAttribute('src'); vmsg.textContent = 'Previews are not in this version of the page.'; vmsg.hidden = false; return; }
+    const ticket = ++vLoad;
+    vmsg.textContent = 'Loading…'; vmsg.hidden = false; vimg.style.opacity = '0';
+    try {
+      const url = await previewUrl(o);
+      if (ticket !== vLoad) return;
+      vimg.onload = () => { if (ticket === vLoad) { vmsg.hidden = true; vimg.style.opacity = '1'; } };
+      vimg.src = url; vimg.alt = `${o.id} ${o.title || o.folder}`;
+    } catch (e) {
+      if (ticket === vLoad) { vmsg.textContent = 'This preview didn\'t load. Use Original to open the file.'; vmsg.hidden = false; }
+    }
+    for (const d of [1, -1, 2]) { const n = vList[(vI + d + vList.length) % vList.length]; if (n) previewUrl(n).catch(() => {}); }
+  }
+  function openViewer(id) {
+    vList = (visible.length ? visible : items).slice();
+    const i = Math.max(0, vList.findIndex(o => o.id === id));
+    lastFocus = document.activeElement;
+    viewer.hidden = false;
+    document.body.style.overflow = 'hidden';
+    if (window.matchMedia && window.matchMedia('(hover: hover)').matches && document.documentElement.requestFullscreen) {
+      try { const p = document.documentElement.requestFullscreen(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+    }
+    vShow(i);
+    $('vclose').focus();
+  }
+  function closeViewer() {
+    viewer.hidden = true; vId = null; vLoad++;
+    document.body.style.overflow = '';
+    if (document.fullscreenElement && document.exitFullscreen) { try { const p = document.exitFullscreen(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  $('viewall').addEventListener('click', () => { const l = visible.length ? visible : items; if (l.length) openViewer(l[0].id); });
+  $('vclose').addEventListener('click', closeViewer);
+  $('vprev').addEventListener('click', () => vShow(vI - 1));
+  $('vnext').addEventListener('click', () => vShow(vI + 1));
+  $('vmark').addEventListener('click', () => { if (vId) toggleMark(vId); });
+  $('vinfo').addEventListener('click', () => { const id = vId; closeViewer(); openDetail(id); });
+  const pts = new Map();
+  let sx = 0, sy = 0, st = 0, pdx = 0, pdy = 0, pinch = null, lastTap = 0, moved = false;
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  vstage.addEventListener('pointerdown', e => {
+    if (e.target.closest('.vnav')) return;
+    vstage.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 1) { sx = e.clientX; sy = e.clientY; st = performance.now(); pdx = dx; pdy = dy; moved = false; }
+    else if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: dist(a, b) || 1, z }; }
+  });
+  vstage.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2 && pinch) { const [a, b] = [...pts.values()]; z = Math.min(6, Math.max(1, pinch.z * dist(a, b) / pinch.d)); if (z === 1) { dx = 0; dy = 0; } moved = true; setT(false); return; }
+    const mx = e.clientX - sx, my = e.clientY - sy;
+    if (Math.abs(mx) > 6 || Math.abs(my) > 6) moved = true;
+    if (z > 1) { dx = pdx + mx; dy = pdy + my; }
+    else { dx = mx; dy = my > 0 && Math.abs(my) > Math.abs(mx) ? my : 0; }
+    setT(false);
+  });
+  function endPointer(e) {
+    if (!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    if (pts.size) return;
+    if (pinch) { pinch = null; return; }
+    const mx = e.clientX - sx, my = e.clientY - sy, dt = performance.now() - st;
+    if (z === 1) {
+      if (Math.abs(mx) > 60 && Math.abs(mx) > Math.abs(my)) { vShow(vI + (mx < 0 ? 1 : -1)); return; }
+      if (my > 100 && my > Math.abs(mx)) { closeViewer(); return; }
+      dx = 0; dy = 0; setT(true);
+    }
+    if (!moved && dt < 300) {
+      const now = performance.now();
+      if (now - lastTap < 320) {
+        lastTap = 0;
+        if (z > 1) { z = 1; dx = 0; dy = 0; }
+        else { const r = vstage.getBoundingClientRect(); z = 2.5; dx = (r.left + r.width / 2 - e.clientX) * 1.5; dy = (r.top + r.height / 2 - e.clientY) * 1.5; }
+        setT(true);
+      } else lastTap = now;
+    }
+  }
+  vstage.addEventListener('pointerup', endPointer);
+  vstage.addEventListener('pointercancel', e => { pts.delete(e.pointerId); pinch = null; if (z === 1) { dx = 0; dy = 0; setT(true); } });
+  vstage.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); z = Math.min(6, Math.max(1, z * (e.deltaY < 0 ? 1.15 : 1 / 1.15))); if (z === 1) { dx = 0; dy = 0; } setT(false); }, { passive: false });
+  document.addEventListener('keydown', e => {
+    if (viewer.hidden) return;
+    if (e.key === 'Escape') { e.preventDefault(); closeViewer(); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); vShow(vI + 1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); vShow(vI - 1); }
+    else if (e.key === 'x' || e.key === 'X') { if (vId) toggleMark(vId); }
+    else if (e.key === 'z' || e.key === 'Z') { if (z > 1) { z = 1; dx = 0; dy = 0; } else z = 2.5; setT(true); }
   });
 
   // ---------- copy ----------
