@@ -23,6 +23,7 @@ variant name).
 | `train.tsv` | 1,078 | full rows for the train bucket |
 | `validate.tsv` | 654 | full rows for the validate bucket |
 | `test.tsv` | 417 | full rows for the test bucket |
+| `split_map_family_v2.tsv` | 2,149 | successor family map (`scripts/emit_family_split_v2.py`): the same lowest-id rule over wider families: patent page (1-bit original + rescans, by `patent_page`), url + page, sha256 and photo bursts. It is computed again on the final membership after the removal review |
 | `retired.tsv` | 11 | ids removed from the corpus: path, sha256, date, reason, and the id a duplicate repeats |
 
 Columns: `id, split, content_class, path, width, height, format, bytes_manifest,

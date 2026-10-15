@@ -24,8 +24,10 @@ retired, and the review may retire more.
      three AI files under stale names are re-keyed.
 3. **Membership and splits.**
    - Retired ids are listed in `manifests/retired.tsv` and never reused.
-   - The successor family map adds sha256, URL-plus-page and photo-burst keys. It is computed
-     once, on the final membership, before any branch exists.
+   - The successor family map (`manifests/split_map_family_v2.tsv`) adds sha256, URL-plus-page
+     and photo-burst keys. It also keys patent scans by `patent_page`, so a page's 1-bit original
+     and both rescans always share a bucket; us3807657's rescans are its pages 1, 3, 5 and 7.
+     It is computed once more, on the final membership, before any branch exists.
 4. **Render v4** from the restored originals, with the rules below.
 5. **Gates, then publish** (see the last two sections).
 
