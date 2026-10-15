@@ -20,6 +20,8 @@ canonical sha256 must equal the published sha256), 1214's camera original, a q10
 the flattened 9869/9874, or else the published bytes. Then:
   - phone screenshots get the camera-class metadata policy (whitelist_v2.rewrite_png /
     rewrite_jpeg): Software, OffsetTime*, ImageUniqueID and the SEFT trailer go;
+  - a DNG's JPEG preview gets the same policy in place (its Exif whitelisted and zero-padded,
+    vendor APPn zeroed), which the August exiftool whitelist did not reach;
   - other JPEGs lose any APP11 (C2PA/JUMBF) segment, nothing else;
   - every PNG is crushed by png-crush at effort 22 (drops caBX, text chunks, sBIT, bKGD,
     tIME and data after IEND; the pixels must match exactly);
@@ -37,6 +39,7 @@ import csv
 import errno
 import hashlib
 import os
+import struct
 import subprocess
 import sys
 
@@ -88,6 +91,89 @@ def strip_app11(d):
     if wl.image_key(".jpg", new) != wl.image_key(".jpg", d):
         raise wl.Reject("image data changed while removing APP11")
     return new, removed
+
+
+def dng_previews(d):
+    """(offset, length) of each JPEG preview strip in a DNG's SubIFDs (NewSubFileType bit 0,
+    compression 6 or 7, one strip)."""
+    e = "<" if d[:2] == b"II" else ">"
+
+    def ifd(off):
+        n = struct.unpack(e + "H", d[off:off + 2])[0]
+        out = {}
+        for i in range(n):
+            tag, ty, count, value = struct.unpack(e + "HHII", d[off + 2 + 12 * i:off + 14 + 12 * i])
+            if ty == 3 and count == 1 and e == ">":
+                value >>= 16
+            elif ty == 3 and count == 1:
+                value &= 0xFFFF
+            out[tag] = (ty, count, value)
+        return out
+
+    i0 = ifd(struct.unpack(e + "I", d[4:8])[0])
+    subs = i0.get(0x14A)
+    if subs is None:
+        return []
+    offsets = [subs[2]] if subs[1] == 1 else [
+        struct.unpack(e + "I", d[subs[2] + 4 * k:subs[2] + 4 * k + 4])[0] for k in range(subs[1])]
+    out = []
+    for off in offsets:
+        s = ifd(off)
+        so, sc = s.get(0x111), s.get(0x117)
+        if s.get(0x103, (0, 0, 0))[2] in (6, 7) and s.get(0xFE, (0, 0, 0))[2] & 1 and so and sc \
+                and so[1] == 1 and sc[1] == 1:
+            out.append((so[2], sc[2]))
+    return out
+
+
+def scrub_dng_previews(d):
+    """The camera-class metadata policy on a DNG's JPEG previews, in place so nothing in the
+    DNG moves: each preview's Exif is whitelisted (whitelist_v2.whitelist_tiff) and padded
+    with zeros to its segment's length, and every APPn/COM payload but JFIF and ICC is
+    zeroed. Returns the new bytes, what was removed, and a description."""
+    out = bytearray(d)
+    removed, kept, touched, notes = [], [], [], []
+    previews = dng_previews(d)
+    if not previews:
+        raise wl.Reject("no JPEG preview found in the DNG")
+    for start, length in previews:
+        j = d[start:start + length]
+        if j[:2] != b"\xff\xd8":
+            raise wl.Reject("DNG preview strip is not a JPEG")
+        for m, s, e_ in wl.jpeg_markers(j):
+            if m == 0xDA:
+                break
+            if not (0xE0 <= m <= 0xEF or m == 0xFE):
+                continue
+            payload = j[s + 4:e_]
+            a, b = start + s + 4, start + e_
+            if m == 0xE1 and payload.startswith(b"Exif\0\0"):
+                t, rem = wl.whitelist_tiff(payload[6:])
+                wl.check_whitelisted(t)
+                new = b"Exif\0\0" + t
+                if len(new) > len(payload):
+                    raise wl.Reject("whitelisted preview Exif is longer than the original")
+                out[a:b] = new + b"\0" * (len(payload) - len(new))
+                removed += rem
+                kept.append(t)
+                notes.append(f"preview Exif whitelisted ({len(payload) - len(new)} bytes zeroed)")
+            elif (m == 0xE0 and payload.startswith(b"JFIF\0")) or (m == 0xE2 and payload.startswith(b"ICC_PROFILE\0")):
+                continue
+            else:
+                out[a:b] = b"\0" * len(payload)
+                removed.append(payload)
+                notes.append(f"preview APP{m - 0xE0:X} zeroed ({len(payload)} bytes)" if m != 0xFE else "preview COM zeroed")
+            touched.append((a, b))
+    if len(out) != len(d):
+        raise wl.Reject("DNG length changed")
+    pos = 0
+    for a, b in sorted(touched) + [(len(d), len(d))]:
+        if out[pos:a] != d[pos:a]:
+            raise wl.Reject("bytes changed outside the preview metadata segments")
+        pos = b
+    out = bytes(out)
+    wl.leak_check(out, removed, kept)
+    return out, "; ".join(notes)
 
 
 def has_app11(d):
@@ -225,6 +311,11 @@ def main():
                 else:
                     write_new(dst, new)
                     base = None
+            elif base is not None and ext == ".dng":
+                new, note = scrub_dng_previews(open(base, "rb").read())
+                write_new(dst, new)
+                steps.append(f"camera-class metadata policy on the JPEG preview: {note}")
+                base = None
             elif base is not None and ext == ".jpg" and rid not in wl2 and has_app11(open(base, "rb").read()):
                 new, removed = strip_app11(open(base, "rb").read())
                 write_new(dst, new)
