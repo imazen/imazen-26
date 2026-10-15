@@ -19,6 +19,13 @@ retired, and the review may retire more.
    - Strip the SEFT trailers (32 screenshots), the IPTC zTXt chunks (3 AI PNGs) and the C2PA
      stores (115 AI images), with our own code.
    - Keep the museum metadata.
+   - Crush every PNG before final storage, in the originals and in every PNG layer. Use zenpng
+     at main with its Crush preset or higher. Re-encoding is lossless (pixel hash checked) and
+     replaces the PNGs written by third-party code (the product images' white-background pass
+     used the `image` crate). Colour (ICC, gamma, sRGB, chromaticities), EXIF and XMP are
+     carried over, and so is `pHYs` (the scan resolution of 175 scans and documents).
+     `sBIT` is dropped: every one in the corpus is 8,8,8, which an 8-bit PNG already says.
+     `tools/png-crush` does this and refuses any file whose pixels change.
    - Keep the originals camera-faithful: record reader quirks in manifest columns instead of
      editing files. The quirks are tile-only HEIC colour, HEIC `irot` plus EXIF orientation,
      and the depth/`tmap` reference libheif 1.17 rejects.
