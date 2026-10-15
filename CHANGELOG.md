@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- `EXPORT-PLAN.md`: at export every id gets a leading `1` (5-digit ids, gaps kept), which keeps every bucket
 - 34 more ids retired with the new `scripts/retire_ids.py`: 18 from the owner's removal review (2 Art Institute paintings, 16 AI product images) and the 16 empty entries from the split-leak audit (7 Access Denied captures, 5 broken layouts, 4 blank scans); 2,149 → 2,115 images, gaps kept
 - `EXPORT-PLAN.md`: every PNG is crushed with zenpng (Crush preset or higher, pixel-verified) before final storage
 - `EXPORT-PLAN.md`: the originals pass also swaps in background-cleaned 9231, 9869 and 9874, the three product images the 2026-05-31 flatten pass missed

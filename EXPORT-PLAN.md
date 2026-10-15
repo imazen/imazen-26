@@ -34,7 +34,9 @@ retired, and the review may retire more.
    - Then the public prefix mirrors the manifest exactly: unlisted objects are deleted, and the
      three AI files under stale names are re-keyed.
 3. **Membership and splits.**
-   - Retired ids are listed in `manifests/retired.tsv` and never reused.
+   - Retired ids are listed in `manifests/retired.tsv` and never reused; the gaps stay.
+   - At export every id gets a leading `1` (1044 becomes 11044). The last digit doesn't
+     change, so neither does any bucket, and the old-to-new mapping is the prefix itself.
    - The successor family map (`manifests/split_map_family_v2.tsv`) adds sha256, URL-plus-page
      and photo-burst keys. It also keys patent scans by `patent_page`, so a page's 1-bit original
      and both rescans always share a bucket; us3807657's rescans are its pages 1, 3, 5 and 7.
