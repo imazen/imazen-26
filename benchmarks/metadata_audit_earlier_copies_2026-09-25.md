@@ -22,11 +22,10 @@ the four camera classes (1000/1200/1400/1600, `STORAGE-MAP.md`)?
   The other items' profiles (gain map, `tmap`, thumbnail) are emptied to 0 bytes or
   overwritten in all 64.
   The published R2 copies are these same files (sha256 checked on 1495, 1540, 1042).
-- **The whitelist rewrite did all of it.** The oldest copies found (a 2026-06-04 snapshot,
-  an iCloud shared-album export, and the camera-named attic tree) agree byte for byte, and
-  still hold the GPS data. One earlier step, before the 2026-06-09 backup, removed only the
-  GPS IFD from 48 files. Every colour and HDR change happens between the backup and the
-  corpus (next section).
+- **The whitelist rewrite did all of it.** The oldest copies found agree byte for byte and
+  still hold the removed values. One earlier step, before a 2026-06-09 backup, removed values
+  from 48 files and changed nothing else. Every colour and HDR change happens between the
+  backup and the corpus (next section).
 
 Tools: `tools/metadata-loss-audit/`. Per-file data:
 `/mnt/v/output/imazen-26-variants/metadata-audit-2026-09-25/` (`SHA256SUMS`).
@@ -35,8 +34,8 @@ Tools: `tools/metadata-loss-audit/`. Per-file data:
 
 | generation | where | covers | relation to the next |
 |---|---|---|---|
-| oldest | `/mnt/v/zen/lilith-corpus-snapshot-2026-06-4/` (files dated 2026-05-27 to 06-04); `/mnt/v/heic/` iCloud shared-album export (52 HEICs); attic `imazen-26 - Copy (2)` (camera file names) | 309 of 319 by content, and all 319 counting the attic copies | identical bytes wherever two of them hold the same file |
-| GPS removed | `/mnt/v/output/codec-corpus/lilith-photos-backup-2026-06-09/` | all 319 | 48 files differ from the oldest (27 JPEG, 21 HEIC): the GPS IFD is gone, and only Exif pointers and offsets move with it. No other tag, segment, item or property changed. The other 271 are byte-identical to the oldest |
+| oldest | three private copies (files dated 2026-05-27 to 06-04) | all 319 between them | identical bytes wherever two of them hold the same file |
+| values removed | a private backup of 2026-06-09 | all 319 | 48 files differ from the oldest: values are removed, and only Exif pointers and offsets move with them. No other tag, segment, item or property changed. The other 271 are byte-identical to the oldest |
 | whitelist rewrite | the corpus (`imazen-26-unprocessed` on R2) | all 319 | everything in the sections below |
 
 The 10 camera-class PNGs and the 3 DNGs follow the same pattern: the backup equals the oldest
@@ -46,14 +45,12 @@ transcript records the command beyond `STORAGE-MAP.md`'s description, so the mec
 
 ## What was compared
 
-Earlier copies on `/mnt/v/output/codec-corpus/`: `lilith-photos-backup-2026-06-09/` (all
-319 camera-class files, before the rewrite) and `attic-2026-08-22/` (full earlier corpus
-trees and rejected sets), 5,230 files in all. Then every JPEG, HEIC and DNG on local storage
-(4.8 M files) was searched by the camera file names, and 551 image files in the older roots
-this turned up were keyed (the generations above). Every PNG under the older roots (the
-snapshot, `imazen-26-inspo`, `imazen-26-clean*`, `imazen-26-pristine`, the `ai-corpus*`
-trees, `Captures`, `collections`, `input`, `product-images`; 52,439 files) was scanned for
-colour chunks.
+Earlier copies: the pre-rewrite backup of all 319 camera-class files, and full earlier
+corpus trees and rejected sets, 5,230 files in all. Then every JPEG, HEIC and DNG on local
+storage (4.8 M files) was searched by the camera file names, and 551 image files in the
+older roots this turned up were keyed (the generations above). Every PNG under the older
+roots (earlier corpus trees, the AI-image working sets, captures and collections; 52,439
+files) was scanned for colour chunks.
 
 Files were paired by content, not by name. The key covers the image data only: JPEG from
 the first non-APPn marker to EOI, PNG `IHDR`+`IDAT`, HEIC the coded bytes of every `hvc1`
@@ -175,8 +172,8 @@ What it changed downstream:
 ## Reprocessing: whitelist v2 (2026-09-26)
 
 Instead of grafting repairs onto the rewritten files, `scripts/whitelist_v2.py` re-applies
-the published policy to the **oldest copy** of each camera file (06-04 snapshot for 309,
-the attic copy for the 10 PNGs), in our own container-aware code:
+the published policy to the **oldest copy** of each camera file, in our own
+container-aware code:
 
 - **Exif:** rebuilt with the documented keep-list (including `Flash`, which the 2026-08
   rewrite dropped) plus `SubjectArea` (57 Apple HEICs), the Interop IFD (`R98`) and, for
@@ -211,7 +208,7 @@ Checks, all 316 files:
 | full gain-map parameters (every field: per-channel min/max, gamma, offsets, headroom, colour-space flag) equal the oldest source's; JPEG via zenjpeg's UltraHDR reader, HEIC via heic `probe_full` | 76 / 76 (33 UltraHDR JPEG, 19 `tmap` HEIC, 24 legacy Apple HEIC; the corpus files match on only the 19) |
 | decodes with zencodecs (corpus-thumbs) | 316 / 316 |
 | Exif carries only whitelisted tags | 316 / 316 |
-| sensitive source values (serials, unique IDs, HostComputer, Software, GPS values, offsets, MakerNotes; 2,406) found outside the whitelisted Exif | 0 |
+| removed source values (2,406, taken from the sources' Exif and XMP) found outside the whitelisted Exif | 0 |
 | inputs re-hashed after the run | 638 / 638 unchanged |
 | **third-party:** libjpeg-turbo `djpeg` pixels equal the source's | 216 / 216 JPEG |
 | **third-party:** libheif `heif-dec --with-aux` pixels (primary, gain maps, depth, mattes) and `heif-info` structure equal the source's | 90 / 90 HEIC |
@@ -225,6 +222,11 @@ and v2 doesn't invent tags. An earlier v2 run also dropped `ExifImageWidth`/`Hei
 (required in JPEG); exiftool caught it and v2 now keeps them. The third-party pass is
 `tools/metadata-loss-audit/oracle_check.py`.
 
+**Correction (2026-10-15).** The search for removed values covered values taken from each
+source's Exif and XMP. It could not see the metadata inside 1044's embedded motion-photo
+video, which v2 kept as the camera wrote it. The originals pass of 2026-10-15 replaces 1044
+with a quality-100 JPEG without the video (`EXPORT-PLAN.md`).
+
 The one HDR-adjacent item v2 drops is Samsung's SEF `Photo_HDR_Info` record (a single zero
 byte in the 33 UltraHDR JPEGs), which goes with the rest of the SEF trailer. No reader we
 have takes gain-map parameters from it.
@@ -237,8 +239,7 @@ Outputs: `/mnt/v/output/imazen-26-variants/whitelist-v2-2026-09-26/` (`manifest.
 `SHA256SUMS`, and `_checks/` with the probe tables and the privacy check). The script
 writes only under `~/tmp` or `/mnt/v/output/imazen-26-variants/`, refuses a non-empty
 output directory, never overwrites a file, and re-hashes its inputs after the run. The
-camera originals it reads (snapshot, iCloud export, backup, attic) are now read-only on
-disk.
+oldest copies it reads are now read-only on disk.
 
 `scripts/restore_uhdr_gainmaps.py` and its candidates are superseded by v2.
 

@@ -81,9 +81,10 @@ sRGB marker; and, in 22 HEICs, the primary image's colour profile, which it repl
 profile of the gain-map or `tmap` item. Details:
 [`benchmarks/metadata_audit_earlier_copies_2026-09-25.md`](benchmarks/metadata_audit_earlier_copies_2026-09-25.md).
 
-Verified 2026-08-22: 0/319 camera-folder files carry location or device-identifying
-metadata, in this tree and in the published R2 copies (spot sha256 match between the
-two).
+Checked 2026-08-22 on Exif and XMP: none of the 319 camera-folder files carried location
+or device-identifying tags, in this tree or in the published R2 copies (spot sha256 match
+between the two). The check could not see inside 1044's embedded motion-photo video; the
+originals pass of 2026-10-15 replaces 1044 with a JPEG without it.
 
 Non-camera categories (museum, government-document, Internet Archive, AI-generated,
 screenshot sets) retain the attribution-relevant metadata their licenses expect.

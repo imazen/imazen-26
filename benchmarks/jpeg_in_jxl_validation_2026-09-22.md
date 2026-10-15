@@ -109,8 +109,7 @@ gets orientation right if it parses EXIF.
 
 **The corpus's UltraHDR JPEGs have lost their gain maps.** zenjpeg (built with its
 `ultrahdr` feature) finds a gain map in none of the 417 canonical JPEGs. It finds one in
-all 33 pre-rewrite originals kept at
-`/mnt/v/output/codec-corpus/lilith-photos-backup-2026-06-09/` (Samsung UltraHDR: primary
+all 33 pre-rewrite originals in a private backup (Samsung UltraHDR: primary
 JPEG, MPF, XMP `hdrgm`, ISO 21496-1 APP2, then the gain-map JPEG and a Samsung trailer).
 The gain-map JPEGs run 18.7–173.7 KB (median 58.3 KB).
 
