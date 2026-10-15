@@ -1,6 +1,7 @@
 # imazen-26 export plan
 
-**Status: decided 2026-10-15, not yet built.** This settles the open questions in
+**Status: decided 2026-10-15. Step 1 (originals) is staged and has passed every gate; the R2
+step waits for the owner's go.** This settles the open questions in
 `benchmarks/layer_repos_2026-09-25.md` and `benchmarks/split_branches_design_2026-09-22.md`.
 Membership becomes final after the removal review: the 11 byte-identical duplicates are
 retired, and the review may retire more.
@@ -12,19 +13,21 @@ retired, and the review may retire more.
      colour and HDR structure kept.
    - Replace 1214 with its camera original.
    - Re-encode 1044 as a quality-100 JPEG, dropping its motion-photo clip.
-   - Replace 9231, 9869 and 9874 with background-cleaned versions. They were regenerated after
-     the white-background flatten pass, so they are the only white-background product images
-     still uncleaned. zenfilters' `ai_corpus_flatten` at main reproduces the original pass byte
-     for byte (checked on 9226).
-   - Strip the SEFT trailers (32 screenshots), the IPTC zTXt chunks (3 AI PNGs) and the C2PA
-     stores (115 AI images), with our own code.
+   - Replace 9869 and 9874 with background-cleaned versions (9231, the third, is retired). They
+     were regenerated after the white-background flatten pass, so they are the only
+     white-background product images still uncleaned. zenfilters' `ai_corpus_flatten` at main
+     reproduces the original pass byte for byte (checked on 9226).
+   - Apply the camera metadata policy to the 32 phone screenshots (their SEFT trailers go with
+     it) and, in place, to the JPEG previews inside the 3 DNGs.
+   - Strip the IPTC zTXt and XMP chunks (3 AI PNGs) and the C2PA stores (106 PNG `caBX`, 5 JPEG
+     APP11), with our own code.
    - Keep the museum metadata.
    - Crush every PNG before final storage, in the originals and in every PNG layer, with zenpng
      at main, effort 22 (owner choice; `benchmarks/png_crush_effort_2026-10-15.md`: Crush adds
      0.3–1.2 points for 7–18× the time). Re-encoding is lossless (pixel hash checked) and
      replaces the PNGs written by third-party code (the product images' white-background pass
-     used the `image` crate). Colour (ICC, gamma, sRGB, chromaticities), EXIF and XMP are
-     carried over, and so is `pHYs` (the scan resolution of 175 scans and documents).
+     used the `image` crate). Colour (ICC, gamma, sRGB, chromaticities) and EXIF are carried
+     over, and so is `pHYs` (the scan resolution of 175 scans and documents).
      `sBIT` is dropped: every one in the corpus is 8,8,8, which an 8-bit PNG already says.
      `tools/png-crush` does this and refuses any file whose pixels change.
    - Keep the originals camera-faithful: record reader quirks in manifest columns instead of
@@ -112,7 +115,12 @@ Git LFS only where GitHub's limits leave no choice.
 - **JPEG XL.**
   - JPEG sources ship as JPEG-in-JXL, which rebuilds the original byte for byte, and all
     other sources as lossless renders.
-  - The 12 progressive Unsplash JPEGs wait for zenjxl-decoder#59.
+  - The 12 progressive Unsplash JPEGs (2003, 2005, 2009, 2012, 2013, 2022, 2203, 2204, 2207,
+    2212, 2402, 2409) cannot carry JPEG reconstruction data: each has a scan with more than
+    65,555 EOB-run reset points, beyond the `jbrd` field's range. libjxl refuses them too, and
+    jxl-encoder now does (zenjxl-decoder#59). Open owner choice: JPEG-in-JXL without
+    reconstruction data (the exact DCT coefficients, no byte-exact JPEG rebuild) or lossless
+    renders.
   - In `jxl-srgb`, the 168 wide-gamut JPEGs need a colour conversion, so they are lossless
     renders there.
 - **`.imi`.** Lossless pixel twins of the PNG and JXL files, published as single files plus

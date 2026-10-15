@@ -12,17 +12,14 @@ the metadata policy; this page is the "just give me a URL" index.
 
 ## Metadata policy — read before use
 
-The published files in the four camera-photo categories (`1000/1200/1400/1600`)
-carry **whitelist EXIF only**: camera make/model, lens, exposure parameters,
-capture dates, orientation, color space, and the ICC profile. No location tags,
-no serial numbers, no device or asset UUIDs — in any tag group, in any format
-(jpg/heic/png/dng); the whitelist rewrite fails closed on unknown vendor tags
-(policy + verification method: `STORAGE-MAP.md`). The rewrite left coded image data
-unchanged but removed some colour and HDR structure: the gain maps of the 33 UltraHDR
-JPEGs, Apple's HDR parameters for 24 HEIC gain maps, and, in 22 HEICs, the primary image's
-colour profile (details in `STORAGE-MAP.md`). The other 17 categories
-retain the attribution-relevant metadata their licenses expect, and the PNG-v3
-derivatives (below) carry no EXIF at all (PNG conversion drops it).
+The camera photos (`1000/1200/1400/1600`) and phone screenshots (`8000`) carry
+**whitelist Exif only**: camera make/model, lens, exposure parameters, capture dates,
+orientation, colour space and the ICC profile. No location tags, serial numbers, device or
+asset ids, or time-zone offsets, in any format. Colour and HDR structure (gain maps, ISO
+21496-1 records, HEIC items) is kept as the camera wrote it. The other categories keep the
+attribution-relevant metadata their licences expect, without C2PA manifest stores. Every
+PNG is recompressed losslessly with zenpng. Policy, history and checks: `STORAGE-MAP.md`.
+The PNG-v3 derivatives (below) carry no EXIF at all.
 
 ## 1. Raw corpus (originals, metadata policy per above)
 

@@ -66,28 +66,50 @@ handful of files without git or an LFS client — see [`ACCESS.md`](ACCESS.md).
 
 ## Metadata policy (published files)
 
-Camera-sourced files carry **whitelist EXIF only**: Make/Model/lens identification,
-exposure parameters (FNumber, ExposureTime, ISO, FocalLength incl. 35mm-equivalent,
-ApertureValue, ShutterSpeedValue, ExposureProgram, MeteringMode, ExposureCompensation,
-WhiteBalance, Flash), capture dates, Orientation, ColorSpace, and the ICC profile.
-No location tags, no serial numbers, no device or asset UUIDs — in any tag group, in
-any format (jpg/heic/dng/png). Enforcement is a whitelist rewrite
-(`exiftool -all= -tagsFromFile @ <keep-list> -icc_profile`), so unknown vendor tags fail
-closed rather than silently surviving. The rewrite left coded image data unchanged, but it
-also removed colour and HDR structure the policy meant to keep: the gain-map images, MPF
-index, `hdrgm` XMP and ISO 21496-1 records of the 33 UltraHDR JPEGs; the HDR headroom values
-Apple stores in the EXIF MakerNote for 24 HEIC gain maps; the `Flash` tag and the EXIF Interop
-sRGB marker; and, in 22 HEICs, the primary image's colour profile, which it replaced with the
-profile of the gain-map or `tmap` item. Details:
+As of the originals pass of 2026-10-15 (`EXPORT-PLAN.md`):
+
+- **Camera photos (1000/1200/1400/1600)** carry **whitelist Exif only**, applied to the
+  oldest copy of each file by our own container-aware code (`scripts/whitelist_v2.py`), so
+  unknown vendor data fails closed.
+  - Kept: Make, Model and lens identification; exposure parameters (FNumber, ExposureTime,
+    ISO, FocalLength and its 35 mm equivalent, ApertureValue, ShutterSpeedValue,
+    ExposureProgram, MeteringMode, ExposureCompensation, WhiteBalance, Flash); capture dates
+    with sub-seconds; Orientation, ColorSpace and the pixel dimensions; the Interop sRGB
+    marker; SubjectArea and SubjectLocation.
+  - Colour and HDR structure stays as the camera wrote it: every ICC profile; in UltraHDR
+    JPEGs the container XMP, the ISO 21496-1 records, a rebuilt MPF index and the gain-map
+    JPEG; in HEICs every item and property (`colr`, `auxC`, `tmap`, grids, auxiliary
+    images), with a MakerNote reduced to Apple's three HDR values where there is no `tmap`.
+  - Removed: location tags, serial numbers, ImageUniqueID and other device or asset ids,
+    OffsetTime*, HostComputer, Software, the rest of every MakerNote, IFD1 thumbnails, vendor
+    APPn segments and comments, Samsung SEF data, and all of a HEIC's primary XMP but the
+    camera's focus regions.
+  - 1044, a motion photo, is published as a quality-100 JPEG of its still image (every
+    quantizer 1, 4:4:4) without the embedded video.
+  - The 3 DNGs keep their own tags as the August 2026 exiftool whitelist left them; their
+    full-size JPEG previews get the keep-list above, applied in place.
+- **Phone screenshots (8000)** get the same Exif keep-list and lose their SEF trailers.
+- **Every other category** keeps the attribution-relevant metadata its licence expects
+  (museum IPTC records and comments, PDF document information), except that the C2PA
+  manifest stores (106 PNG `caBX` chunks, 5 JPEG APP11 segments) and the IPTC/XMP text
+  chunks of 3 AI product PNGs are removed.
+- **Every PNG** is recompressed losslessly by zenpng at effort 22 (`tools/png-crush`): ICC,
+  Exif, the colour chunks and `pHYs` are kept, other ancillary chunks dropped, and each
+  output decodes to its source's pixels in zenpng, Pillow and ImageMagick.
+
+Before this pass, the camera photos carried an August 2026 exiftool whitelist rewrite
+(`exiftool -all= -tagsFromFile @ <keep-list> -icc_profile`). It left coded image data
+unchanged but also removed colour and HDR structure the policy meant to keep: the gain-map
+images, MPF index, `hdrgm` XMP and ISO 21496-1 records of the 33 UltraHDR JPEGs; the HDR
+headroom values Apple stores in the EXIF MakerNote for 24 HEIC gain maps; the `Flash` tag and
+the EXIF Interop sRGB marker; and, in 22 HEICs, the primary image's colour profile. Details:
 [`benchmarks/metadata_audit_earlier_copies_2026-09-25.md`](benchmarks/metadata_audit_earlier_copies_2026-09-25.md).
 
-Checked 2026-08-22 on Exif and XMP: none of the 319 camera-folder files carried location
-or device-identifying tags, in this tree or in the published R2 copies (spot sha256 match
-between the two). The check could not see inside 1044's embedded motion-photo video; the
-originals pass of 2026-10-15 replaces 1044 with a JPEG without it.
-
-Non-camera categories (museum, government-document, Internet Archive, AI-generated,
-screenshot sets) retain the attribution-relevant metadata their licenses expect.
+Checked 2026-08-22 on each file's top-level Exif and XMP: none of the 319 camera-folder
+files carried location or device-identifying tags, in this tree or in the published R2
+copies (spot sha256 match between the two). That check could not see inside 1044's embedded
+motion-photo video or the DNGs' embedded JPEG previews; the originals pass of 2026-10-15
+handles both, and the export's byte-scan and inventory gates now read whole files.
 
 ## Split manifests
 

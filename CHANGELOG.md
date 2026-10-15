@@ -3,6 +3,10 @@
 ## [Unreleased]
 
 ### Changed
+- Originals pass of 2026-10-15 (manifests point at the staged bytes; the R2 objects follow the owner's go): 314 camera files are their whitelist-v2 versions with colour and HDR structure kept, 1214 its camera original, 1044 a quality-100 JPEG of its still image (`…_4000x3000.jpg`), 9869 and 9874 background-cleaned; the camera metadata policy covers the 32 phone screenshots and, in place, the 3 DNGs' JPEG previews; C2PA stores leave 106 PNGs and 5 JPEGs; every PNG is recompressed by zenpng at effort 22 (4.06 → 3.38 GB). 1,924 of 2,115 sha256s change; 5314's `train.tsv` sha256, wrong since the seed commit, is now right
+- `STORAGE-MAP.md` and `ACCESS.md` describe the published metadata after the originals pass; the 2026-08-22 check is described as covering top-level Exif and XMP only
+- `EXPORT-PLAN.md`: the 12 progressive Unsplash JPEGs cannot carry JPEG reconstruction data (a `jbrd` range limit libjxl shares; zenjxl-decoder#59), which leaves an owner choice for the JXL layers
+- `scripts/restore_uhdr_gainmaps.py` removed; whitelist v2 superseded it
 - `EXPORT-PLAN.md`: PNGs are crushed at zenpng effort 22 (owner choice after `benchmarks/png_crush_effort_2026-10-15.md`)
 - `EXPORT-PLAN.md`: at export every id gets a leading `1` (5-digit ids, gaps kept), which keeps every bucket
 - 34 more ids retired with the new `scripts/retire_ids.py`: 18 from the owner's removal review (2 Art Institute paintings, 16 AI product images) and the 16 empty entries from the split-leak audit (7 Access Denied captures, 5 broken layouts, 4 blank scans); 2,149 → 2,115 images, gaps kept
@@ -20,6 +24,9 @@
 - README / STORAGE-MAP variant tables list both branches with current pointer counts
 
 ### Added
+- Export gates: `scripts/inventory_gate.py` with `manifests/inventory_allowlist.tsv` (unknown parts block unless a reviewed kind), `scripts/byte_scan.py` with `manifests/byte_scan_allowlist.tsv` (nested media and location data, decoder-independent), `scripts/png_readback.py` (Pillow and ImageMagick decode each recompressed PNG to its source's pixels)
+- `scripts/stage_originals.py` and `scripts/apply_originals_pass.py`: build the originals pass in a staging tree, then point every manifest at it
+- `tools/corpus-thumbs --to-jpeg`: a baseline 4:4:4 JPEG of one 8-bit image in stored orientation with its ICC profile and Exif (`libjpeg100`: every quantizer 1)
 - `benchmarks/dhash_census_2026-10-15.md`: dHash census of all 2,149 images (`tools/corpus-thumbs --dhash`); no cross-bucket duplicates; the five pie-chart theme variants (7115–7119) become one family in `split_map_family_v2.tsv`
 - Removal review full-screen viewer: swipe between 1280 px previews of every image, mark from there, open the original; previews packed into 18 files of about 12 MB
 - `tools/corpus-thumbs --preview <max> <quality>`: one WebP per image instead of a sheet, for full-screen viewing
