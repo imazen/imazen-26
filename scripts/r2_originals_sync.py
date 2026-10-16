@@ -6,8 +6,9 @@ Subcommands:
   plan <staging-dir> [--out plan.tsv]
       Read-only. Lists codec-corpus/imazen-26-unprocessed/ through the Cloudflare API and
       compares every object with the manifests and the staged files: `put` for a manifest
-      path whose staged bytes differ from the object (MD5 against a single-part ETag; a
-      multipart ETag always counts as different) or that has no object. An object no
+      path whose staged bytes differ from the object (its ETag recomputed locally: the MD5,
+      or for a multipart upload the MD5 of the parts' MD5s at s5cmd's 50 MiB part size) or
+      that has no object. An object no
       manifest lists is a document when git tracks its path in this repository (README.md,
       CORPUS-MANIFEST.tsv, the class folders' MANIFEST.tsv, PROVENANCE.md, LICENSE.md and
       so on): `put` the repository's copy when it differs. Under KEEP (the patent scans'
@@ -127,6 +128,23 @@ def md5(path):
     return h.hexdigest()
 
 
+S5CMD_PART = 50 << 20  # s5cmd's default --part-size (MiB), which every put here uses
+
+
+def etag_like(path, etag):
+    """The local file's ETag in the form of `etag`: its MD5, or for a multipart ETag
+    (`<md5>-<parts>`) the MD5 of each part's MD5 at s5cmd's part size."""
+    if "-" not in etag:
+        return md5(path)
+    h = hashlib.md5()
+    parts = 0
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(S5CMD_PART), b""):
+            h.update(hashlib.md5(block).digest())
+            parts += 1
+    return f"{h.hexdigest()}-{parts}"
+
+
 def s5cmd(c, env, commands, check=True):
     with tempfile.NamedTemporaryFile("w", suffix=".s5", dir=os.path.expanduser("~/tmp"), delete=False) as f:
         f.write("\n".join(commands) + "\n")
@@ -150,10 +168,9 @@ def cmd_plan(a, c):
         if not os.path.isfile(local) or os.path.getsize(local) != size:
             raise SystemExit(f"staged file missing or wrong size: {path}")
         key = PREFIX + path
-        m = md5(local)
         have = objs.get(key)
-        if have is None or have[1] != m:
-            rows.append(("put", key, size, m, local))
+        if have is None or have[1] != etag_like(local, have[1]):
+            rows.append(("put", key, size, md5(local), local))
     docs = tracked()
     for key, (size, etag) in sorted(objs.items()):
         rel = key[len(PREFIX):]
