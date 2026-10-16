@@ -320,7 +320,7 @@ checksum = "6e44b0a4eaa4c82f441d50a963f2d5f05a787240aeee097597033e72accfd22f"
 [[package]]
 name = "jxl-encoder"
 version = "0.4.0"
-source = "git+https://github.com/imazen/jxl-encoder?branch=main#801132ca50b218ca16dc632266778417be5124fb"
+source = "git+https://github.com/imazen/jxl-encoder?branch=main#d73b6c989be81338b7e72a9f38b1a88fd2df00d1"
 dependencies = [
  "archmage",
  "brotli",
@@ -342,7 +342,7 @@ dependencies = [
 [[package]]
 name = "jxl-encoder-macros"
 version = "0.4.0"
-source = "git+https://github.com/imazen/jxl-encoder?branch=main#801132ca50b218ca16dc632266778417be5124fb"
+source = "git+https://github.com/imazen/jxl-encoder?branch=main#d73b6c989be81338b7e72a9f38b1a88fd2df00d1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -352,7 +352,7 @@ dependencies = [
 [[package]]
 name = "jxl-encoder-simd"
 version = "0.4.0"
-source = "git+https://github.com/imazen/jxl-encoder?branch=main#801132ca50b218ca16dc632266778417be5124fb"
+source = "git+https://github.com/imazen/jxl-encoder?branch=main#d73b6c989be81338b7e72a9f38b1a88fd2df00d1"
 dependencies = [
  "archmage",
  "libm",
