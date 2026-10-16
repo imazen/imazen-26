@@ -11,7 +11,7 @@
 
 # imazen-26 image corpus
 
-A test corpus for image codecs and processing — **2,160 images, ~5.9 GB** across 21
+A test corpus for image codecs and processing — **2,115 images, 5.1 GB** across 21
 categories. Deliberately diverse: real photographs, stock photography, artwork
 reproductions, born-digital government documents, document/manuscript scans, synthetic
 charts and line patterns, UI screenshots, and AI-generated graphics. It spans the hard
@@ -32,40 +32,40 @@ attribution; `keyinfo` holds page/variant/camera/iso (f-stops written `f1p8`, no
 | Folder | n | Size | Format | Dims (MP) | Source | License | Contents |
 |---|--:|--:|---|---|---|---|---|
 | `1000-lilith-photos-general` | 72 | 0.26 GB | jpg/heic | 6.9–12.2 | lilith (own) | PD-own | Everyday photographs (phones: Note9…S25U, iPhones), mixed subjects |
-| `1200-lilith-interiors` | 49 | 0.20 GB | jpg/heic/png | 3.0–12.2 | lilith (own) | PD-own | Interior & architecture photos |
-| `1400-lilith-nature` | 157 | 0.75 GB | heic/jpg/png/dng | 1.6–124 | lilith (own) | PD-own | Landscape/nature; incl. HEIC + 3 DNG raws + panoramas |
-| `1600-lilith-food` | 41 | 0.13 GB | jpg/heic | 7.4–24.5 | lilith (own) | PD-own | Food & plated dishes |
+| `1200-lilith-interiors` | 49 | 0.19 GB | jpg/heic/png | 3.0–12.2 | lilith (own) | PD-own | Interior & architecture photos |
+| `1400-lilith-nature` | 157 | 0.73 GB | heic/jpg/png/dng | 1.6–124 | lilith (own) | PD-own | Landscape/nature; incl. HEIC + 3 DNG raws + panoramas |
+| `1600-lilith-food` | 41 | 0.12 GB | jpg/heic | 7.4–24.5 | lilith (own) | PD-own | Food & plated dishes |
 | `2000-unsplash-people` | 28 | 0.08 GB | jpg | 6.0–32.7 | Unsplash | Unsplash-License | Stock portraits / people |
 | `2200-unsplash-renders` | 13 | 0.04 GB | jpg | 5.8–99 | Unsplash | Unsplash-License | Abstract / 3D renders |
 | `2400-unsplash-textures` | 10 | 0.09 GB | jpg | 5.6–102 | Unsplash | Unsplash-License | Surfaces / textures |
-| `3000-art-institute-of-chicago-photos` | 15 | 0.04 GB | jpg | 1.8–20.9 | Art Institute of Chicago | CC0 | Open-access artwork reproductions (paintings, prints) |
+| `3000-art-institute-of-chicago-photos` | 13 | 0.03 GB | jpg | 1.8–20.9 | Art Institute of Chicago | CC0 | Open-access artwork reproductions (paintings, prints) |
 | `3300-met-museum-photos` | 24 | 0.06 GB | jpg | 0.2–16 | The Met | CC0 | Open-access artwork reproductions |
-| `5000-national-park-service-brochures` | 59 | 0.56 GB | png | 0.5–55.6 | NPS | PD-USGov | Park brochures/maps (born-digital PDF→PNG), color + grayscale variants |
+| `5000-national-park-service-brochures` | 59 | 0.36 GB | png | 0.5–55.6 | NPS | PD-USGov | Park brochures/maps (born-digital PDF→PNG), color + grayscale variants |
 | `5200-epa-climate-impact-2021-report` | 25 | 0.03 GB | png | 11.4 | EPA | PD-USGov | Report pages — text, tables, charts |
-| `5300-noaa-hurricane-documents` | 44 | 0.06 GB | png | 8.4 | NOAA/NHC | PD-USGov | Hurricane report pages — text, maps, charts |
-| `6000-lilith-scans-public-patents` | 113 | 0.09 GB | png/jpg | 7.9–8.0 | USPTO | PD | 3 US patents × {1-bit CCITT original, color rescan, gray rescan} — **bilevel + scan texture** |
-| `6600-ia-scans-manuscript-illustrations` | 36 | 1.04 GB | png | 6.0–37 | Internet Archive | PD | PD plate scans (Haeckel, Hokusai, Owen Jones, Redouté, Shin-Bijutsukai, Trouvelot) |
-| `6800-ia-scans-manuscript-text` | 36 | 0.32 GB | png | 6.0–30 | Internet Archive | PD | PD manuscript text-page scans (same works) |
+| `5300-noaa-hurricane-documents` | 44 | 0.04 GB | png | 8.4 | NOAA/NHC | PD-USGov | Hurricane report pages — text, maps, charts |
+| `6000-lilith-scans-public-patents` | 111 | 0.09 GB | png/jpg | 7.9–8.0 | USPTO | PD | 3 US patents × {1-bit CCITT original, color rescan, gray rescan} — **bilevel + scan texture** |
+| `6600-ia-scans-manuscript-illustrations` | 36 | 0.97 GB | png | 6.0–37 | Internet Archive | PD | PD plate scans (Haeckel, Hokusai, Owen Jones, Redouté, Shin-Bijutsukai, Trouvelot) |
+| `6800-ia-scans-manuscript-text` | 34 | 0.25 GB | png | 6.0–30 | Internet Archive | PD | PD manuscript text-page scans (same works) |
 | `7000-lilith-plots` | 126 | 0.02 GB | png | 1.0 | lilith (generated) | PD-own | Synthetic charts + line/polygon test patterns (hard-edge graphics) |
-| `8000-lilith-mobile-screenshots` | 32 | 0.04 GB | png/jpg | 2.3–5.6 | various web/apps | CC0 | Phone UI/web screenshots (own capture); some frames are lilith's own content, rest third-party UI/content under fair use |
-| `8100-lilith-web-screenshots` | 370 | 0.27 GB | png | 0.2–5.2 | various web | PD (PD-filtered) | Website viewport crops at multiple resolutions/dpr |
-| `9000-lilith-ai-clipart` | 86 | 0.04 GB | png | 1.0–1.6 | lilith (AI-gen) | PD-own | AI-generated clipart (flat / transparent) |
-| `9094-lilith-ai-illustrations` | 75 | 0.26 GB | png | 1.6 | lilith (AI-gen) | PD-own | AI-generated illustrations |
-| `9226-lilith-ai-products` | 749 | 1.53 GB | png/jpg | 1.0–17 | lilith (AI-gen) | PD-own | AI-generated product images, by product-category subfolders |
+| `8000-lilith-mobile-screenshots` | 32 | 0.03 GB | png/jpg | 2.3–5.6 | various web/apps | CC0 | Phone UI/web screenshots (own capture); some frames are lilith's own content, rest third-party UI/content under fair use |
+| `8100-lilith-web-screenshots` | 348 | 0.23 GB | png | 0.2–5.2 | various web | PD (PD-filtered) | Website viewport crops at multiple resolutions/dpr |
+| `9000-lilith-ai-clipart` | 86 | 0.03 GB | png | 1.0–1.6 | lilith (AI-gen) | PD-own | AI-generated clipart (flat / transparent) |
+| `9094-lilith-ai-illustrations` | 75 | 0.22 GB | png | 1.6 | lilith (AI-gen) | PD-own | AI-generated illustrations |
+| `9226-lilith-ai-products` | 732 | 1.26 GB | png/jpg | 1.0–17 | lilith (AI-gen) | PD-own | AI-generated product images, by product-category subfolders |
 
 ## Licensing status
 
 | License | Files | Notes |
 |---|--:|---|
-| PD-own | 1,360 | lilith's own photos, generated plots, AI images — released to public domain |
-| PD | 533 | US patents + Internet-Archive scans of PD works; per-file `pd_basis` in manifests |
+| PD-own | 1,343 | lilith's own photos, generated plots, AI images — released to public domain |
+| PD | 507 | US patents + Internet-Archive scans of PD works; per-file `pd_basis` in manifests |
 | PD-USGov | 128 | NPS/EPA/NOAA federal works (17 USC §105) |
 | Unsplash-License | 51 | Free to use; attribution appreciated (photographer in filename). Unsplash terms apply |
-| CC0 | 39 | Met + Art Institute open-access (public-domain dedication) |
+| CC0 | 37 | Met + Art Institute open-access (public-domain dedication) |
 | Mailing-list-PD / PD-tool | 17 | within the web-screenshot set |
 | CC0 (maintainer's own capture) | 32 | mobile screenshots; capture is CC0, some frames are lilith's own content, rest show third-party UI/content under fair use |
 
-**All 2,160 files are public-domain, PD-own, CC0 or Unsplash-licensed** (freely
+**All 2,115 files are public-domain, PD-own, CC0 or Unsplash-licensed** (freely
 usable; the 51 Unsplash images under the Unsplash License, attribution
 appreciated). The 8000 mobile-screenshot set's *captures* are CC0; where a
 frame shows third-party app or web content rather than the maintainer's own,
@@ -117,7 +117,7 @@ hash-verifies a branch's objects against its pointers.
 
 Each variant branch carries a `VARIANT.md` saying what the set is, how it was
 produced, and where its coverage is incomplete — `variant/png-v3` mirrors
-2,157 of the 2,160 canonical images and lists the three that have no render in
+2,157 of the 2,160 images the corpus had then and lists the three that have no render in
 its `MISSING.tsv`.
 
 `corpus-guard` enforces the split: canonical branches carry no image bytes, and
