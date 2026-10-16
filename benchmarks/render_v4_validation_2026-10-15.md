@@ -51,6 +51,14 @@ pass's commits, hashes and results).
   whose kinds (`…+jhgm`) the check didn't know. Fixed (5a930e3: the kind's check plus
   libjxl's `jxlinfo -v` reading the `jhgm` bundle); the full re-check passed 4,300 of 4,300
   files.
+- **Whole-tree gates** (`scripts/render_v4_gates.sh`, 2026-10-16): the PNG read-back passed
+  4,300 of 4,300 files; the inventory read all 8,600 PNG and JXL files, 0 violations; the byte
+  scan found nothing in `png-p3`, `png-srgb` and `jxl-srgb` and one nested JPEG in `jxl-p3`:
+  11231's JPEG-in-JXL `jbrd` box holds the UltraHDR gain-map JPEG, the original's MPF
+  secondary image, all 173,712 bytes verbatim. The byte-exact rebuild needs it; brotli stored
+  those already-compressed bytes raw here, and compressed them in the other 32 UltraHDR
+  transcodes. It waits on an owner decision (an allow-list entry, as for the originals'
+  MPF gain maps).
 
 ## SDR PNG layers
 
