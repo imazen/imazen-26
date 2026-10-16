@@ -1,0 +1,3 @@
+target/
+libjxl/libjxl_hash
+libjxl/*.o

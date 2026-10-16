@@ -1,0 +1,63 @@
+[package]
+name = "jxl-decode-check"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Decode the imazen-26 JPEG XL layers with zenjxl and jxl-rs (and, via libjxl/, libjxl): XXH3 of every decoded bitmap, every jhgm gain map read back"
+
+# Standalone: not part of any workspace. The zen crates come from main with the same patches
+# as tools/render-v4, and Cargo.lock starts from render-v4's, so the zen decode is the one that
+# wrote the files. jxl-rs (crates.io `jxl`) and libjxl are third-party test oracles: they only
+# read (EXPORT-PLAN.md, "Gates").
+[workspace]
+
+[dependencies]
+zencodecs = { git = "https://github.com/imazen/zenpipe", branch = "main", default-features = false, features = ["png", "jxl-decode", "jpeg-ultrahdr"] }
+zencodec = { git = "https://github.com/imazen/zencodec", branch = "main" }
+zenpixels = { git = "https://github.com/imazen/zenpixels", branch = "main", default-features = false, features = ["std", "icc"] }
+zenjxl = { git = "https://github.com/imazen/zenjxl", branch = "main", default-features = false, features = ["zencodec", "decode", "reconstruct-hdr"] }
+jxl = "0.7.4"
+xxhash-rust = { version = "0.8.19", features = ["xxh3"] }
+rayon = "1.12.0"
+
+[patch.crates-io]
+zencodec = { path = "../corpus-thumbs/zen-main/zencodec" }
+zenmeta = { path = "../corpus-thumbs/zen-main/zencodec/zenmeta" }
+ultrahdr-core = { path = "../corpus-thumbs/zen-main/ultrahdr/ultrahdr-core" }
+whereat = { git = "https://github.com/lilith/whereat", branch = "main" }
+zenpixels = { git = "https://github.com/imazen/zenpixels", branch = "main" }
+zenpixels-convert = { git = "https://github.com/imazen/zenpixels", branch = "main" }
+zenresize = { git = "https://github.com/imazen/zenresize", branch = "main" }
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", branch = "main" }
+heic = { git = "https://github.com/imazen/heic", branch = "main" }
+zenpng = { git = "https://github.com/imazen/zenpng", branch = "main" }
+zenraw = { git = "https://github.com/imazen/zenraw", branch = "main" }
+zenwebp = { git = "https://github.com/imazen/zenwebp", branch = "main" }
+zenflate = { git = "https://github.com/imazen/zenflate", branch = "main" }
+zenanalyze = { git = "https://github.com/imazen/zenanalyze", branch = "main" }
+enough = { git = "https://github.com/imazen/enough", branch = "main" }
+how-far = { git = "https://github.com/imazen/how-far", branch = "main" }
+linear-srgb = { git = "https://github.com/imazen/linear-srgb", branch = "main" }
+garb = { git = "https://github.com/imazen/garb", branch = "main" }
+winarm-cpufeatures = { git = "https://github.com/imazen/winarm-cpufeatures", branch = "main" }
+zenblend = { git = "https://github.com/imazen/zenblend", branch = "main" }
+zenquant = { git = "https://github.com/imazen/zenquant", branch = "main" }
+zenyuv = { git = "https://github.com/imazen/zenjpeg", branch = "main" }
+zenzop = { git = "https://github.com/imazen/zenzop", branch = "main" }
+almost-enough = { git = "https://github.com/imazen/enough", branch = "main" }
+zenjxl = { git = "https://github.com/imazen/zenjxl", branch = "main" }
+zenjxl-decoder = { git = "https://github.com/imazen/zenjxl-decoder", branch = "main" }
+jxl-encoder = { git = "https://github.com/imazen/jxl-encoder", branch = "main" }
+
+# Several mains pin older zencodec, zenmeta and ultrahdr-core commits. Cargo can't patch a git
+# source with the same URL, so all of them resolve to the main checkouts in
+# ../corpus-thumbs/zen-main/ (its sync-main.sh clones them and records the commits).
+[patch."https://github.com/imazen/zencodec"]
+zencodec = { path = "../corpus-thumbs/zen-main/zencodec" }
+zenmeta = { path = "../corpus-thumbs/zen-main/zencodec/zenmeta" }
+
+[patch."https://github.com/imazen/ultrahdr"]
+ultrahdr-core = { path = "../corpus-thumbs/zen-main/ultrahdr/ultrahdr-core" }
+
+[profile.release]
+debug = false
