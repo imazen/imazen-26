@@ -65,14 +65,19 @@ Git LFS only where GitHub's limits leave no choice.
 | `imazen-26-imi-srgb`, `imazen-26-imi-p3` | IMIJ `.imi` renders; private until IMIJ ships with a frozen format version |
 | `imazen-xl-26` | every image that has a file over GitHub's 100 MiB limit in any layer, with all of its layers, in GitHub LFS |
 
-- **XL membership.**
-  - On the png-v3 sizes and the originals, 7 ids qualify today: 1415, 1455, 1458, 1521,
-    1531, 1540 and 2402.
-  - 8 more HDR renders are within 10 MiB of the limit: 1520, 1527, 1528, 1532, 1536, 1537,
-    1542 and 1543.
-  - The v4 file sizes decide. An XL image leaves the other repositories completely.
-- **Repository size.** GitHub caps a repository at 10 GB. The PNG layers measure 10.5 and
-  14.3 GiB on png-v3, so they get a repository per bucket.
+- **XL membership** (v4 sizes, `scripts/export_sizing.py`, 2026-10-16): 5 ids.
+  - 11455 and 11458: their DNG originals (118.8 and 126.8 MiB).
+  - 11521 and 11540: their HDR PNGs (107.9 and 100.4 MiB).
+  - 12402: its SDR PNG, 101.2 MiB in both PNG layers.
+  - 11531's HDR PNG is 99.5 MiB, under the limit. No JPEG XL file exceeds 71 MiB.
+  - An XL image leaves the other repositories completely.
+- **Repository size.** GitHub caps a repository at 10 GB on disk and a push at 2 GiB
+  ([repository limits](https://docs.github.com/en/repositories/creating-and-managing-repositories/repository-limits),
+  checked 2026-10-16). Without the XL images, v4
+  measures: originals 4.86 GB, `png-p3` 12.59 GB (6.13 / 3.81 / 2.66 by bucket), `png-srgb`
+  9.44 GB, `jxl-p3` 6.16 GB, `jxl-srgb` 4.77 GB. The PNG layers get a repository per bucket;
+  the others one repository with a branch per bucket. A large branch goes up in several
+  pushes.
 - **R2 copies.** Every layer also sits under named prefixes in an `imazen-26` R2 bucket.
 - **Older layers.** png-v3 and pristine-8th keep their bytes and leave the docs.
 - **Release.** One version tag goes on every repository at once, with release notes, a
