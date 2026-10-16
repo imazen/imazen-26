@@ -2,3 +2,4 @@ id	finding	reason
 3306	1 JPEG stream(s) beyond the expected 1	Photoshop thumbnail resource (8BIM 0x040C) in APP13: a small preview of the same museum image, part of the museum metadata the export keeps
 3322	1 JPEG stream(s) beyond the expected 1	Photoshop thumbnail resource (8BIM 0x040C) in APP13: a small preview of the same museum image, part of the museum metadata the export keeps
 3323	1 JPEG stream(s) beyond the expected 1	Photoshop thumbnail resource (8BIM 0x040C) in APP13: a small preview of the same museum image, part of the museum metadata the export keeps
+1231	1 JPEG stream(s) beyond the expected 0	UltraHDR gain-map JPEG in the jbrd box: the JPEG-in-JXL rebuild of the original keeps its MPF secondary image byte for byte, so brotli stores it plain. Owner OK 2026-10-16, with the condition that the gain maps decode in jxl-rs, libjxl and zenjxl (tools/jxl-decode-check)
