@@ -22,6 +22,7 @@
 //!        render-v4 png-hdr [--jobs N] <list.tsv> <out-dir>    (the gain-map sources; see `hdr`)
 //!        render-v4 hdr-info [--jobs N] <list.tsv> <out-dir>   (what png-hdr would use; writes nothing)
 //!        render-v4 jxl --effort E [--jobs N] <list.tsv> <out-dir>   (the JPEG XL layers; see `jxl`)
+//!        render-v4 jxl-hdr --effort E [--jobs N] <list.tsv> <out-dir>   (each .hdr.png's JXL twin)
 //!   list: id<TAB>source path<TAB>out stem (class/newid_name, no _WxH)<TAB>provenance JSON
 //!   → <out-dir>/png-p3/<stem>_<W>x<H>.png and <out-dir>/png-srgb/<stem>_<W>x<H>.png, and a
 //!     report on stdout: id, layer, path, width, height, layout, source_alpha (none, kept or
@@ -585,6 +586,7 @@ fn main() {
         (Some("png-hdr"), 3) => (hdr::render, hdr::HDR_HEADER),
         (Some("hdr-info"), 3) => (hdr::info, hdr::INFO_HEADER),
         (Some("jxl"), 3) => (jxl::render, jxl::JXL_HEADER),
+        (Some("jxl-hdr"), 3) => (jxl::render_hdr, jxl::JXL_HEADER),
         _ => usage(),
     };
     let columns = header.split('\t').count();
@@ -656,7 +658,7 @@ fn main() {
 
 fn usage() -> ! {
     eprintln!(
-        "usage: render-v4 <png-sdr|png-hdr|hdr-info|jxl> [--jobs N] [--effort N (jxl)] <list.tsv: id, source, out stem, provenance JSON> <out-dir>"
+        "usage: render-v4 <png-sdr|png-hdr|hdr-info|jxl|jxl-hdr> [--jobs N] [--effort N (jxl)] <list.tsv: id, source, out stem, provenance JSON> <out-dir>"
     );
     std::process::exit(2);
 }

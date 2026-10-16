@@ -13,7 +13,10 @@ Reads <out-dir>/jxl-report.tsv (render-v4 jxl), <out-dir>/report.tsv (the PNG tw
 - JPEG-in-JXL: render-v4's rebuild and libjxl's (`djxl out.jpg`) both give the original's
   sha256;
 - JPEG-in-JXL without reconstruction data: `djxl` decodes it (pixels are the JPEG's, by
-  libjxl's JPEG decode, so no hash to compare).
+  libjxl's JPEG decode, so no hash to compare);
+- the 16-bit PQ `.hdr.jxl` files (<out-dir>/jxl-hdr-report.tsv, when present): render-v4's
+  and libjxl's 16-bit decodes give the `.hdr.png` twin's sample hash (<out-dir>/hdr-report.tsv),
+  and `jxlinfo` states P3 primaries with the PQ transfer function.
 
 Writes <out-dir>/jxl-check.tsv and exits 1 on any failure.
 """
@@ -33,7 +36,7 @@ import numpy as np
 
 
 def pnm(data):
-    """Parse djxl's P5/P6/P7 output: (channels, samples)."""
+    """Parse djxl's P5/P6/P7 output: (channels, samples); 16-bit PNM comes back big-endian."""
     if data[:2] == b"P7":
         head, _, body = data.partition(b"ENDHDR\n")
         f = dict(line.split(b" ", 1) for line in head.split(b"\n")[1:] if b" " in line)
@@ -50,10 +53,9 @@ def pnm(data):
         pos = end
     pos += 1
     ch = {b"P5": 1, b"P6": 3}[fields[0]]
-    w, h = int(fields[1]), int(fields[2])
-    if int(fields[3]) != 255:
-        raise ValueError("djxl wrote a non-8-bit PNM")
-    return ch, np.frombuffer(data[pos:], np.uint8)[: w * h * ch].reshape(h, w, ch)
+    w, h, maxval = int(fields[1]), int(fields[2]), int(fields[3])
+    dtype = ">u2" if maxval > 255 else np.uint8
+    return ch, np.frombuffer(data[pos:], dtype)[: w * h * ch].reshape(h, w, ch)
 
 
 def rgba_hash(ch, px):
@@ -114,6 +116,19 @@ def check(job):
                 if hashlib.sha256(open(out, "rb").read()).hexdigest() != original_sha:
                     raise ValueError("libjxl's rebuild is not the original")
                 res["result"] = "ok"
+            elif r["kind"] == "lossless-pq":
+                if twin is None:
+                    raise ValueError("no .hdr.png twin row")
+                if r["pixels_sha256"] != twin["rgb16_sha256"]:
+                    raise ValueError("render-v4 decode hash differs from the .hdr.png twin")
+                out = os.path.join(tmp, "d.ppm")
+                subprocess.run(["djxl", path, out, "--bits_per_sample=16", "--quiet"], capture_output=True, check=True)
+                ch, px = pnm(open(out, "rb").read())
+                if ch != 3 or hashlib.sha256(px.astype("<u2").tobytes()).hexdigest() != twin["rgb16_sha256"]:
+                    raise ValueError("libjxl decodes different 16-bit samples")
+                if "P3 primaries, PQ transfer function" not in colour_line:
+                    raise ValueError(f"colour statement: {colour_line}")
+                res["result"] = "ok"
             elif r["kind"] == "jpeg-in-jxl-codestream":
                 subprocess.run(["djxl", path, os.path.join(tmp, "d.ppm"), "--quiet"], capture_output=True, check=True)
                 res["result"] = "ok (decodes; no rebuild data by design)"
@@ -140,8 +155,18 @@ def main():
     for line in open(os.path.join(a.out_dir, "list.tsv")):
         f = line.rstrip("\n").split("\t")
         original[f[0]] = json.loads(f[3])["original_sha256"]
+    hdr_report = os.path.join(a.out_dir, "hdr-report.tsv")
+    if os.path.exists(hdr_report):
+        for r in csv.DictReader(open(hdr_report), delimiter="\t"):
+            if not r["error"]:
+                twins[(r["id"], "png-p3-hdr")] = r
+    rows = []
+    for name in ("jxl-report.tsv", "jxl-hdr-report.tsv"):
+        p = os.path.join(a.out_dir, name)
+        if os.path.exists(p):
+            rows += list(csv.DictReader(open(p), delimiter="\t"))
     jobs = []
-    for r in csv.DictReader(open(os.path.join(a.out_dir, "jxl-report.tsv")), delimiter="\t"):
+    for r in rows:
         if keep and r["id"] not in keep:
             continue
         if r["error"]:

@@ -4,8 +4,10 @@
 #
 #   scripts/render_v4_jxl.sh <out-dir> <effort> [jobs]
 #
-# Renders every row of <out-dir>/list.tsv and writes beside them:
+# Renders every row of <out-dir>/list.tsv and, when render_v4_hdr.sh has run, the .hdr.png
+# files' lossless twins, and writes beside them:
 #   jxl-report.tsv     one row per JXL file (render-v4 jxl), sorted by id and layer
+#   jxl-hdr-report.tsv one row per .hdr.jxl (render-v4 jxl-hdr)
 #   jxl-progress.log   per-file progress
 #   jxl-check.tsv      scripts/render_v4_jxl_check.py: twins, colour and libjxl read-back
 # and appends the JXL pass's commits and results to RUN.meta.
@@ -33,6 +35,15 @@ run_heavy "$((jobs * 2))" 40G "$bin" jxl --effort "$effort" --jobs "$jobs" "$out
 { head -n 1 "$out/jxl-report.unsorted.tsv"; tail -n +2 "$out/jxl-report.unsorted.tsv" | sort -t$'\t' -k1,1 -k2,2; } \
   > "$out/jxl-report.tsv"
 rm "$out/jxl-report.unsorted.tsv"
+if [ -e "$out/hdr-report.tsv" ]; then
+  awk -F'\t' 'NR > 1 && $NF == "" { print $1 }' "$out/hdr-report.tsv" | sort -u > "$out/jxl-hdr-ids.txt"
+  awk -F'\t' 'NR == FNR { keep[$1] = 1; next } keep[$1]' "$out/jxl-hdr-ids.txt" "$out/list.tsv" > "$out/jxl-hdr-list.tsv"
+  run_heavy "$((jobs * 2))" 40G "$bin" jxl-hdr --effort "$effort" --jobs "$jobs" "$out/jxl-hdr-list.tsv" "$out" \
+    > "$out/jxl-hdr-report.unsorted.tsv" 2>> "$out/jxl-progress.log" || status=$?
+  { head -n 1 "$out/jxl-hdr-report.unsorted.tsv"; tail -n +2 "$out/jxl-hdr-report.unsorted.tsv" | sort -t$'\t' -k1,1; } \
+    > "$out/jxl-hdr-report.tsv"
+  rm "$out/jxl-hdr-report.unsorted.tsv"
+fi
 python3 "$repo/scripts/render_v4_jxl_check.py" "$out" --jobs "$jobs" > "$out/jxl-check.log" 2>&1 || status=$?
 tools="tools/render-v4 scripts/render_v4_jxl.sh scripts/render_v4_jxl_check.py"
 {

@@ -374,6 +374,107 @@ pub(crate) fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
     Ok(rows)
 }
 
+/// `jxl-hdr`: the lossless twin of each `.hdr.png` from `png-hdr`, as
+/// `jxl-p3/<stem>_<W>x<H>.hdr.jxl`. It reads the PNG's 16-bit PQ samples, cLLI and provenance
+/// and encodes exactly those samples, the colour stated as CICP 12/16 (Display P3, PQ) and
+/// MaxCLL as the codestream's intensity target (JXL has no MaxFALL field). The file must decode
+/// to the same samples and colour.
+pub(crate) fn render_hdr(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
+    let effort = *EFFORT.get().ok_or("no --effort")?;
+    let (class, file) = row
+        .stem
+        .split_once('/')
+        .ok_or("stem without a class folder")?;
+    let dir = out_dir.join("png-p3").join(class);
+    let prefix = format!("{file}_");
+    let png_name = fs::read_dir(&dir)
+        .map_err(|e| format!("read {}: {e}", dir.display()))?
+        .filter_map(Result::ok)
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .find(|n| n.starts_with(&prefix) && n.ends_with(".hdr.png"))
+        .ok_or("no .hdr.png for this row (run png-hdr first)")?;
+    let png = fs::read(dir.join(&png_name)).map_err(|e| format!("read: {e}"))?;
+    let d = zenpng::decode(
+        &png,
+        &zenpng::PngDecodeConfig::default().with_max_pixels(1_000_000_000),
+        &enough::Unstoppable,
+    )
+    .map_err(|e| format!("png decode: {e:?}"))?;
+    let (w, h) = (d.info.width as usize, d.info.height as usize);
+    let samples = d.pixels.copy_to_contiguous_bytes();
+    if samples.len() != w * h * 6 {
+        return Err(format!("{png_name} is not 16-bit RGB"));
+    }
+    if d.info.cicp != Some(zencodec::Cicp::new(12, 16, 0, true)) {
+        return Err(format!("{png_name} is not CICP 12/16"));
+    }
+    let [cll, fall] = d.info.content_light_level_raw.ok_or("no cLLI")?;
+    let provenance = d
+        .info
+        .text_chunks
+        .first()
+        .map(|t| t.text.clone())
+        .ok_or("no provenance text")?;
+    if provenance != row.provenance {
+        return Err("the PNG's provenance differs from the list's".into());
+    }
+    let xmp = provenance_xmp(&provenance);
+    let max_cll = (f64::from(cll) / 10000.0).ceil().min(65535.0) as u16;
+    let max_fall = (f64::from(fall) / 10000.0).round().min(65535.0) as u16;
+    let cicp = zencodec::Cicp::new(12, 16, 0, true);
+    // Labelled as plain 16-bit sRGB so nothing converts the samples; the metadata states PQ.
+    let desc = PixelDescriptor::RGB16_SRGB;
+    let slice = PixelSlice::new(&samples, w as u32, h as u32, w * 6, desc)
+        .map_err(|e| format!("pixel slice: {e:?}"))?;
+    let meta = Metadata::default()
+        .with_xmp(xmp.clone())
+        .with_cicp(cicp)
+        .with_content_light_level(zenpixels::hdr::ContentLightLevel::new(max_cll, max_fall));
+    let jxl = EncodeRequest::new(ImageFormat::Jxl)
+        .with_lossless(true)
+        .with_effort(u32::from(effort))
+        .with_metadata(meta)
+        .encode(slice, false)
+        .map_err(|e| format!("jxl encode: {e}"))?
+        .into_vec();
+
+    let limits = limits();
+    let back = DecodeRequest::new(&jxl)
+        .with_limits(&limits)
+        .decode_full_frame()
+        .map_err(|e| format!("jxl decode: {e}"))?;
+    let got_cicp = back.info().source_color.cicp;
+    let got_meta = back.metadata().clone();
+    let buf = back.into_buffer();
+    let got = buf.copy_to_contiguous_bytes();
+    if (buf.width() as usize, buf.height() as usize) != (w, h) || got != samples {
+        return Err(format!(
+            "HDR JXL decodes different samples ({:?}, {} bytes)",
+            buf.descriptor(),
+            got.len()
+        ));
+    }
+    match got_cicp {
+        Some(c) if c.color_primaries == 12 && c.transfer_characteristics == 16 => {}
+        other => return Err(format!("HDR JXL colour {other:?}, want CICP 12/16")),
+    }
+    if got_meta.xmp.as_deref() != Some(&xmp[..]) {
+        return Err("provenance XMP did not survive".into());
+    }
+
+    let name = png_name.replace(".hdr.png", ".hdr.jxl");
+    let path = out_dir.join("jxl-p3").join(class).join(&name);
+    fs::create_dir_all(path.parent().unwrap()).map_err(|e| format!("mkdir: {e}"))?;
+    fs::write(&path, &jxl).map_err(|e| format!("write: {e}"))?;
+    Ok(vec![format!(
+        "{}\tjxl-p3-hdr\tjxl-p3/{class}/{name}\t{w}\t{h}\tlossless-pq\tdisplay-p3-pq\t{}\t{}\t{}\t\t\t",
+        row.id,
+        jxl.len(),
+        hex(&Sha256::digest(&jxl)),
+        hex(&Sha256::digest(&samples)),
+    )])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
