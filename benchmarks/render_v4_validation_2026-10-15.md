@@ -36,6 +36,14 @@ also with LittleCMS through ImageMagick.
   Display P3 with the sRGB curve, maximum u16 error 1, no LittleCMS disagreement. The 37
   images are re-rendered with `scripts/render_v4_redo.sh`; six control images rendered with
   the new toolchain are byte-identical to the first run's files.
+- **Fixed: the 1-bit patent pages kept their depth** (98eb20c). render-v4 wrote every grey
+  source through zenpng's 8-bit grey encoder, so the 39 one-bit pages became 8-bit grey PNGs,
+  33–47% larger than their originals, against "bit depth follows the source". Sub-byte grey
+  PNG sources now go through zenpng's layout search (as the originals' crush did) and must
+  come out at the source's depth; 16000 is 1-bit again and within 0.3% of its original. Across
+  the 1,260 PNG sources rendered before the fix, `png-p3` was otherwise the original's size to
+  within 0.03% at the median, palette images included (zenpng's RGB path keeps their 1/2/4/8-bit
+  palettes). The 39 pages are re-rendered with the redo.
 - **HEIC decoders disagree slightly.** Against libheif's decode, our heic crate's differs by
   up to 3 code values on a few dozen pixels of the iPhone files (1068: 12 of 12.2 million
   pixels, by 1; 11069: 66 pixels). The pairs sit at saturated edges, which points at chroma
@@ -93,6 +101,9 @@ On the 16-image test set: 32 of 32 files pass; on the six HDR files: 6 of 6.
 - **zencodecs' JXL decode reports orientation instead of applying it.** A JPEG-in-JXL keeps
   the JPEG's orientation in its header (1064: orientation 6); render-v4 applies the reported
   orientation before comparing.
+- **1-bit JPEG XL** (03da97a). The same 39 pages are encoded through jxl-encoder directly
+  with `bits_per_sample` 1 (zencodecs' request has no bit-depth setting); libjxl reads them as
+  "1-bit Grayscale" and decodes them to the PNG twins' pixels.
 - **The 12 progressive Unsplash JPEGs** fall back to a bare codestream of the same DCT
   coefficients without reconstruction data (owner question 2): 2003 decodes within 4 code
   values of zenjpeg's decode of the JPEG.
