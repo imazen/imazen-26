@@ -1,0 +1,480 @@
+<title>imazen-26 v4 Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a light table. Summary board, then filters, then the contact grid; a dark
+   full-screen viewer with a details panel beside (desktop) or under (phone) the image. */
+:root {
+  --bg: #f1f2ee; --surface: #ffffff; --sunk: #e7e9e3; --ink: #1b201c; --muted: #5b645d;
+  --rule: #d5d9d1; --accent: #0e6a62; --accent-ink: #ffffff; --mark: #c2410c; --mark-ink: #ffffff;
+  --ok: #2c7a31; --warn: #9a5b00; --bad: #b42318;
+  --v-bg: #0c0d0c; --v-panel: #161916; --v-ink: #e6e9e4; --v-dim: #9aa29b; --v-line: #2d332e;
+  --sans: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111412; --surface: #191d1a; --sunk: #0d0f0e; --ink: #e2e6e0; --muted: #98a199;
+  --rule: #2b312c; --accent: #4db2a6; --accent-ink: #08201d; --mark: #f07136; --mark-ink: #1a0b03;
+  --ok: #6dbf71; --warn: #d9a440; --bad: #f2695b; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111412; --surface: #191d1a; --sunk: #0d0f0e; --ink: #e2e6e0; --muted: #98a199;
+  --rule: #2b312c; --accent: #4db2a6; --accent-ink: #08201d; --mark: #f07136; --mark-ink: #1a0b03;
+  --ok: #6dbf71; --warn: #d9a440; --bad: #f2695b; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans); margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px }
+h1 { font: 700 1.65rem/1.15 var(--sans); margin: 0; letter-spacing: -.01em; text-wrap: balance }
+h2 { font: 600 .78rem/1.2 var(--sans); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 8px }
+p { margin: 0 }
+a { color: var(--accent) }
+code, .mono { font-family: var(--mono); font-size: .82em }
+.wrap { max-width: 1480px; margin: 0 auto; display: grid; gap: 18px }
+.lede { max-width: 72ch; color: var(--muted) }
+.board { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px }
+.cell { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; min-width: 0 }
+.cell ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: .88rem }
+.cell li { display: flex; gap: 8px; align-items: baseline; justify-content: space-between }
+.cell li span:last-child { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap }
+.pill { display: inline-block; font: 600 .72rem/1.4 var(--sans); padding: 1px 7px; border-radius: 999px; border: 1px solid currentColor }
+.pill.ok { color: var(--ok) } .pill.warn { color: var(--warn) } .pill.bad { color: var(--bad) } .pill.na { color: var(--muted) }
+.btn { font: 600 .85rem var(--sans); border: 1px solid var(--rule); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 7px 12px; cursor: pointer }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink) }
+.btn:focus-visible, .tile:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--bg); padding-block: 10px; border-bottom: 1px solid var(--rule) }
+.filters input, .filters select { font: 500 .88rem var(--sans); background: var(--surface); color: var(--ink); border: 1px solid var(--rule); border-radius: 6px; padding: 7px 9px; min-width: 0 }
+.filters input { flex: 1 1 220px }
+.count { color: var(--muted); font-size: .86rem; font-variant-numeric: tabular-nums; margin-left: auto }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 10px }
+.tile { position: relative; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 6px; display: grid; gap: 5px; cursor: pointer; text-align: left; font: inherit; color: inherit; content-visibility: auto; contain-intrinsic-size: 200px 230px }
+.tile .img { aspect-ratio: 1; background-color: var(--sunk); background-repeat: no-repeat; border-radius: 3px }
+.tile .cap { display: flex; justify-content: space-between; gap: 6px; font-size: .78rem; min-width: 0 }
+.tile .cap b { font: 500 .78rem var(--mono) }
+.tile .cap span { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.tags { display: flex; flex-wrap: wrap; gap: 3px; min-height: 18px }
+.tag { font: 600 .64rem/1.5 var(--sans); letter-spacing: .03em; padding: 0 5px; border-radius: 3px; background: var(--sunk); color: var(--muted) }
+.tag.hdr { background: #7c3aed22; color: #7c3aed } .tag.p3 { background: #0e6a6222; color: var(--accent) }
+.tag.issue { background: #b4231822; color: var(--bad) }
+.tile.marked { border-color: var(--mark); box-shadow: inset 0 0 0 2px var(--mark) }
+.tile .flag { display: none; position: absolute; top: 12px; left: 12px; font: 700 .66rem/1 var(--sans); letter-spacing: .06em; text-transform: uppercase; background: var(--mark); color: var(--mark-ink); padding: 4px 6px; border-radius: 3px }
+.tile.marked .flag { display: block }
+.store { font-size: .82rem; color: var(--muted) }
+.foot { color: var(--muted); font-size: .86rem; max-width: 80ch; display: grid; gap: 6px }
+/* viewer */
+.viewer { position: fixed; inset: 0; z-index: 50; background: var(--v-bg); color: var(--v-ink); display: grid; grid-template-rows: auto 1fr auto;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px) }
+.viewer[hidden] { display: none }
+.vtop, .vbot { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--v-line); min-width: 0 }
+.vbot { border-top: 1px solid var(--v-line); border-bottom: 0; flex-wrap: wrap }
+.vtop .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1 }
+.vtop .pos { color: var(--v-dim); font-variant-numeric: tabular-nums; font-size: .85rem }
+.vbtn { font: 600 .85rem var(--sans); border: 1px solid var(--v-line); background: var(--v-panel); color: var(--v-ink); border-radius: 6px; padding: 7px 11px; cursor: pointer; text-decoration: none; display: inline-block }
+.vbtn.on { background: var(--mark); border-color: var(--mark); color: #fff }
+.vmain { display: grid; grid-template-columns: 1fr; min-height: 0 }
+.vmain.withinfo { grid-template-columns: minmax(0, 1fr) min(440px, 42vw) }
+.vstage { position: relative; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; min-height: 0 }
+.vstage img { position: absolute; left: 0; top: 0; transform-origin: 0 0; max-width: none; image-rendering: auto; will-change: transform }
+.vstage.px img { image-rendering: pixelated }
+.vmsg { position: absolute; left: 12px; bottom: 12px; font-size: .8rem; color: var(--v-dim); background: #000a; padding: 3px 8px; border-radius: 4px; pointer-events: none; font-variant-numeric: tabular-nums }
+.vframe { position: absolute; inset: 0; border: 4px solid var(--mark); pointer-events: none; display: none }
+.vnav { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 64px; border: 0; background: #0009; color: var(--v-ink); font-size: 1.5rem; cursor: pointer; border-radius: 6px }
+.vnav.l { left: 8px } .vnav.r { right: 8px }
+.info { background: var(--v-panel); border-left: 1px solid var(--v-line); overflow: auto; min-width: 0; min-height: 0; padding: 12px 14px; display: none; font-size: .86rem }
+.vmain.withinfo .info { display: block }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; position: sticky; top: -12px; background: var(--v-panel); padding-block: 4px }
+.tabs button { font: 600 .78rem var(--sans); border: 1px solid var(--v-line); background: transparent; color: var(--v-dim); border-radius: 999px; padding: 4px 10px; cursor: pointer }
+.tabs button[aria-selected="true"] { color: var(--v-ink); border-color: var(--v-ink) }
+.info h3 { font: 600 .74rem/1.2 var(--sans); text-transform: uppercase; letter-spacing: .07em; color: var(--v-dim); margin: 14px 0 6px; overflow-wrap: anywhere }
+.info h3 code { text-transform: none; letter-spacing: 0; color: var(--v-ink); font-weight: 400 }
+.info table { border-collapse: collapse; width: 100%; font-size: .78rem }
+.info td, .info th { border-bottom: 1px solid var(--v-line); padding: 3px 6px 3px 0; text-align: left; vertical-align: top }
+.info th { color: var(--v-dim); font-weight: 600 }
+.info .tw { overflow-x: auto }
+.info .kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 12px }
+.info .kv div:nth-child(odd) { color: var(--v-dim) }
+.info .kv div { overflow-wrap: anywhere }
+.info pre { white-space: pre-wrap; overflow-wrap: anywhere; font: .76rem/1.4 var(--mono); background: #0006; padding: 8px; border-radius: 4px; margin: 0 }
+.g { color: #7fd384 } .y { color: #e8b44f } .r { color: #ff8577 } .d { color: var(--v-dim) }
+@media (max-width: 760px) {
+  .vmain.withinfo { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, 46vh) }
+  .info { border-left: 0; border-top: 1px solid var(--v-line) }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:8px">
+    <h1>imazen-26 v4 Review</h1>
+    <p class="lede" id="lede">Every image of render v4 before its release, with full-resolution zoom and, for each file: its provenance and metadata, the inventory of every chunk and box, the gate results, the bitmap hashes from three JPEG XL decoders, and how the Docker readers of the compatibility matrix decode it. Click a tile to open it; marks for removal save to this page.</p>
+  </header>
+  <section class="board" id="board" aria-label="Checks"><div class="cell"><p class="store">Loading the corpus index…</p></div></section>
+  <div class="filters" role="search">
+    <input id="q" type="search" placeholder="Search id or description" aria-label="Search">
+    <select id="fClass" aria-label="Class folder"><option value="">All classes</option></select>
+    <select id="fBucket" aria-label="Bucket"><option value="">All buckets</option><option>train</option><option>validate</option><option>test</option></select>
+    <select id="fLic" aria-label="Licence"><option value="">All licences</option></select>
+    <select id="fKind" aria-label="Kind">
+      <option value="">Everything</option><option value="hdr">HDR / gain map</option><option value="wide">Wide gamut (P3, Adobe RGB)</option>
+      <option value="alpha">With alpha</option><option value="jpeg">JPEG source (JPEG-in-JXL)</option><option value="issue">Reader or check differences</option>
+      <option value="marked">Marked for removal</option>
+    </select>
+    <span class="count" id="count"></span>
+  </div>
+  <p class="store" id="store">Marks: connecting…</p>
+  <main class="grid" id="grid" aria-label="Images"></main>
+  <footer class="foot" id="foot"></footer>
+</div>
+
+<div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-label="Image viewer">
+  <div class="vtop"><span class="t" id="vtitle"></span><span class="pos" id="vpos"></span><button class="vbtn" id="vclose" type="button" aria-label="Close">Close ✕</button></div>
+  <div class="vmain" id="vmain">
+    <div class="vstage" id="vstage">
+      <img id="vimg" alt="">
+      <div class="vframe" id="vframe"></div>
+      <button class="vnav l" id="vprev" type="button" aria-label="Previous">‹</button>
+      <button class="vnav r" id="vnext" type="button" aria-label="Next">›</button>
+      <div class="vmsg" id="vmsg"></div>
+    </div>
+    <aside class="info" id="info" aria-label="Details"></aside>
+  </div>
+  <div class="vbot">
+    <button class="vbtn" id="vmark" type="button" aria-pressed="false">Mark for removal</button>
+    <button class="vbtn" id="vfull" type="button">Full resolution</button>
+    <button class="vbtn" id="v100" type="button">1:1</button>
+    <button class="vbtn" id="vfit" type="button">Fit</button>
+    <button class="vbtn" id="vinfo" type="button" aria-pressed="false">Details</button>
+    <a class="vbtn" id="vorig" target="_blank" rel="noopener">Original ↗</a>
+    <span class="d" style="font-size:.8rem;margin-left:auto">← → move · wheel or pinch zooms · double-click 1:1 · x marks · i details · Esc closes</span>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const fmt = n => n == null || n === '' ? '' : Number(n).toLocaleString('en-US');
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let IDX = null, list = [], view = [], marks = new Map(), db = null, canWrite = false;
+  const chunks = new Map(), packs = new Map();
+
+  // ---------- index ----------
+  fetch('data/index.json').then(r => r.json()).then(data => {
+    IDX = data; list = data.images;
+    for (const c of data.classes) $('fClass').append(new Option(c, c));
+    for (const l of data.licences) $('fLic').append(new Option(l, l));
+    board(data.summary); footer(data);
+    applyFilters();
+    connectMarks();
+  }).catch(e => { $('board').innerHTML = `<div class="cell"><p>Could not load the index: ${esc(e.message)}</p></div>`; });
+
+  function pill(cls, text) { return `<span class="pill ${cls}">${esc(text)}</span>`; }
+  function board(s) {
+    const cells = s.map(c => `<div class="cell"><h2>${esc(c.title)}</h2><ul>${c.rows.map(r =>
+      `<li><span>${esc(r[0])}</span><span>${r[2] ? pill(r[2], r[1]) : esc(r[1])}</span></li>`).join('')}</ul>${c.download ?
+      `<p style="margin-top:10px"><button class="btn primary" id="dl" type="button">${esc(c.download)}</button> <span class="store" id="dlmsg"></span></p>` : ''}</div>`);
+    $('board').innerHTML = cells.join('');
+    const dl = $('dl');
+    if (dl) dl.addEventListener('click', downloadHashes);
+  }
+  function footer(d) {
+    $('foot').innerHTML = d.footer.map(p => `<p>${p}</p>`).join('');
+  }
+
+  // ---------- grid ----------
+  const io = new IntersectionObserver(es => {
+    for (const e of es) if (e.isIntersecting) { const el = e.target; io.unobserve(el); thumb(el.firstChild, list[+el.dataset.i]); }
+  }, { rootMargin: '600px' });
+  function thumb(el, im) {
+    // im.s = [sheet, cell x, cell y]: the sheet's cells hold the thumbnail centred, so a tile
+    // shows one whole cell, scaled to the tile's width.
+    const [sheet, x, y] = im.s, cell = IDX.cell, r = (el.getBoundingClientRect().width || cell) / cell;
+    el.style.backgroundImage = `url(thumbs/sheet_${String(sheet).padStart(2, '0')}.webp)`;
+    el.style.backgroundSize = `${IDX.sheetW * r}px auto`;
+    el.style.backgroundPosition = `${-x * r}px ${-y * r}px`;
+  }
+  function tags(im) {
+    const t = [];
+    if (im.hdr) t.push('<span class="tag hdr">HDR</span>');
+    if (im.col === 'display-p3') t.push('<span class="tag p3">P3</span>');
+    if (im.col === 'adobe-rgb') t.push('<span class="tag p3">Adobe RGB</span>');
+    if (im.a === 'kept') t.push('<span class="tag">alpha</span>');
+    if (im.jpeg) t.push('<span class="tag">JPEG</span>');
+    if (im.issue) t.push('<span class="tag issue">differences</span>');
+    return t.join('');
+  }
+  function applyFilters() {
+    const q = $('q').value.trim().toLowerCase(), c = $('fClass').value, b = $('fBucket').value, l = $('fLic').value, k = $('fKind').value;
+    view = list.map((im, i) => i).filter(i => {
+      const im = list[i];
+      if (c && IDX.classes[im.c] !== c) return false;
+      if (b && im.b !== b) return false;
+      if (l && im.lic !== l) return false;
+      if (k === 'hdr' && !im.hdr) return false;
+      if (k === 'wide' && !(im.col === 'display-p3' || im.col === 'adobe-rgb')) return false;
+      if (k === 'alpha' && im.a !== 'kept') return false;
+      if (k === 'jpeg' && !im.jpeg) return false;
+      if (k === 'issue' && !im.issue) return false;
+      if (k === 'marked' && !marks.has(im.id)) return false;
+      if (q && !(im.id.includes(q) || im.t.toLowerCase().includes(q))) return false;
+      return true;
+    });
+    $('count').textContent = `${fmt(view.length)} of ${fmt(list.length)} images`;
+    const g = $('grid'); g.textContent = '';
+    const frag = document.createDocumentFragment();
+    for (const i of view) {
+      const im = list[i];
+      const el = document.createElement('button');
+      el.type = 'button'; el.className = 'tile' + (marks.has(im.id) ? ' marked' : ''); el.dataset.i = i;
+      el.setAttribute('aria-label', `${im.id} ${im.t}`);
+      el.innerHTML = `<div class="img"></div><div class="cap"><b>${im.id}</b><span>${esc(IDX.classes[im.c].replace(/^\d+-/, ''))}</span></div><div class="tags">${tags(im)}</div><span class="flag">Remove</span>`;
+      el.addEventListener('click', () => openViewer(view.indexOf(i)));
+      frag.append(el); io.observe(el);
+    }
+    g.append(frag);
+  }
+  for (const id of ['q', 'fClass', 'fBucket', 'fLic', 'fKind']) $(id).addEventListener(id === 'q' ? 'input' : 'change', applyFilters);
+  addEventListener('resize', () => { for (const el of document.querySelectorAll('.tile .img[style]')) thumb(el, list[+el.parentElement.dataset.i]); });
+
+  // ---------- marks (artifact db) ----------
+  async function connectMarks() {
+    try {
+      db = await claude.use('db');
+      const user = await claude.use('user');
+      canWrite = user ? user.canEdit() : false;
+    } catch (e) { db = null; }
+    if (!db) { $('store').textContent = 'Marks are unavailable in this view; the page works read-only.'; return; }
+    $('store').textContent = canWrite ? 'Marks save to this page as you make them.' : 'Marks are shown read-only for your access level.';
+    db.collection('marks').onSnapshot(snap => {
+      marks = new Map(snap.docs.map(d => [d.id, d.data()]));
+      for (const el of document.querySelectorAll('.tile')) el.classList.toggle('marked', marks.has(list[+el.dataset.i].id));
+      if (!$('viewer').hidden) markState();
+      $('store').textContent = `${marks.size} marked for removal. ` + (canWrite ? 'Marks save as you make them.' : 'Read-only for your access level.');
+    }, () => { $('store').textContent = 'Lost the connection to the marks; reload the page to reconnect.'; });
+  }
+  async function toggleMark(id) {
+    if (!db || !canWrite) return;
+    const ref = db.collection('marks').doc(id);
+    try { if (marks.has(id)) await ref.delete(); else await ref.set({ mark: 'remove', at: new Date().toISOString() }); }
+    catch (e) { $('store').textContent = `The mark did not save (${e.code || e.message}).`; }
+  }
+
+  // ---------- downloads ----------
+  async function downloadHashes() {
+    const msg = $('dlmsg');
+    try {
+      const downloads = await claude.use('downloads');
+      if (!downloads) { msg.textContent = 'Saving files is unavailable in this view.'; return; }
+      msg.textContent = 'Preparing…';
+      const r = await fetch(IDX.hashesFile);
+      const tsv = await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).blob();
+      const res = await downloads.save({ filename: 'imazen-26-v4-decoded-xxh3.tsv', data: tsv });
+      msg.textContent = res.status === 'saved' ? 'Saved.' : '';
+    } catch (e) { msg.textContent = e.code === 'cancelled' ? '' : `Not saved (${e.code || e.message}).`; }
+  }
+
+  // ---------- viewer ----------
+  let cur = -1, z = 1, tx = 0, ty = 0, natW = 0, natH = 0, shownW = 0, full = false, loadToken = 0;
+  const vimg = $('vimg'), vstage = $('vstage');
+  function openViewer(pos) { $('viewer').hidden = false; document.body.style.overflow = 'hidden'; show(pos); }
+  function closeViewer() { $('viewer').hidden = true; document.body.style.overflow = ''; vimg.removeAttribute('src'); cur = -1; }
+  function im() { return list[view[cur]]; }
+  async function packBlob(p) {
+    const [pk, off, len] = p;
+    if (!packs.has(pk)) packs.set(pk, fetch(`packs/pack_${String(pk).padStart(2, '0')}.webp`).then(r => r.arrayBuffer()));
+    const buf = await packs.get(pk);
+    return URL.createObjectURL(new Blob([buf.slice(off, off + len)], { type: 'image/webp' }));
+  }
+  async function show(pos) {
+    cur = (pos + view.length) % view.length;
+    const m = im(), token = ++loadToken;
+    $('vtitle').textContent = `${m.id} · ${m.t}`;
+    $('vpos').textContent = `${fmt(cur + 1)} / ${fmt(view.length)}`;
+    $('vorig').href = m.o || '#'; $('vorig').hidden = !m.o;
+    natW = m.w; natH = m.h;
+    full = !m.z && m.p[3] === m.w;  // a preview at the image's own size is the full resolution
+    markState();
+    $('vfull').disabled = !m.z; $('vfull').textContent = m.z ? 'Full resolution' : full ? 'Full resolution (shown)' : 'Full resolution';
+    if (vimg.src.startsWith('blob:')) URL.revokeObjectURL(vimg.src);
+    try {
+      const url = await packBlob(m.p);
+      if (token !== loadToken) return;
+      shownW = m.p[3]; vimg.src = url; vimg.width = m.p[3]; vimg.height = m.p[4];
+      fit(); msg();
+      if (m.z && z > 1) loadFull();  // the preview would show upscaled: fetch the full resolution
+    } catch (e) { $('vmsg').textContent = 'Preview failed to load.'; }
+    if (!$('vmain').classList.contains('withinfo')) return;
+    details();
+  }
+  // Full resolution lives in the artifact's asset store, several images to a pack: m.z = [pack url,
+  // offset, length, width, height]. Ask for the image's byte range; a server that ignores Range
+  // sends the whole pack, which is kept (a few at a time) for its other images.
+  const fullPacks = new Map();
+  async function fullBlob(z) {
+    const [url, off, len] = z;
+    if (fullPacks.has(url)) { const buf = await fullPacks.get(url); return new Blob([buf.slice(off, off + len)], { type: 'image/webp' }); }
+    const r = await fetch(url, { headers: { Range: `bytes=${off}-${off + len - 1}` } });
+    if (r.status === 206) return new Blob([await r.arrayBuffer()], { type: 'image/webp' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const p = r.arrayBuffer(); fullPacks.set(url, p);
+    while (fullPacks.size > 4) fullPacks.delete(fullPacks.keys().next().value);
+    const buf = await p; return new Blob([buf.slice(off, off + len)], { type: 'image/webp' });
+  }
+  async function loadFull() {
+    const m = im(); if (!m.z || full) return;
+    const token = loadToken; full = true; $('vmsg').textContent = 'Loading full resolution…';
+    try {
+      const url = URL.createObjectURL(await fullBlob(m.z));
+      const img = new Image();
+      img.onload = () => {
+        if (token !== loadToken) { URL.revokeObjectURL(url); return; }
+        const k = img.naturalWidth / shownW, old = vimg.src;
+        vimg.src = url; vimg.width = img.naturalWidth; vimg.height = img.naturalHeight;
+        if (old.startsWith('blob:')) URL.revokeObjectURL(old);
+        z = z / k; shownW = img.naturalWidth; apply(); msg();
+      };
+      img.onerror = () => { if (token === loadToken) { full = false; $('vmsg').textContent = 'Full resolution failed to decode.'; } };
+      img.src = url;
+    } catch (e) { if (token === loadToken) { full = false; $('vmsg').textContent = `Full resolution failed to load (${e.message}).`; } }
+  }
+  function fit() {
+    const r = vstage.getBoundingClientRect(), w = vimg.width, h = vimg.height;
+    z = Math.min(r.width / w, r.height / h);
+    tx = (r.width - w * z) / 2; ty = (r.height - h * z) / 2; apply();
+  }
+  function zoomTo(nz, cx, cy) {
+    const r = vstage.getBoundingClientRect(); cx ??= r.width / 2; cy ??= r.height / 2;
+    nz = Math.min(Math.max(nz, 0.02), 8 * natW / vimg.width);  // up to 800% of the full resolution
+    tx = cx - (cx - tx) * nz / z; ty = cy - (cy - ty) * nz / z; z = nz; apply(); msg();
+    if (!full && z * vimg.width / natW > 0.6 && im().z) loadFull();
+  }
+  function oneToOne(cx, cy) { zoomTo(natW / vimg.width, cx, cy); }
+  function apply() {
+    vimg.style.transform = `translate(${tx}px, ${ty}px) scale(${z})`;
+    vstage.classList.toggle('px', z * vimg.width / natW >= 2);
+  }
+  function msg() {
+    const pct = Math.round(z * vimg.width / natW * 100);
+    $('vmsg').textContent = `${fmt(natW)}×${fmt(natH)} · ${full ? 'full resolution' : `preview ${fmt(vimg.width)} px`} · ${pct}%`;
+  }
+  function markState() {
+    const on = marks.has(im().id);
+    $('vmark').classList.toggle('on', on); $('vmark').setAttribute('aria-pressed', on);
+    $('vmark').textContent = on ? 'Marked for removal' : 'Mark for removal';
+    $('vmark').disabled = !canWrite; $('vframe').style.display = on ? 'block' : 'none';
+  }
+  $('vclose').onclick = closeViewer;
+  $('vprev').onclick = () => show(cur - 1);
+  $('vnext').onclick = () => show(cur + 1);
+  $('vmark').onclick = () => toggleMark(im().id);
+  $('vfull').onclick = loadFull;
+  $('v100').onclick = () => oneToOne();
+  $('vfit').onclick = () => { fit(); msg(); };
+  $('vinfo').onclick = () => { const on = $('vmain').classList.toggle('withinfo'); $('vinfo').setAttribute('aria-pressed', on); requestAnimationFrame(() => { fit(); msg(); }); if (on) details(); };
+  vstage.addEventListener('wheel', e => { e.preventDefault(); const r = vstage.getBoundingClientRect(); zoomTo(z * Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+  vstage.addEventListener('dblclick', e => { const r = vstage.getBoundingClientRect(); const at1 = Math.abs(z * vimg.width / natW - 1) < 0.05; if (at1) { fit(); msg(); } else oneToOne(e.clientX - r.left, e.clientY - r.top); });
+  const pts = new Map(); let pinch = null, drag = null, swipe = null;
+  vstage.addEventListener('pointerdown', e => {
+    if (e.target.closest('button')) return;
+    vstage.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z }; drag = null; }
+    else { drag = { x: e.clientX, y: e.clientY, tx, ty }; swipe = { x: e.clientX, y: e.clientY, t: Date.now() }; }
+  });
+  vstage.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pinch && pts.size === 2) { const [a, b] = [...pts.values()]; const r = vstage.getBoundingClientRect(); zoomTo(pinch.z * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top); }
+    else if (drag) { tx = drag.tx + e.clientX - drag.x; ty = drag.ty + e.clientY - drag.y; apply(); }
+  });
+  function endPointer(e) {
+    if (!pts.has(e.pointerId)) return; pts.delete(e.pointerId);
+    if (pts.size < 2) pinch = null;
+    if (pts.size === 0 && swipe) {
+      const dx = e.clientX - swipe.x, dy = e.clientY - swipe.y, fitted = z <= Math.min(vstage.clientWidth / vimg.width, vstage.clientHeight / vimg.height) * 1.02;
+      if (fitted && Date.now() - swipe.t < 600 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) show(cur + (dx < 0 ? 1 : -1));
+      else if (fitted && dy > 110 && Math.abs(dy) > Math.abs(dx) * 1.5) closeViewer();
+      swipe = null; drag = null;
+    }
+  }
+  vstage.addEventListener('pointerup', endPointer);
+  vstage.addEventListener('pointercancel', e => { pts.delete(e.pointerId); pinch = null; drag = null; swipe = null; });
+  document.addEventListener('keydown', e => {
+    if ($('viewer').hidden || e.target.matches('input, select')) return;
+    if (e.key === 'ArrowRight') show(cur + 1); else if (e.key === 'ArrowLeft') show(cur - 1);
+    else if (e.key === 'Escape') closeViewer(); else if (e.key === 'x') toggleMark(im().id);
+    else if (e.key === 'i') $('vinfo').click(); else if (e.key === 'f') loadFull(); else if (e.key === '1') oneToOne();
+  });
+  addEventListener('resize', () => { if (!$('viewer').hidden) { fit(); msg(); } });
+
+  // ---------- details ----------
+  let tab = 'overview';
+  async function chunk(k) {
+    if (!chunks.has(k)) chunks.set(k, fetch(`data/d${String(k).padStart(2, '0')}.json`).then(r => r.json()));
+    return chunks.get(k);
+  }
+  async function details() {
+    const m = im(), token = loadToken, el = $('info');
+    el.innerHTML = '<p class="d">Loading details…</p>';
+    let d;
+    try { d = (await chunk(m.k))[m.id]; } catch (e) { el.innerHTML = `<p class="r">Details failed to load: ${esc(e.message)}</p>`; return; }
+    if (token !== loadToken) return;
+    const tabs = [['overview', 'Overview'], ['files', 'Files'], ['inventory', 'Inventory'], ['checks', 'Checks'], ['readers', 'Readers']];
+    el.innerHTML = `<div class="tabs" role="tablist">${tabs.map(([k, n]) => `<button type="button" role="tab" data-t="${k}" aria-selected="${k === tab}">${n}</button>`).join('')}</div><div id="tabbody"></div>`;
+    for (const b of el.querySelectorAll('.tabs button')) b.onclick = () => { tab = b.dataset.t; details(); };
+    $('tabbody').innerHTML = RENDER[tab](m, d);
+  }
+  const kv = rows => `<div class="kv">${rows.filter(r => r[1] !== '' && r[1] != null).map(([k, v]) => `<div>${esc(k)}</div><div>${v}</div>`).join('')}</div>`;
+  const table = (head, rows) => `<div class="tw"><table><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  const okc = s => s === 'ok' || s === 'yes' || s === 'native' ? `<span class="g">${esc(s)}</span>` : s === 'rgba8' ? `<span class="y">${esc(s)}</span>` : !s ? '<span class="d">–</span>' : `<span class="r">${esc(s)}</span>`;
+  const RENDER = {
+    overview(m, d) {
+      return kv([['Id', `<code>${m.id}</code>`], ['Class', esc(IDX.classes[m.c])], ['Bucket', esc(m.b)], ['Licence', esc(m.lic)],
+        ['Displayed size', `${fmt(m.w)} × ${fmt(m.h)}`], ['Colour', esc(m.col)], ['Source alpha', esc(m.a)],
+        ['HDR', m.hdr ? esc(d.hdr || 'gain map') : 'no']]) +
+        `<h3>Provenance (in every file)</h3><pre>${esc(JSON.stringify(d.prov, null, 1))}</pre>` +
+        `<h3>Original</h3>` + kv([['Path', `<code>${esc(d.orig.path)}</code>`], ['Format', esc(d.orig.format)], ['Bytes', fmt(d.orig.bytes)],
+          ['sha256', `<code>${esc(d.orig.sha256)}</code>`], ['Public copy', m.o ? `<a href="${esc(m.o)}" target="_blank" rel="noopener">R2 ↗</a>` : '']]);
+    },
+    files(m, d) {
+      return d.files.map(f => `<h3>${esc(f.layer)} · ${esc(f.form)}</h3>` + kv([
+        ['Path', `<code>${esc(f.path)}</code>`], ['Bytes', fmt(f.bytes)], ['sha256', `<code>${esc(f.sha256)}</code>`],
+        ['Pixels sha256', `<code>${esc(f.pixels_sha256)}</code>`], ['Colour', esc(f.colour)], ['Clipped pixels', fmt(f.clipped)],
+        ['Gain map', esc(f.gain_map)], ['Headroom (stops)', esc(f.headroom_stops)], ['Diffuse white (nits)', esc(f.diffuse_white_nits)],
+        ['MaxCLL / MaxFALL', f.max_cll ? `${esc(f.max_cll)} / ${esc(f.max_fall)}` : ''], ['jhgm', esc(f.jhgm)],
+        ['JPEG rebuild sha256', f.jpeg_rebuild_sha256 ? `<code>${esc(f.jpeg_rebuild_sha256)}</code>` : ''],
+        ['Tool commit', `<code>${esc((f.tool_commit || '').slice(0, 12))}</code>`]]) +
+        (f.xxh3 ? `<h3>Decoded bitmap XXH3</h3>` + table(['decoder', 'size', 'layout', 'xxh3', 'gain map xxh3'],
+          f.xxh3.map(x => [esc(x[0]), `${fmt(x[1])}×${fmt(x[2])}`, `${x[3]}×${x[4]}-bit`, `<code>${esc(x[5])}</code>`, x[6] ? `<code>${esc(x[6])}</code>` : ''])) : '')).join('');
+    },
+    inventory(m, d) {
+      return d.files.map(f => `<h3>${esc(f.layer)} · ${esc(f.form)} <code>${esc(f.path.split('/').pop())}</code></h3>` + (f.inv && f.inv.length ?
+        table(['offset', 'bytes', 'kind', 'tag', 'what the decoder does', 'label'], f.inv.map(p => [fmt(p[0]), fmt(p[1]), esc(p[3]), `<code>${esc(p[4])}</code>`, esc(p[5]), esc(p[6])])) :
+        '<p class="d">No inventory rows.</p>')).join('');
+    },
+    checks(m, d) {
+      let h = '';
+      for (const f of d.files) {
+        const rows = [];
+        const named = (names, vals) => vals.map((v, i) => v ? `${esc(names[i])} ${okc(v)}` : '').filter(Boolean).join(' · ');
+        if (f.readback) rows.push(['Read-back', named(['chunks', 'pngfix', 'Pillow', 'ImageMagick', 'netpbm'], f.readback)]);
+        if (f.jxlcheck) rows.push(['libjxl check (djxl, jxlinfo)', okc(f.jxlcheck[0]) + (f.jxlcheck[1] ? ` <span class="d">${esc(f.jxlcheck[1])}</span>` : '')]);
+        if (f.bytescan != null) rows.push(['Byte scan', f.bytescan[0] ? `<span class="r">${esc(f.bytescan[0])}</span>` : (f.bytescan[1] ? `<span class="y">allowed: ${esc(f.bytescan[1])}</span>` : '<span class="g">clean</span>')]);
+        if (f.decode) rows.push(['zenjxl / jxl-rs / libjxl', `${okc(f.decode[0])} ${f.decode[1] ? `same as PNG twin: ${okc(f.decode[1])}` : ''} ${f.decode[2] ? `<span class="d">agree: ${esc(f.decode[2])}</span>` : ''}`]);
+        if (f.gm) rows.push(['jhgm gain map', `decodes and lines up: ${okc(f.gm[0])} · metadata same: ${okc(f.gm[1])} · equals the gain-map form: ${okc(f.gm[2])} · max diff vs form ${esc(f.gm[3])}`]);
+        if (f.hdr) rows.push(['zenjxl HDR reconstruction vs PQ render', `${okc(f.hdr[0])} · stops ≥5% white p50 ${esc(f.hdr[1])}, p99.9 ${esc(f.hdr[2])}, max ${esc(f.hdr[3])}`]);
+        if (f.imi) rows.push(['.imi twin', named(['imij', 'imij-oracle', 'metadata', 'gain map'], f.imi)]);
+        h += `<h3>${esc(f.layer)} · ${esc(f.form)}</h3>` + kv(rows);
+      }
+      return h || '<p class="d">No checks recorded.</p>';
+    },
+    readers(m, d) {
+      if (!d.census || !d.census.length) return '<p class="d">The reader census has not reached this image yet.</p>';
+      return d.census.map(c => `<h3>${esc(c.layer)} <code>${esc(c.path.split('/').pop())}</code>${c.also.length ? ` <span class="d">(same bytes: ${c.also.map(a => esc(a.split('/')[0])).join(', ')})</span>` : ''}</h3>` + table(['reader', 'status', 'same as ours', 'max diff', 'vs sRGB twin', 'ms'],
+        c.rows.map(r => [esc(r[0]), okc(r[1]) + (r[7] ? ` <span class="d">${esc(r[7])}</span>` : ''), okc(r[2]), esc(r[3]), r[4] ? `${okc(r[4])} ${esc(r[5])}` : '', fmt(r[6])]))).join('') +
+        '<p class="d" style="margin-top:8px">Same as ours: <span class="g">native</span> = identical samples and layout; <span class="y">rgba8</span> = identical once both are 8-bit RGBA; anything else differs, by at most the max diff (8-bit code values).</p>';
+    },
+  };
+})();
+</script>
