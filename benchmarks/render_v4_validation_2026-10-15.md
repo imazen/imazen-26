@@ -27,6 +27,16 @@ pass's commits, hashes and results).
   pixel; the median clips 2.70% of its pixels, 53 clip 10% or more, the most 94.9% (11443),
   86.7% (11546) and 44.7% (11068).
 - No source has an alpha channel.
+- **HDR** (f4163bf, 4 jobs, 2,831 s, peak RSS 14.0 GiB): 76 renders (33 UltraHDR JPEGs, 19
+  `tmap` HEICs, 24 legacy Apple HEICs), 0 errors, 3.76 GB, MaxCLL 315–1,624 nits. The HDR
+  oracle passed all 76: mean difference at most 0.48 PQ codes, 99.9th percentile at most
+  0.0004 stops, the largest single-pixel differences 0.27–0.29 stops (HEIC decoder edges, as
+  below), `cLLI` equal to within 0.2 nits. The 76 gain-map forms read back within 0.0061
+  stops of Apple's curve for the legacy maps and exactly for the ISO ones. Two HDR files pass
+  GitHub's 100 MiB file limit, 11521 (107.9 MiB) and 11540 (100.4 MiB); 11531 is 99.5 MiB.
+  Pillow calls the Samsung gain-map JPEGs malformed MPO files and reads them as plain JPEGs;
+  the camera wrote them so (1064's gain map from the 2026-06-04 snapshot of the camera file is
+  byte-identical to the export original's).
 
 ## SDR PNG layers
 
