@@ -1,22 +1,25 @@
 //! Render the imazen-26 v4 layers from the originals (EXPORT-PLAN.md, "Render v4").
 //!
-//! This version renders the two SDR PNG layers:
-//! - `png-p3`: each source's own colour space and code values.
-//! - `png-srgb`: sRGB. Display P3 and Adobe RGB sources are converted relative-colorimetric
-//!   (a matrix in linear light), out-of-gamut colours clipped, and the clipped pixels counted.
-//!   An sRGB source's `png-srgb` file is byte-identical to its `png-p3` file.
+//! Four passes, each a subcommand writing beside the others in one output directory:
+//! - `png-sdr` (this file): the two SDR PNG layers.
+//!   - `png-p3`: each source's own colour space and code values.
+//!   - `png-srgb`: sRGB. Display P3 and Adobe RGB sources are converted relative-colorimetric
+//!     (a matrix in linear light), out-of-gamut colours clipped, and the clipped pixels
+//!     counted. An sRGB source's `png-srgb` file is byte-identical to its `png-p3` file.
+//! - `png-hdr` (see `hdr`): the 16-bit PQ render of each gain-map source, `<stem>.hdr.png` in
+//!   `png-p3`.
+//! - `jxl` and `jxl-hdr` (see `jxl`): the JPEG XL twins of the PNG layers, with JPEG-in-JXL for
+//!   JPEG sources and the gain-map form (`jhgm`) for gain-map sources.
 //!
-//! For both: orientation baked into the pixels; channels follow the source (8-bit; every
-//! original decodes to 8 bits), a fully opaque alpha channel dropped and reported; colour signalling as the
-//! plan says (an `sRGB` chunk for sRGB, the source's `iCCP` plus an agreeing `cICP` where H.273
-//! has a code, `iCCP` alone for Adobe RGB); one provenance `tEXt` chunk (keyword `imazen-26`,
-//! the row's JSON, ASCII so it reads the same as Latin-1 or UTF-8) before the image data; zenpng
-//! at effort 22. Every output is decoded again and must hold exactly the pixels it was written
-//! from and that one text chunk. DNGs are not rendered.
-//!
-//! A source with a gain map is rendered from the camera's SDR base image like any other, and
-//! the report names its gain map; its 16-bit PQ render (`.hdr.png` beside the `png-p3` file)
-//! comes from the HDR pass.
+//! For the PNG layers: orientation baked into the pixels; channels and bit depth follow the
+//! source (8-bit, and the 1-bit patent pages stay 1-bit), a fully opaque alpha channel dropped
+//! and reported; colour signalling as the plan says (an `sRGB` chunk for sRGB, the source's
+//! `iCCP` plus an agreeing `cICP` where H.273 has a code, `iCCP` alone for Adobe RGB); one
+//! provenance `tEXt` chunk (keyword `imazen-26`, the row's JSON, ASCII so it reads the same as
+//! Latin-1 or UTF-8) before the image data; zenpng at effort 22. Every output is decoded again
+//! and must hold exactly the pixels it was written from and that one text chunk. DNGs are not
+//! rendered. A gain-map source's SDR files hold the camera's SDR base, and the report names
+//! its gain map.
 //!
 //! Usage: render-v4 png-sdr [--jobs N] <list.tsv> <out-dir>
 //!        render-v4 png-hdr [--jobs N] <list.tsv> <out-dir>    (the gain-map sources; see `hdr`)
