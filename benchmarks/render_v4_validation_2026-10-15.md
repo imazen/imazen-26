@@ -51,6 +51,10 @@ pass's commits, hashes and results).
   whose kinds (`…+jhgm`) the check didn't know. Fixed (5a930e3: the kind's check plus
   libjxl's `jxlinfo -v` reading the `jhgm` bundle); the full re-check passed 4,300 of 4,300
   files.
+- **`.imi`** (the private IMIJ tool, 2026-10-16): 4,300 files, 0 failures. Every file decodes
+  to its PNG twin's pixel hash in imij and in imij-oracle and reads back its metadata; the 76
+  gain maps decode in both. Sizes and timings stay with the private tool until IMIJ is
+  released.
 - **Whole-tree gates** (`scripts/render_v4_gates.sh`, 2026-10-16): the PNG read-back passed
   4,300 of 4,300 files; the inventory read all 8,600 PNG and JXL files, 0 violations; the byte
   scan found nothing in `png-p3`, `png-srgb` and `jxl-srgb` and one nested JPEG in `jxl-p3`:
