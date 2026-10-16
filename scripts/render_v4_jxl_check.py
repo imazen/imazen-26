@@ -89,7 +89,7 @@ def check(job):
                     raise ValueError("no PNG twin row")
                 if r["pixels_sha256"] != twin["rgba_sha256"]:
                     raise ValueError("render-v4 decode hash differs from the PNG twin")
-                ext = {"gray8": "pgm", "rgb8": "ppm", "rgba8": "pam"}[twin["layout"]]
+                ext = {"gray1": "pgm", "gray8": "pgm", "rgb8": "ppm", "rgba8": "pam"}[twin["layout"]]
                 out = os.path.join(tmp, "d." + ext)
                 icc = os.path.join(tmp, "d.icc")
                 subprocess.run(["djxl", path, out, f"--icc_out={icc}", "--quiet"], capture_output=True, check=True)

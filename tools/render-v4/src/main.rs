@@ -354,6 +354,7 @@ fn encode_png(
     colour: Colour,
     icc: Option<&[u8]>,
     provenance: &str,
+    sub_byte_gray: Option<u8>,
 ) -> Result<Vec<u8>, String> {
     let mut cfg = EncodeConfig::default()
         .with_compression(Compression::Effort(EFFORT))
@@ -367,6 +368,37 @@ fn encode_png(
         if colour == Colour::DisplayP3 {
             cfg = cfg.with_cicp(Some(Cicp::new(12, 13, 0, true)));
         }
+    }
+    // A sub-byte greyscale source keeps its depth: zenpng's layout search on the expanded
+    // pixels picks the sub-byte grey encoding, which the IHDR check below holds it to.
+    if let (Pixels::Gray(_), Some(depth)) = (px, sub_byte_gray) {
+        let c: Vec<rgb::Rgba<u8>> = px
+            .rgba()
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|c| rgb::Rgba {
+                r: c[0],
+                g: c[1],
+                b: c[2],
+                a: c[3],
+            })
+            .collect();
+        let png = zenpng::encode_rgba8(
+            imgref::Img::new(&c[..], w, h),
+            Some(&meta),
+            &cfg,
+            &Unstoppable,
+            &Unstoppable,
+        )
+        .map_err(|e| format!("encode: {e:?}"))?;
+        let (got_depth, got_type) = (png[24], png[25]);
+        if (got_depth, got_type) != (depth, 0) {
+            return Err(format!(
+                "wrote {got_depth}-bit colour type {got_type}, not the source's {depth}-bit grey"
+            ));
+        }
+        return Ok(png);
     }
     match px {
         Pixels::Gray(p) => {
@@ -466,6 +498,9 @@ struct Row<'a> {
 struct Source {
     gain_map: Option<String>,
     alpha: &'static str,
+    /// The bit depth of a greyscale PNG source stored below 8 bits (the 1-bit patent pages);
+    /// its PNG layers keep that depth.
+    sub_byte_gray: Option<u8>,
     colour: Colour,
     icc: Option<Vec<u8>>,
     px: Pixels,
@@ -497,9 +532,14 @@ fn load(row: &Row) -> Result<Source, String> {
         .or_else(|| heic_tile_icc(&data));
     let colour = classify(icc.as_deref())?;
     let (px, alpha) = code_values(buf)?;
+    let sub_byte_gray = match zenpng::probe(&data) {
+        Ok(info) if info.color_type == 0 && info.bit_depth < 8 => Some(info.bit_depth),
+        _ => None,
+    };
     Ok(Source {
         gain_map,
         alpha,
+        sub_byte_gray,
         colour,
         icc,
         px,
@@ -515,6 +555,7 @@ fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
     let Source {
         gain_map,
         alpha,
+        sub_byte_gray,
         colour,
         icc,
         px,
@@ -522,27 +563,51 @@ fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
         h,
     } = load(row)?;
     let name = format!("{}_{w}x{h}.png", row.stem);
+    // The PNG layout column names a sub-byte grey file by its depth (gray1).
+    let gray_layout = sub_byte_gray.map(|d| format!("gray{d}"));
+    let layout_of = |px: &Pixels| -> String {
+        gray_layout
+            .clone()
+            .filter(|_| matches!(px, Pixels::Gray(_)))
+            .unwrap_or_else(|| px.layout().to_string())
+    };
     let mut rows = Vec::new();
 
     // (layer, file, layout, rgba sha256, clipped pixels)
-    let mut files: Vec<(&str, Vec<u8>, &str, String, String)> = Vec::new();
-    let png = encode_png(&px, w, h, colour, icc.as_deref(), row.provenance)?;
+    let mut files: Vec<(&str, Vec<u8>, String, String, String)> = Vec::new();
+    let png = encode_png(
+        &px,
+        w,
+        h,
+        colour,
+        icc.as_deref(),
+        row.provenance,
+        sub_byte_gray,
+    )?;
     let hash = check(&png, &px, w, h, row.provenance)?;
     if colour.is_srgb() {
         files.push((
             "png-p3",
             png.clone(),
-            px.layout(),
+            layout_of(&px),
             hash.clone(),
             String::new(),
         ));
-        files.push(("png-srgb", png, px.layout(), hash, "0".into()));
+        files.push(("png-srgb", png, layout_of(&px), hash, "0".into()));
     } else {
-        files.push(("png-p3", png, px.layout(), hash, String::new()));
+        files.push(("png-p3", png, layout_of(&px), hash, String::new()));
         let (spx, clipped) = to_srgb(&px, w, colour)?;
-        let png = encode_png(&spx, w, h, Colour::Srgb, None, row.provenance)?;
+        let png = encode_png(
+            &spx,
+            w,
+            h,
+            Colour::Srgb,
+            None,
+            row.provenance,
+            sub_byte_gray,
+        )?;
         let hash = check(&png, &spx, w, h, row.provenance)?;
-        files.push(("png-srgb", png, spx.layout(), hash, clipped.to_string()));
+        files.push(("png-srgb", png, layout_of(&spx), hash, clipped.to_string()));
     }
     let gm = gain_map.as_deref().unwrap_or("");
 

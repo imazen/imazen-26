@@ -81,9 +81,10 @@ def check_chunks(data, row, hdr):
 
 
 def pnm(data):
-    """Parse netpbm P5/P6 output: (channels, maxval, samples)."""
+    """Parse netpbm P4/P5/P6 output: (channels, maxval, samples). P4 (1-bit PBM, 1 = black)
+    comes back as 8-bit grey 0/255."""
     fields, pos = [], 0
-    while len(fields) < 4:
+    while len(fields) < (3 if data[:2] == b"P4" else 4):
         while data[pos:pos + 1].isspace():
             pos += 1
         if data[pos:pos + 1] == b"#":
@@ -95,6 +96,11 @@ def pnm(data):
         fields.append(data[pos:end])
         pos = end
     pos += 1
+    if fields[0] == b"P4":
+        w, h = int(fields[1]), int(fields[2])
+        row = (w + 7) // 8
+        bits = np.unpackbits(np.frombuffer(data[pos:pos + row * h], np.uint8).reshape(h, row), axis=1)[:, :w]
+        return 1, 255, ((1 - bits) * 255).astype(np.uint8).reshape(h, w, 1)
     magic, w, h, maxval = fields[0], int(fields[1]), int(fields[2]), int(fields[3])
     ch = {b"P5": 1, b"P6": 3}[magic]
     dtype = ">u2" if maxval > 255 else "u1"
