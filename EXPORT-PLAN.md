@@ -102,9 +102,22 @@ Git LFS only where GitHub's limits leave no choice.
   converted like any other source. render-v4 finds the gain map with each codec's own probe.
   - Every format gets a 16-bit PQ render: each image's full gain-map headroom, diffuse white
     at 203 nits (BT.2408), measured `cLLI`, and the settings recorded in the manifest.
+    - The gain map is oriented like the displayed base and sampled as ultrahdr-core's
+      `apply_gainmap` samples it: corner-aligned, as libultrahdr, with Shepard's weights over
+      the per-sample gains (libultrahdr blends the stored values first; 0.011 stops apart at
+      the 99.9th percentile on 1064, imazen/ultrahdr#42).
+    - ISO 21496-1 maps (33 UltraHDR JPEGs, 19 iPhone `tmap` HEICs) go through `apply_gainmap`;
+      the 24 legacy Apple maps use Apple's curve, `1 + (H - 1) * sRGB_EOTF(g)`, under the same
+      sampling (zen's own reconstruction approximates it by up to 0.3 stops, imazen/heic#62).
+    - PQ is ST 2084 in f64, rounded to 16 bits; `cICP` 12/16/0/1; `cLLI` is measured on the
+      written codes. The `.hdr.jxl` twin holds the same samples, with MaxCLL as its intensity
+      target (JXL has no MaxFALL).
   - JXL (`jhgm`) and `.imi` also get the gain-map form: the camera's SDR base plus an
-    ISO 21496-1 gain map.
-  - The 24 Apple legacy gain maps are re-encoded in ISO form (within 0.006 stops).
+    ISO 21496-1 gain map, in the `p3` file itself. A JPEG-in-JXL transcode of an UltraHDR JPEG
+    carries the JPEG's gain map as `jhgm` already; a HEIC's lossless `p3` file gets the box
+    appended.
+  - The 24 Apple legacy gain maps are re-encoded in ISO form (min 0, max = headroom, gamma 1,
+    no offsets), within half a code step of Apple's curve: 0.006 stops measured.
   - `jhgm` support, checked 2026-10-15 on each project's main:
     - libjxl reads and writes the gain-map bundle since v0.11.0 (`jxl/gain_map.h`, "utility
       functions to manipulate jhgm boxes"; `jxlinfo` reports it). Applying it is left to
@@ -123,7 +136,12 @@ Git LFS only where GitHub's limits leave no choice.
   `.imi` carry the same text in their own metadata.
 - **JPEG XL.**
   - JPEG sources ship as JPEG-in-JXL, which rebuilds the original byte for byte, and all
-    other sources as lossless renders.
+    other sources as lossless renders. A JPEG-in-JXL file keeps the JPEG's own metadata (its
+    Exif and XMP, under the originals' keep-list) because the rebuild needs it, and its
+    orientation lives in the codestream header.
+  - Lossless files state sRGB and Display P3 in JXL's own colour encoding and Adobe RGB as its
+    ICC profile, and carry the provenance JSON as XMP (one `imazen26:provenance` property).
+    Owner question 5 settles whether JPEG-in-JXL files carry provenance too.
   - The 12 progressive Unsplash JPEGs (2003, 2005, 2009, 2012, 2013, 2022, 2203, 2204, 2207,
     2212, 2402, 2409) cannot carry JPEG reconstruction data: each has a scan with more than
     65,555 EOB-run reset points, beyond the `jbrd` field's range. libjxl refuses them too, and
@@ -146,6 +164,11 @@ A file ships only if all of these pass:
 - **Byte scan.** No nested media and no location atom in any original or layer.
 - **Third-party read-back.** libpng, Pillow and ImageMagick read every PNG; libjxl reads
   every JXL. No third-party `.imi` decoder exists, so IMIJ's own decoder checks those.
+  (`scripts/render_v4_readback.py`, `scripts/render_v4_jxl_check.py`.)
+- **Colour and HDR oracles.** Every wide-gamut `png-srgb` file is within 1 code value of a
+  textbook conversion of its own `png-p3` twin (`scripts/colour_oracle.py`, which also reports
+  LittleCMS); every HDR render is rebuilt in numpy from libheif, Pillow and exiftool decodes
+  (`scripts/hdr_oracle.py`).
 - **Lossless twins.** The PNG, JXL and `.imi` copies of one image decode to one pixel hash
   and state one colour description.
 - **JPEG-in-JXL.** The rebuilt JPEG's sha256 equals the original's.
