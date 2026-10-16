@@ -3,8 +3,9 @@
 #
 #   scripts/render_v4_redo.sh <originals-dir> <out-dir> <jobs> <export ids, comma-separated>
 #
-# The list is regenerated (scripts/render_v4_list.py) and may only lose rows relative to
-# <out-dir>/list.tsv (say, rows the list now leaves out); any changed or added row is refused.
+# The list is regenerated (scripts/render_v4_list.py) and may lose rows relative to
+# <out-dir>/list.tsv (say, rows the list now leaves out) and change rows that are re-rendered;
+# an added row, or a changed row that isn't re-rendered, is refused.
 # The given ids are rendered again into <out-dir>; report.tsv drops the rows of those ids and of
 # the removed ones and takes the new rows; list.tsv becomes the regenerated list (the old one is
 # kept as list.before-redo-<n>.tsv); the colour oracle checks the new rows; RUN.meta records the
@@ -30,10 +31,14 @@ removed=$(python3 - "$out/list.tsv" "$out/list.redo-$n.tsv" "$ids" <<'EOF'
 import sys
 old = {l.split("\t")[0]: l for l in open(sys.argv[1]) if l.strip()}
 new = {l.split("\t")[0]: l for l in open(sys.argv[2]) if l.strip()}
-changed = [i for i in new if i not in old or old[i] != new[i]]
+redo = set(sys.argv[3].split(","))
+added = [i for i in new if i not in old]
+if added:
+    sys.exit(f"refusing: the regenerated list adds rows: {added[:10]}")
+changed = [i for i in new if old[i] != new[i] and i not in redo]
 if changed:
-    sys.exit(f"refusing: the regenerated list changes or adds rows: {changed[:10]}")
-missing = [i for i in sys.argv[3].split(",") if i not in new]
+    sys.exit(f"refusing: the regenerated list changes rows that aren't re-rendered: {changed[:10]}")
+missing = [i for i in redo if i not in new]
 if missing:
     sys.exit(f"refusing: ids not in the regenerated list: {missing}")
 print(",".join(sorted(set(old) - set(new))))
@@ -68,6 +73,8 @@ tools="tools/render-v4 scripts/render_v4_list.py scripts/render_v4_run.sh script
   echo "redo_${n}_removed	$removed"
   echo "redo_${n}_tool_commit	$(git -C "$repo" log -1 --format=%H -- $tools)"
   echo "redo_${n}_tool_dirty	$(git -C "$repo" status --porcelain -- $tools | wc -l)"
+  echo "redo_${n}_manifests_sha256	$(cat "$repo"/manifests/{train,validate,test}.tsv | sha256sum | cut -d' ' -f1)"
+  echo "redo_${n}_family_map_sha256	$(sha256sum "$repo/manifests/split_map_family_v2.tsv" | cut -d' ' -f1)"
   echo "redo_${n}_render_v4_cargo_lock_sha256	$(sha256sum "$repo/tools/render-v4/Cargo.lock" | cut -d' ' -f1)"
   sed "s/^/redo_${n}_zen_main_/" "$repo/tools/corpus-thumbs/zen-main/COMMITS.tsv"
   grep -E '^run-heavy: done' "$out/redo-$n-progress.log" | sed "s/^/redo_${n}_run_heavy	/" || true

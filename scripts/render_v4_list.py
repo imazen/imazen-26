@@ -12,7 +12,10 @@ One row per manifest image, except the DNGs, which stay in the originals only (E
   extension; render-v4 appends the displayed size. Sub-folders are dropped: every file name
   starts with its unique id, so names stay unique within a class folder.
 - provenance JSON: corpus, id, split, category, source, licence and the attribution the
-  per-folder MANIFEST.tsv records, plus the original's sha256. ASCII (`\\uXXXX` escapes), so
+  per-folder MANIFEST.tsv records, plus the original's sha256. The split is the image's bucket
+  in the successor family map, `manifests/split_map_family_v2.tsv` (owner decision S1): a
+  patent page's 1-bit original and its rescans, the pages of one URL, a photo burst and
+  identical files share one bucket. It differs from the id's last-digit bucket for some ids. ASCII (`\\uXXXX` escapes), so
   the PNG `tEXt` chunk reads the same as Latin-1 or UTF-8. Nothing about where or with what a
   photo was taken: no location, camera or capture time.
 
@@ -33,6 +36,12 @@ def manifest_rows():
     for b in BUCKETS:
         with open(os.path.join(REPO, "manifests", f"{b}.tsv"), newline="") as f:
             yield from csv.DictReader(f, delimiter="\t")
+
+
+def family_buckets():
+    """id -> bucket in the successor family map (EXPORT-PLAN.md, "Membership and splits")."""
+    with open(os.path.join(REPO, "manifests", "split_map_family_v2.tsv"), newline="") as f:
+        return {r["id"]: r["split"] for r in csv.DictReader(f, delimiter="\t")}
 
 
 def folder_rows():
@@ -106,6 +115,7 @@ def main():
     a = ap.parse_args()
     keep = set(a.ids.split(",")) if a.ids else None
     folders = folder_rows()
+    buckets = family_buckets()
     n = dngs = 0
     for r in manifest_rows():
         if keep is not None and r["id"] not in keep:
@@ -119,7 +129,9 @@ def main():
         source = os.path.join(a.originals, r["path"])
         if not os.path.isfile(source):
             raise SystemExit(f"missing original {source}")
-        prov = {"corpus": "imazen-26", "id": new_id(r["id"]), "split": r["split"], "category": f["category"],
+        if buckets.get(r["id"]) not in BUCKETS:
+            raise SystemExit(f"{r['id']} has no bucket in split_map_family_v2.tsv")
+        prov = {"corpus": "imazen-26", "id": new_id(r["id"]), "split": buckets[r["id"]], "category": f["category"],
                 "source": f["source"], "license": f["license"]}
         prov.update(attribution(f["source"], f))
         prov["original_sha256"] = r["sha256"]

@@ -4,7 +4,8 @@
     export_sizing.py <render-dir> [--out sizing.tsv]
 
 Reads the render's report.tsv, hdr-report.tsv, jxl-report.tsv and jxl-hdr-report.tsv (those
-present), list.tsv (export id -> bucket) and the manifests (each original's size), and prints:
+present), the manifests (each original's size) and the successor family map (each image's
+bucket, which list.tsv must agree with), and prints:
 
 - per layer (originals, png-p3, png-srgb, jxl-p3, jxl-srgb) and bucket: files and bytes, against
   GitHub's 10 GB repository cap;
@@ -30,15 +31,16 @@ def main():
     ap.add_argument("render")
     ap.add_argument("--out", default="sizing.tsv")
     a = ap.parse_args()
-    bucket = {}
+    bucket = {"1" + r["id"]: r["split"] for r in csv.DictReader(
+        open(os.path.join(REPO, "manifests", "split_map_family_v2.tsv")), delimiter="\t")}
     for line in open(os.path.join(a.render, "list.tsv")):
         f = line.rstrip("\n").split("\t")
-        bucket[f[0]] = json.loads(f[3])["split"]
+        if json.loads(f[3])["split"] != bucket.get(f[0]):
+            sys.exit(f"{f[0]}: list.tsv's bucket is not the family map's")
     files = []  # (export id, layer, path, bytes)
     for b in ("train", "validate", "test"):
         for r in csv.DictReader(open(os.path.join(REPO, "manifests", f"{b}.tsv")), delimiter="\t"):
             files.append(("1" + r["id"], "originals", r["path"], int(r["bytes_actual"])))
-            bucket.setdefault("1" + r["id"], r["split"])
     for name in ("report.tsv", "hdr-report.tsv", "jxl-report.tsv", "jxl-hdr-report.tsv"):
         p = os.path.join(a.render, name)
         if not os.path.exists(p):
