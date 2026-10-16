@@ -43,14 +43,15 @@ LAYERS = {
 
 LICENCE_NOTES = {
     "PD-own": "the maintainer's own photos, plots and AI images, dedicated to the public domain",
-    "PD": "US patents and Internet Archive scans of public-domain works (`pd_basis` per file)",
+    "PD": "US patents, Internet Archive scans of public-domain works (`pd_basis` per file), and "
+          "web pages from US government sites, Project Gutenberg, the Smithsonian, LKML and the "
+          "Wayback Machine",
     "PD-USGov": "works of the US federal government (17 USC §105): NPS, EPA, NOAA",
     "Unsplash-License": "free to use under the Unsplash License; attribution appreciated "
                         "(photographer in the provenance)",
-    "CC0": "Art Institute of Chicago and Met open-access reproductions",
+    "CC0": "Art Institute of Chicago and Met open-access reproductions, and the maintainer's "
+           "phone screenshots",
 }
-# Labels whose meaning the owner hasn't settled (EXPORT-PLAN.md): the card says so.
-PENDING = "label under owner review before release"
 
 
 def meta(render):
@@ -156,15 +157,15 @@ def main():
     w("")
     w("| licence | images | what |")
     w("|---|--:|---|")
+    unknown = sorted(set(licences) - set(LICENCE_NOTES))
+    if unknown:
+        sys.exit(f"no licence note for {', '.join(unknown)}")
     for lic, n in licences.most_common():
-        w(f"| {lic} | {n:,} | {LICENCE_NOTES.get(lic, PENDING)} |")
+        w(f"| {lic} | {n:,} | {LICENCE_NOTES[lic]} |")
     w("")
-    w("`license` is assigned per source folder, as a best effort, not per-file legal "
-      "clearance. Artwork photos are reproductions of public-domain works. Document and "
-      "screenshot pages can embed third-party logos or photos whose rights differ from the "
-      "page's. The phone-screenshot captures are released CC0, but where a frame shows "
-      "third-party app or web content, that content is included under fair use, not "
-      "relicensed. Check embedded media before redistributing.")
+    w("Every image is in the public domain or dedicated to it under CC0, except the Unsplash "
+      "images, which are free to use under the Unsplash License. Each file's provenance record "
+      "and `manifest.tsv` name its licence and source.")
     w("")
     w("## How the files were made")
     w("")

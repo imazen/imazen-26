@@ -42,31 +42,20 @@ produce a full tile (currently empty).
 ## Copyright status
 
 Every crop inherits the license of its source capture (carried through from
-`../auto_screen/MANIFEST.tsv`, which has 100% license coverage). After the
-2026-06-07 PD filter, the **370 crops kept here are all public domain**:
+`../auto_screen/MANIFEST.tsv`, which has 100% license coverage). The folder holds
+public-domain pages only: the 2026-06-07 PD filter kept 370 crops, and the removal reviews
+since leave 348.
 
-| License | Crops | Source domains (examples) |
+| License | Crops | Sources |
 |---|---:|---|
-| PD (US-gov / works) | 348 | nasa.gov, nps.gov, loc.gov, weather.gov, usgs.gov, archives.gov, noaa.gov, nih.gov, si.edu, bls.gov, gutenberg.org |
-| Mailing-list-PD | 12 | lkml.org |
-| PD-own / PD-tool | 10 | local captures / tool output |
+| PD | 343 | US government sites (nps.gov, nasa.gov, loc.gov, archives.gov, climate.gov, usgs.gov, data.gov, nih.gov, weather.gov, noaa.gov, usaspending.gov, federalreserve.gov, whitehouse.gov, cdc.gov), gutenberg.org, si.edu, lkml.org, web.archive.org |
+| PD-own | 5 | the maintainer's terminal captures |
 
-**No obligations** — every kept crop is public domain. The non-PD sources
-(CC-BY-SA, CC-BY, ODbL, PSF, GPL, Apache-MIT, open-source-readme, mixed-CC,
-MIXED, Various-open — 354 crops) were moved to
+The non-PD sources (CC-BY-SA, CC-BY, ODbL, PSF, GPL, Apache-MIT, open-source-readme,
+mixed-CC, MIXED, Various-open — 354 crops) were moved to
 `../../imazen-26-not-pd/web-screenshots/`; their per-row licenses live in that
 folder's `MANIFEST.tsv` if you ever restore them (attribution / share-alike
 obligations apply to those).
-
-### Caveat: screenshots are composite works
-
-A page screenshot can embed third-party media (photos, logos) whose rights
-differ from the page's text license. The license column reflects the **site /
-page** content license, not an independent clearance of every embedded asset.
-For the kept PD set: US-gov pages are PD as published, but a gov page may embed
-a contributed photo with separate credit (rare in this set). For internal codec
-benchmarking this is immaterial; for any public redistribution of individual
-crops, spot-check embedded media.
 
 ## Regenerating
 

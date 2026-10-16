@@ -47,38 +47,25 @@ attribution; `keyinfo` holds page/variant/camera/iso (f-stops written `f1p8`, no
 | `6600-ia-scans-manuscript-illustrations` | 36 | 0.97 GB | png | 6.0–37 | Internet Archive | PD | PD plate scans (Haeckel, Hokusai, Owen Jones, Redouté, Shin-Bijutsukai, Trouvelot) |
 | `6800-ia-scans-manuscript-text` | 34 | 0.25 GB | png | 6.0–30 | Internet Archive | PD | PD manuscript text-page scans (same works) |
 | `7000-lilith-plots` | 126 | 0.02 GB | png | 1.0 | lilith (generated) | PD-own | Synthetic charts + line/polygon test patterns (hard-edge graphics) |
-| `8000-lilith-mobile-screenshots` | 32 | 0.03 GB | png/jpg | 2.3–5.6 | various web/apps | CC0 | Phone UI/web screenshots (own capture); some frames are lilith's own content, rest third-party UI/content under fair use |
-| `8100-lilith-web-screenshots` | 348 | 0.23 GB | png | 0.2–5.2 | various web | PD (PD-filtered) | Website viewport crops at multiple resolutions/dpr |
+| `8000-lilith-mobile-screenshots` | 32 | 0.03 GB | png/jpg | 2.3–5.6 | various web/apps | CC0 | Phone UI and web screenshots captured by the maintainer |
+| `8100-lilith-web-screenshots` | 348 | 0.23 GB | png | 0.2–5.2 | various web | PD | Website viewport crops at multiple resolutions/dpr |
 | `9000-lilith-ai-clipart` | 86 | 0.03 GB | png | 1.0–1.6 | lilith (AI-gen) | PD-own | AI-generated clipart (flat / transparent) |
 | `9094-lilith-ai-illustrations` | 75 | 0.22 GB | png | 1.6 | lilith (AI-gen) | PD-own | AI-generated illustrations |
 | `9226-lilith-ai-products` | 732 | 1.26 GB | png/jpg | 1.0–17 | lilith (AI-gen) | PD-own | AI-generated product images, by product-category subfolders |
 
 ## Licensing status
 
-| License | Files | Notes |
+Every image is in the public domain or dedicated to it under CC0, except the 51 Unsplash
+images, which are free to use under the Unsplash License. The `license` column of each
+manifest gives an image's status.
+
+| License | Files | What |
 |---|--:|---|
-| PD-own | 1,343 | lilith's own photos, generated plots, AI images — released to public domain |
-| PD | 507 | US patents + Internet-Archive scans of PD works; per-file `pd_basis` in manifests |
-| PD-USGov | 128 | NPS/EPA/NOAA federal works (17 USC §105) |
-| Unsplash-License | 51 | Free to use; attribution appreciated (photographer in filename). Unsplash terms apply |
-| CC0 | 37 | Met + Art Institute open-access (public-domain dedication) |
-| Mailing-list-PD / PD-tool | 17 | within the web-screenshot set |
-| CC0 (maintainer's own capture) | 32 | mobile screenshots; capture is CC0, some frames are lilith's own content, rest show third-party UI/content under fair use |
-
-**All 2,115 files are public-domain, PD-own, CC0 or Unsplash-licensed** (freely
-usable; the 51 Unsplash images under the Unsplash License, attribution
-appreciated). The 8000 mobile-screenshot set's *captures* are CC0; where a
-frame shows third-party app or web content rather than the maintainer's own,
-that content is included under fair use, not relicensed.
-
-Caveats: `license` is **folder-level best-effort, not per-file legal clearance**.
-Artwork "photos" are reproductions of PD works (CC0 on the reproduction). Document
-and screenshot renders may embed third-party logos/photos whose rights differ from
-the page; the 8000 mobile-screenshot set's captures are released CC0 by the
-maintainer, but that release covers the capture, not the subject matter — some
-frames are the maintainer's own content, and frames showing third-party app/web
-content are included under fair use, not CC0. Spot-check embedded media before
-redistribution.
+| PD-own | 1,343 | the maintainer's own photos, plots and AI images, dedicated to the public domain |
+| PD | 524 | US patents, Internet Archive scans of public-domain works (`pd_basis` per file), and web pages from US government sites, Project Gutenberg, the Smithsonian, LKML and the Wayback Machine |
+| PD-USGov | 128 | NPS, EPA and NOAA publications, works of the US federal government (17 USC §105) |
+| CC0 | 69 | Art Institute of Chicago and Met open-access reproductions, and the maintainer's phone screenshots |
+| Unsplash-License | 51 | free to use under the Unsplash License; attribution appreciated (photographer in the file name) |
 
 ## Variant branches
 

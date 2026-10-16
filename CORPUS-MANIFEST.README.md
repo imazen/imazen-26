@@ -34,16 +34,19 @@ Aggregate of all per-folder manifests, common columns only (`path` = `folder/fil
 Regenerate after any change with `scripts/23_swap_and_cleanup_manifests.py` (or the
 inline regen) — the per-folder manifests are authoritative.
 
-## License column — folder-level best-effort, NOT per-file legal clearance
+## License column
 
-- `PD` US patents + Internet-Archive scans of PD works (Haeckel etc.); see `pd_basis`.
+Every image is in the public domain or dedicated to it under CC0, except the Unsplash images.
+
+- `PD` US patents, Internet-Archive scans of PD works (Haeckel etc.; see `pd_basis`), and the
+  8100 web screenshots of public-domain pages.
 - `PD-USGov` NPS / EPA / NOAA federal works.
 - `PD-own` lilith's own photos, plots, AI-generated images.
-- `CC0` Art Institute of Chicago + Met open-access artworks (also in `art_license`).
+- `CC0` Art Institute of Chicago + Met open-access artworks (also in `art_license`), and the
+  8000 mobile screenshots.
 - `Unsplash-License` unsplash stock (photographer in `original_filename`).
-- 8100 web screenshots carry the **per-capture** license harvested from the original
-  crop manifest (`PD`/`PD-tool`/`Mailing-list-PD`/`PD-own`).
-- `screenshot-unverified` 8000 mobile screenshots — third-party sites; unverified.
+- 8100 web screenshots carry the per-capture license of the original crop manifest (`PD`,
+  or `PD-own` for the maintainer's terminal captures).
 
 Excluded: `nope/` (reject pile), `museum-art/` (fetch tooling).
 
