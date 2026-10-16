@@ -47,7 +47,8 @@ retired, and the review may retire more.
    - The successor family map (`manifests/split_map_family_v2.tsv`) adds sha256, URL-plus-page
      and photo-burst keys. It also keys patent scans by `patent_page`, so a page's 1-bit original
      and both rescans always share a bucket; us3807657's rescans are its pages 1, 3, 5 and 7.
-     It is computed once more, on the final membership, before any branch exists.
+     It is computed once more, on the final membership, before any branch exists. Every export
+  bucket, and the bucket in each file's provenance, comes from this map.
 4. **Render v4** from the restored originals, with the rules below.
 5. **Gates, then publish** (see the last two sections).
 
@@ -151,7 +152,11 @@ Git LFS only where GitHub's limits leave no choice.
   - In `jxl-srgb`, the 168 wide-gamut JPEGs need a colour conversion, so they are lossless
     renders there.
 - **`.imi`.** Lossless pixel twins of the PNG and JXL files, published as single files plus
-  archives as release assets.
+  archives as release assets. A private tool in the IMIJ repository writes them from the PNG
+  layers: the PNG's samples, colour, `cLLI` and provenance (as the JXL files' XMP packet),
+  and on each gain-map source's `p3` SDR file the ISO 21496-1 gain map that
+  `render-v4 gain-maps` writes under `gain-maps/` (the map oriented like the base, and its
+  metadata).
 - **DNGs.** They stay in the originals and are left out of every derived layer.
 
 ## Gates
@@ -163,7 +168,8 @@ A file ships only if all of these pass:
   zTXt.
 - **Byte scan.** No nested media and no location atom in any original or layer.
 - **Third-party read-back.** libpng, Pillow and ImageMagick read every PNG; libjxl reads
-  every JXL. No third-party `.imi` decoder exists, so IMIJ's own decoder checks those.
+  every JXL. No third-party `.imi` decoder exists: imij and imij-oracle, a second decoder
+  written from the format specification alone, both decode every `.imi`.
   (`scripts/render_v4_readback.py`, `scripts/render_v4_jxl_check.py`.)
 - **Colour and HDR oracles.** Every wide-gamut `png-srgb` file is within 1 code value of a
   textbook conversion of its own `png-p3` twin (`scripts/colour_oracle.py`, which also reports

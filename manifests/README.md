@@ -10,6 +10,11 @@ the bucket —
 | 1, 3, 5 | `validate` |
 | 7, 9 | `test` |
 
+**The v4 export uses the successor family map instead.** Its repositories and every
+exported file's provenance bucket each image by `split_map_family_v2.tsv` (owner decision
+S1, 2026-10-15), which keeps related images in one bucket; for 270 of the 2,115 ids that
+differs from the last digit.
+
 Every derivative of an image — resize, crop, re-encode, feature row, metric row —
 **inherits the image's bucket**. Datasets never invent their own split; they join on
 `id` (the leading 4 digits of every corpus filename and of every spec-conformant

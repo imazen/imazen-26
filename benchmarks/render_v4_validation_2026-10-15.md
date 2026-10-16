@@ -31,11 +31,12 @@ also with LittleCMS through ImageMagick.
   values off LittleCMS (7.3% of pixels off by more than 1); now max 1. sRGB-curve sources
   (Display P3) were unaffected.
 - **Fixed: Android's "Display P3 Gamut with sRGB Transfer" profile** (imazen/zenpixels
-  174e01e5). zenpixels didn't identify this 520-byte profile, which tags all 32 mobile
-  screenshots and 5 more phone images; render-v4 refused them. icc-gen identifies it as
-  Display P3 with the sRGB curve, maximum u16 error 1, no LittleCMS disagreement. The 37
-  images are re-rendered with `scripts/render_v4_redo.sh`; six control images rendered with
-  the new toolchain are byte-identical to the first run's files.
+  174e01e5). zenpixels didn't identify this 520-byte profile, which tags 31 of the 32 mobile
+  screenshots (the 32nd is an sRGB JPEG) and 10 phone screenshots filed under interiors and
+  nature; the full run refused those 41. icc-gen identifies it as Display P3 with the sRGB
+  curve, maximum u16 error 1, no LittleCMS disagreement. The 41 images are re-rendered with
+  `scripts/render_v4_redo.sh`; six control images rendered with the new toolchain are
+  byte-identical to the first run's files.
 - **Fixed: the 1-bit patent pages kept their depth** (98eb20c). render-v4 wrote every grey
   source through zenpng's 8-bit grey encoder, so the 39 one-bit pages became 8-bit grey PNGs,
   33–47% larger than their originals, against "bit depth follows the source". Sub-byte grey
@@ -54,6 +55,20 @@ also with LittleCMS through ImageMagick.
 against the recorded pixel hash, runs `pngfix`, and checks the chunk set (`sRGB`; `iCCP` +
 `cICP` 12/13; `iCCP` alone for Adobe RGB; one provenance `tEXt`). On the 16-image test set:
 32 of 32 files pass.
+
+## Buckets
+
+Every export bucket follows the successor family map, `manifests/split_map_family_v2.tsv`
+(owner decision S1): a patent page's 1-bit original and both rescans, the pages of one URL, a
+photo burst, a plot run and chart theme variants share one bucket.
+
+- **Fixed: the full run's provenance named the wrong bucket for 270 images** (ee56da7).
+  `scripts/render_v4_list.py` wrote each id's last-digit bucket, so page 1 of us5046022 had
+  its 1-bit original in train and both rescans in test. 270 of the 2,112 rows differ: 143 web
+  pages, 67 patent rescans, 39 burst photos, 17 plots and 4 charts. The pixels were right;
+  the `tEXt` chunk of both their PNG files was not. The list now takes the family map's
+  bucket, `export_sizing.py` refuses a list that disagrees with it, and the 270 images are
+  re-rendered with the redo.
 
 ## HDR (16-bit PQ)
 
@@ -119,6 +134,27 @@ On the 16-image test set: 32 of 32 files pass; on the six HDR files: 6 of 6.
   (HDR from the box equals the source's, 0.0000 stops); a legacy Apple map is re-quantized
   onto an ISO curve (min 0, max = headroom, gamma 1, no offsets): 0.0059–0.0060 stops from
   Apple's curve, as `benchmarks/apple_legacy_gainmap_iso_fit_2026-10-03.md` predicted.
+
+## `.imi`
+
+The `.imi` layers are written from the PNG layers by a private tool in the IMIJ repository:
+each file holds its PNG's samples, colour (CICP 1/13, 12/13 or 12/16; Adobe RGB as the ICC
+profile), `cLLI` and provenance (the same XMP packet as the JPEG XL files), and a gain-map
+source's `p3` SDR file carries the `gain-maps/` form as its ISO 21496-1 gain map. Each file
+is decoded again before it is written. The check decodes every file with imij and with
+imij-oracle, a second decoder written from the format specification alone, against the PNG
+twin's pixel hash, reads the metadata back, and decodes each gain map with both.
+
+The gain-map forms come from `render-v4 gain-maps` (f4163bf), which writes each source's
+form once, under `gain-maps/`: the map in ISO 21496-1 form, oriented like the `png-p3` base,
+as an 8-bit PNG, and its metadata as the bare ISO 21496-1 payload a `jhgm` box carries. HEIC
+sources get the form their JPEG XL file carries; UltraHDR JPEGs keep their own map, decoded
+by zenjpeg like the base. The HDR the read-back form gives is compared with the source's
+own: on four test sources (an UltraHDR JPEG, a legacy Apple HEIC, two `tmap` HEICs), 0.0036
+stops for the Apple map and 0.0000 for the ISO ones.
+
+On the nine-image test set (sRGB, assumed sRGB, Display P3, Adobe RGB, a 1-bit page, an
+UltraHDR JPEG, a legacy Apple HEIC and two `tmap` HEICs): 22 files, all pass both decoders.
 
 ## Inventory and byte scan
 
