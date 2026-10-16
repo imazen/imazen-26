@@ -37,6 +37,20 @@ pass's commits, hashes and results).
   Pillow calls the Samsung gain-map JPEGs malformed MPO files and reads them as plain JPEGs;
   the camera wrote them so (1064's gain map from the 2026-06-04 snapshot of the camera file is
   byte-identical to the export original's).
+- **JPEG XL** (f4163bf, effort 9, 6 jobs: 11,305 s for the SDR layers, peak RSS 21.9 GiB;
+  2,636 s for the 76 `.hdr.jxl` twins, peak RSS 18.0 GiB): 3 of the 2,112 images failed,
+  11415 (108 MP), 12207 and 12402 (99.4 and 101.8 MP, progressive). jxl-encoder reserves 56
+  bytes per DCT coefficient for a transcode and caps an unset budget at 8 GiB, its default for
+  untrusted input; they asked for 8.4–9.1 GB. render-v4 now passes the run's limits (de6bf54),
+  and one JXL redo (5a930e3, 8 s, peak RSS 7.9 GiB) wrote the 6 files. Result: `jxl-p3` 2,112
+  files, 3.81 GB (0.414× its PNGs): 1,656 lossless, 43 lossless with `jhgm`, 368
+  JPEG-in-JXL, 33 JPEG-in-JXL with `jhgm`, 12 bare codestreams (the progressive Unsplash
+  JPEGs); `jxl-srgb` 2,112 files, 4.82 GB (0.502×); 76 `.hdr.jxl`, 2.53 GB (0.673× the
+  `.hdr.png` files, the largest 70.6 MiB). No JXL file nears 100 MiB.
+- **JXL gate.** The pass's own check failed 79 files: the 3 above and the 76 gain-map files,
+  whose kinds (`…+jhgm`) the check didn't know. Fixed (5a930e3: the kind's check plus
+  libjxl's `jxlinfo -v` reading the `jhgm` bundle); the full re-check passed 4,300 of 4,300
+  files.
 
 ## SDR PNG layers
 
