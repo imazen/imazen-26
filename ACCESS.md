@@ -23,8 +23,9 @@ The PNG-v3 derivatives (below) carry no EXIF at all.
 
 ## 1. Raw corpus (originals, metadata policy per above)
 
-`s3://codec-corpus/imazen-26-unprocessed/` — 2,688 objects, 6.99 GB. Full
-21-category structure, original jpg/heic/png/dng formats.
+`s3://codec-corpus/imazen-26-unprocessed/` — 2,174 objects, 5.23 GB (2,115 images plus the
+documents and the 9 patent PDFs; synced to the manifests 2026-10-16). Full 21-category
+structure, original jpg/heic/png/dng formats.
 
 ```
 https://codec-corpus.r2.imazen.org/imazen-26-unprocessed/<category>/<filename>
@@ -33,7 +34,7 @@ https://codec-corpus.r2.imazen.org/imazen-26-unprocessed/CORPUS-MANIFEST.tsv
 ```
 
 Includes the patent scan source PDFs (3 US patents × {1-bit original, color
-rescan, gray rescan}, 82 MB) alongside their rasterized page images:
+rescan, gray rescan}, 85 MB) alongside their rasterized page images:
 
 ```
 https://codec-corpus.r2.imazen.org/imazen-26-unprocessed/6000-lilith-scans-public-patents/pdfs/<filename>.pdf
@@ -78,10 +79,10 @@ The canonical split is deterministic, by the **last digit of the image id**:
 `{0,2,4,6,8}` = train, `{1,3,5}` = validate, `{7,9}` = test. One row per corpus
 image, with sha256 and direct raw + PNG-v3 URLs per row:
 
-- [`manifests/train.tsv`](manifests/train.tsv) — 1,084 rows
-- [`manifests/validate.tsv`](manifests/validate.tsv) — 658 rows
-- [`manifests/test.tsv`](manifests/test.tsv) — 418 rows
-- [`manifests/split_map.tsv`](manifests/split_map.tsv) — the bare id→split map (2,160 rows)
+- [`manifests/train.tsv`](manifests/train.tsv) — 1,062 rows
+- [`manifests/validate.tsv`](manifests/validate.tsv) — 642 rows
+- [`manifests/test.tsv`](manifests/test.tsv) — 411 rows
+- [`manifests/split_map.tsv`](manifests/split_map.tsv) — the bare id→split map (2,115 rows)
 
 Columns: `id, split, content_class, path, width, height, format, bytes_manifest,
 bytes_actual, sha256, raw_url, png_v3_sdr_url, png_v3_hdr_url`. The two render

@@ -1,7 +1,7 @@
 # imazen-26 export plan
 
-**Status: decided 2026-10-15. Step 1 (originals) is staged and has passed every gate; the R2
-step waits for the owner's go.** This settles the open questions in
+**Status: decided 2026-10-15. Steps 1 (originals) and 2 (R2) are done: the owner's go came
+2026-10-16, and the public prefix now holds exactly the manifests' originals and documents.** This settles the open questions in
 `benchmarks/layer_repos_2026-09-25.md` and `benchmarks/split_branches_design_2026-09-22.md`.
 Membership becomes final after the removal review: the 11 byte-identical duplicates are
 retired, and the review may retire more.
@@ -37,6 +37,13 @@ retired, and the review may retire more.
    - A private bucket keeps every revision of the originals as dated, read-only checkpoints.
    - Then the public prefix mirrors the manifest exactly: unlisted objects are deleted, and the
      three AI files under stale names are re-keyed.
+   - Done 2026-10-16 with `scripts/r2_originals_sync.py`. No originals bucket existed before,
+     so the private bucket `imazen-26-originals` was created for it. It holds
+     `2026-10-16-before/` (the public prefix as it stood: 2,688 objects, 6.96 GB) and
+     `2026-10-16-after/` (2,174 objects, 5.23 GB). Each copy was checked against its source by
+     size and MD5, and a bucket-lock rule per prefix refuses deletes and overwrites. The sync put
+     1,945 objects and deleted 518; `verify` then read every public object back by sha256 (0
+     missing, 0 extra, 0 mismatched).
 3. **Membership and splits.**
    - Retired ids are listed in `manifests/retired.tsv` and never reused; the gaps stay.
    - At export every id gets a leading `1` (1044 becomes 11044). The last digit doesn't
