@@ -19,8 +19,8 @@ import re
 import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CLASS_DIR = re.compile(r"(^|/)\d{4}-[^/]+/")
-IMAGE_EXT = {".jpg", ".jpeg", ".png", ".heic", ".dng", ".pdf", ".webp", ".gif", ".tif", ".tiff"}
+CLASS_DIR = re.compile(r"(^|/)\d{4,5}-[^/]+/")  # corpus ids, or export ids with the leading 1
+IMAGE_EXT = {".jpg", ".jpeg", ".png", ".heic", ".dng", ".pdf", ".webp", ".gif", ".tif", ".tiff", ".jxl"}
 
 
 def main():
@@ -59,6 +59,8 @@ def main():
     for path, msg in violations:
         print(f"BLOCKED {path}: {msg}")
     print(f"{len(violations)} violations")
+    if not files:
+        sys.exit("no image files in the inventory: nothing was checked")
     sys.exit(1 if violations else 0)
 
 

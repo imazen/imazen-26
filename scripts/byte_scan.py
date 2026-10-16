@@ -185,12 +185,14 @@ def main():
     rows, bad, allowed = [], 0, 0
     for root, _, files in os.walk(a.tree):
         for f in sorted(files):
-            if not re.match(r"\d{4}_", f):
+            if not re.match(r"\d{4,5}_", f):  # corpus ids, or export ids with the leading 1
                 continue
             p = os.path.join(root, f)
             found, ok = [], []
             for x in scan(p):
-                (ok if any(f.startswith(i + "_") and x.startswith(pre) for i, pre in allow) else found).append(x)
+                listed = any((f.startswith(i + "_") or f.startswith("1" + i + "_")) and x.startswith(pre)
+                             for i, pre in allow)
+                (ok if listed else found).append(x)
             bad += bool(found)
             allowed += len(ok)
             rows.append((os.path.relpath(p, a.tree), "; ".join(found), "; ".join(ok)))
@@ -200,6 +202,8 @@ def main():
         if f or ok or a.out != "-":
             out.write(f"{p}\t{f}\t{ok}\n")
     print(f"{len(rows)} files scanned, {bad} with findings, {allowed} allowed findings", file=sys.stderr)
+    if not rows:
+        sys.exit("no image files found: nothing was scanned")
     sys.exit(1 if bad else 0)
 
 
