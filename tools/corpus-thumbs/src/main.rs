@@ -176,6 +176,11 @@ fn thumbnail(path: &str, colour: &str, cell: usize) -> Result<(Rgba, u8), String
         .min(1.0);
     let tw = ((img.w as f64 * scale).round() as usize).max(1);
     let th = ((img.h as f64 * scale).round() as usize).max(1);
+    if (tw, th) == (img.w, img.h) {
+        // Nothing to resize (a preview no smaller than the image): zenresize caps its output
+        // at 100 MP, which the 124 MP panorama passes.
+        return Ok((img, o));
+    }
     let config = ResizeConfig::builder(img.w as u32, img.h as u32, tw as u32, th as u32)
         .filter(Filter::Lanczos)
         .format(zenresize::PixelDescriptor::RGBA8_SRGB)
