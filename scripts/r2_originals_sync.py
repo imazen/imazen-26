@@ -13,9 +13,10 @@ Subcommands:
       so on): `put` the repository's copy when it differs. Under KEEP (the patent scans'
       source PDFs, which ACCESS.md lists) it stays: `keep`. Anything else: `delete`.
 
-  checkpoint <src-bucket>/<src-prefix> <dst-bucket>/<dst-prefix>
-      Server-side copy of every object under the source prefix (s5cmd). Run before `apply`
-      into the private bucket, and again after it.
+  checkpoint <src-bucket>/<src-prefix> <dst-bucket>/<dst-prefix> [--resume]
+      Server-side copy of every object under the source prefix (s5cmd; keys with a space go
+      through a local file), then a size and MD5 check of every copy. Run before `apply` into
+      the private bucket, and again after it. --resume copies only what is missing.
 
   apply <plan.tsv> --owner-go
       Uploads every `put` (Content-Type by extension), then deletes every `delete`. The
@@ -126,7 +127,7 @@ def md5(path):
     return h.hexdigest()
 
 
-def s5cmd(c, env, commands):
+def s5cmd(c, env, commands, check=True):
     with tempfile.NamedTemporaryFile("w", suffix=".s5", dir=os.path.expanduser("~/tmp"), delete=False) as f:
         f.write("\n".join(commands) + "\n")
         batch = f.name
@@ -135,7 +136,7 @@ def s5cmd(c, env, commands):
                            env=env, capture_output=True, text=True)
     finally:
         os.remove(batch)
-    if r.returncode != 0:
+    if check and r.returncode != 0:
         raise SystemExit(f"s5cmd failed:\n{r.stderr[-4000:]}")
     return r.stdout
 
@@ -182,18 +183,31 @@ def cmd_checkpoint(a, c):
     sb, sp = a.src.split("/", 1)
     db, dp = a.dst.split("/", 1)
     src = listing(c, sb, sp)
-    if listing(c, db, dp):
-        raise SystemExit(f"refusing: {a.dst} is not empty")
+    if listing(c, db, dp) and not a.resume:
+        raise SystemExit(f"refusing: {a.dst} is not empty (--resume copies only what is missing)")
     # The root key: temporary credentials are scoped to one bucket, a copy spans two.
     env = dict(os.environ, AWS_ACCESS_KEY_ID=c["R2_ACCESS_KEY_ID"], AWS_SECRET_ACCESS_KEY=c["R2_SECRET_ACCESS_KEY"],
                AWS_REGION="auto")
     env.pop("AWS_SESSION_TOKEN", None)
-    cmds = [f'cp "s3://{sb}/{k}" "s3://{db}/{dp}{k[len(sp):]}"' for k in sorted(src)]
-    s5cmd(c, env, cmds)
+    have = listing(c, db, dp)
+    todo = [k for k in sorted(src) if have.get(dp + k[len(sp):], (None,))[0] != src[k][0]]
+    # s5cmd's server-side copy sends a key with a space unencoded in x-amz-copy-source, which R2
+    # answers with NoSuchKey (2026-10-16, 31 keys): those go through a local file instead.
+    s5cmd(c, env, [f'cp "s3://{sb}/{k}" "s3://{db}/{dp}{k[len(sp):]}"' for k in todo if " " not in k])
+    spaced = [k for k in todo if " " in k]
+    if spaced:
+        with tempfile.TemporaryDirectory(dir=os.path.expanduser("~/tmp")) as tmp:
+            s5cmd(c, env, [f'cp "s3://{sb}/{k}" "{tmp}/{i}"' for i, k in enumerate(spaced)])
+            s5cmd(c, env, [f'cp "{tmp}/{i}" "s3://{db}/{dp}{k[len(sp):]}"' for i, k in enumerate(spaced)])
     dst = listing(c, db, dp)
-    bad = [k for k, v in src.items() if dst.get(dp + k[len(sp):], (None,))[0] != v[0]]
-    print(f"copied {len(src)} objects ({sum(v[0] for v in src.values()) / 1e9:.2f} GB) to {a.dst}; "
-          f"{len(bad)} size mismatches")
+    # A copy must match its source in size, and in MD5 wherever both ETags are single-part MD5s.
+    bad = []
+    for k, (size, etag) in src.items():
+        got = dst.get(dp + k[len(sp):])
+        if got is None or got[0] != size or ("-" not in etag and "-" not in got[1] and got[1] != etag):
+            bad.append(k)
+    print(f"copied {len(todo)} objects ({len(spaced)} through a local file); {dp} holds {len(dst)} objects "
+          f"({sum(v[0] for v in dst.values()) / 1e9:.2f} GB) for {len(src)} source objects; {len(bad)} mismatches")
     if bad:
         raise SystemExit(bad[:10])
 
@@ -257,6 +271,7 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("plan"); p.add_argument("staging"); p.add_argument("--out", default="r2_plan.tsv")
     p = sub.add_parser("checkpoint"); p.add_argument("src"); p.add_argument("dst")
+    p.add_argument("--resume", action="store_true")
     p = sub.add_parser("apply"); p.add_argument("plan"); p.add_argument("--owner-go", action="store_true")
     sub.add_parser("verify")
     a = ap.parse_args()
