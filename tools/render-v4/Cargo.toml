@@ -21,6 +21,7 @@ heic = { git = "https://github.com/imazen/heic", branch = "main" }
 zenjpeg = { git = "https://github.com/imazen/zenjpeg", branch = "main" }
 ultrahdr-core = { git = "https://github.com/imazen/ultrahdr", branch = "main" }
 zenjxl = { git = "https://github.com/imazen/zenjxl", branch = "main", default-features = false, features = ["zencodec", "jpeg-lossy"] }
+jxl-encoder = { git = "https://github.com/imazen/jxl-encoder", branch = "main", default-features = false, features = ["std", "convenience"] }
 enough = { git = "https://github.com/imazen/enough", branch = "main" }
 imgref = "1.12.3"
 rgb = "0.8.53"

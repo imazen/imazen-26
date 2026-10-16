@@ -55,7 +55,10 @@ def pnm(data):
     ch = {b"P5": 1, b"P6": 3}[fields[0]]
     w, h, maxval = int(fields[1]), int(fields[2]), int(fields[3])
     dtype = ">u2" if maxval > 255 else np.uint8
-    return ch, np.frombuffer(data[pos:], dtype)[: w * h * ch].reshape(h, w, ch)
+    px = np.frombuffer(data[pos:], dtype)[: w * h * ch].reshape(h, w, ch)
+    if maxval < 255:  # a sub-byte JXL (the 1-bit pages): scale its levels to 8 bits
+        px = (px.astype(np.uint32) * 255 // maxval).astype(np.uint8)
+    return ch, px
 
 
 def rgba_hash(ch, px):

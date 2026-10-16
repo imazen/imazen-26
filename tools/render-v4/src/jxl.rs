@@ -67,7 +67,27 @@ fn encode_lossless(
     icc: Option<&[u8]>,
     xmp: &[u8],
     effort: u8,
+    sub_byte_gray: Option<u8>,
 ) -> Result<Vec<u8>, String> {
+    // A sub-byte greyscale source (the 1-bit patent pages) keeps its depth in the codestream
+    // header: jxl-encoder takes the values as 16-bit samples of that depth.
+    if let (Pixels::Gray(p), Some(depth)) = (px, sub_byte_gray) {
+        let max = (1u32 << depth) - 1;
+        let samples: Vec<u8> = p
+            .iter()
+            .map(|&v| ((u32::from(v) * max + 127) / 255) as u16)
+            .flat_map(u16::to_ne_bytes)
+            .collect();
+        let meta = jxl_encoder::ImageMetadata::new().with_xmp(xmp);
+        let config = jxl_encoder::LosslessConfig::new().with_effort(effort);
+        return config
+            .encode_request(w as u32, h as u32, jxl_encoder::PixelLayout::Gray16)
+            .with_bits_per_sample(u32::from(depth))
+            .with_color_encoding(jxl_encoder::ColorEncoding::gray())
+            .with_metadata(&meta)
+            .encode(&samples)
+            .map_err(|e| format!("jxl {depth}-bit encode: {e}"));
+    }
     let (bytes, base): (&[u8], PixelDescriptor) = match px {
         Pixels::Gray(p) => (p, PixelDescriptor::GRAY8_SRGB),
         Pixels::Rgb(p) => (p, PixelDescriptor::RGB8_SRGB),
@@ -334,6 +354,7 @@ pub(crate) fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
         w,
         h,
         gain_map,
+        sub_byte_gray,
         ..
     } = load(row)?;
     let xmp = provenance_xmp(row.provenance);
@@ -359,7 +380,7 @@ pub(crate) fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
         };
     let lossless =
         |px: &Pixels, colour: Colour, icc: Option<&[u8]>| -> Result<(Vec<u8>, String), String> {
-            let jxl = encode_lossless(px, w, h, colour, icc, &xmp, effort)?;
+            let jxl = encode_lossless(px, w, h, colour, icc, &xmp, effort, sub_byte_gray)?;
             let (back, size, meta, cicp) = decode(&jxl)?;
             if size != (w, h) {
                 return Err(format!(
