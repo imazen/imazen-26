@@ -7,8 +7,11 @@ Subcommands:
       Read-only. Lists codec-corpus/imazen-26-unprocessed/ through the Cloudflare API and
       compares every object with the manifests and the staged files: `put` for a manifest
       path whose staged bytes differ from the object (MD5 against a single-part ETag; a
-      multipart ETag always counts as different) or that has no object, `delete` for an
-      object no manifest lists, nothing for the rest.
+      multipart ETag always counts as different) or that has no object. An object no
+      manifest lists is a document when git tracks its path in this repository (README.md,
+      CORPUS-MANIFEST.tsv, the class folders' MANIFEST.tsv, PROVENANCE.md, LICENSE.md and
+      so on): `put` the repository's copy when it differs. Under KEEP (the patent scans'
+      source PDFs, which ACCESS.md lists) it stays: `keep`. Anything else: `delete`.
 
   checkpoint <src-bucket>/<src-prefix> <dst-bucket>/<dst-prefix>
       Server-side copy of every object under the source prefix (s5cmd). Run before `apply`
@@ -20,7 +23,8 @@ Subcommands:
 
   verify
       Downloads every object under the public prefix and checks its sha256 and size against
-      the manifests, and that the prefix holds exactly the manifest paths.
+      the manifests (documents against the repository's copies), and that the prefix holds
+      exactly the manifest paths, the documents and KEEP.
 
 Credentials come from ~/.config/cloudflare/r2-credentials. `plan` and `verify` only read.
 """
@@ -39,7 +43,11 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BUCKET = "codec-corpus"
 PREFIX = "imazen-26-unprocessed/"
 TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".heic": "image/heic",
-         ".dng": "image/x-adobe-dng", ".pdf": "application/pdf"}
+         ".dng": "image/x-adobe-dng", ".pdf": "application/pdf",
+         ".md": "text/markdown; charset=utf-8", ".tsv": "text/tab-separated-values; charset=utf-8",
+         ".py": "text/x-python; charset=utf-8"}
+# Objects no manifest lists that stay as they are: the patent scans' source PDFs (ACCESS.md).
+KEEP = ("6000-lilith-scans-public-patents/pdfs/",)
 
 
 def creds():
@@ -103,6 +111,13 @@ def manifests():
     return rows
 
 
+def tracked():
+    """Paths git tracks in this repository: the documents whose published copies follow it.
+    The class folders can hold local image copies, which git ignores."""
+    out = subprocess.run(["git", "-C", REPO, "ls-files", "-z"], capture_output=True, check=True).stdout
+    return set(out.decode().split("\0")) - {""}
+
+
 def md5(path):
     h = hashlib.md5()
     with open(path, "rb") as f:
@@ -138,16 +153,29 @@ def cmd_plan(a, c):
         have = objs.get(key)
         if have is None or have[1] != m:
             rows.append(("put", key, size, m, local))
+    docs = tracked()
     for key, (size, etag) in sorted(objs.items()):
-        if key[len(PREFIX):] not in man:
+        rel = key[len(PREFIX):]
+        if rel in man:
+            continue
+        if rel in docs:
+            local = os.path.join(REPO, rel)
+            m = md5(local)
+            if m != etag:
+                rows.append(("put", key, os.path.getsize(local), m, local))
+        elif rel.startswith(KEEP):
+            rows.append(("keep", key, size, etag, ""))
+        else:
             rows.append(("delete", key, size, etag, ""))
     with open(a.out, "w") as f:
         f.write("action\tkey\tbytes\tmd5\tlocal\n")
         f.writelines("\t".join(map(str, r)) + "\n" for r in rows)
     puts = [r for r in rows if r[0] == "put"]
     dels = [r for r in rows if r[0] == "delete"]
+    keeps = [r for r in rows if r[0] == "keep"]
     print(f"{len(objs)} objects now; {len(man)} manifest paths; put {len(puts)} "
-          f"({sum(r[2] for r in puts) / 1e9:.2f} GB); delete {len(dels)} ({sum(r[2] for r in dels) / 1e9:.2f} GB) -> {a.out}")
+          f"({sum(r[2] for r in puts) / 1e9:.2f} GB); delete {len(dels)} ({sum(r[2] for r in dels) / 1e9:.2f} GB); "
+          f"keep {len(keeps)} -> {a.out}")
 
 
 def cmd_checkpoint(a, c):
@@ -197,7 +225,13 @@ def cmd_verify(a, c):
     man = manifests()
     objs = listing(c, BUCKET, PREFIX)
     keys = {k[len(PREFIX):] for k in objs}
-    extra, missing = sorted(keys - set(man)), sorted(set(man) - keys)
+    tracked_paths = tracked()
+    docs = {k for k in keys - set(man) if k in tracked_paths}
+    for k in sorted(docs):
+        man[k] = (hashlib.sha256(open(os.path.join(REPO, k), "rb").read()).hexdigest(),
+                  os.path.getsize(os.path.join(REPO, k)))
+    extra = sorted(k for k in keys - set(man) if not k.startswith(KEEP))
+    missing = sorted(set(man) - keys)
     bad = []
     for path, (sha, size) in sorted(man.items()):
         if path in missing:
