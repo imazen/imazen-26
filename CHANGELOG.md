@@ -25,6 +25,10 @@
 - README / STORAGE-MAP variant tables list both branches with current pointer counts
 
 ### Added
+- JPEG XL fixes from the full pass: render-v4's JPEG-in-JXL transcode takes the run's limits instead of jxl-encoder's untrusted-input defaults, which refused the three ~100 MP JPEGs (de6bf54); `render_v4_jxl_check.py` knows the gain-map (`…+jhgm`) kinds and checks the `jhgm` bundle with libjxl (5a930e3); `scripts/render_v4_jxl_redo.sh` re-renders failed ids (f6a2e9b)
+- `scripts/render_v4_gates.sh`: the read-back, inventory and byte-scan gates over a whole render tree, with results in `RUN.meta`
+- `scripts/export_card.py`: each layer repository's dataset card, `CITATION.cff` and manifest, every number from the manifests
+- `scripts/r2_originals_sync.py` keeps the published documents (refreshed from the repository) and the 9 patent source PDFs, which ACCESS.md lists, instead of deleting everything no image manifest names
 - `render-v4 gain-maps` (f4163bf): each gain-map source's gain-map form for the `.imi` layers, an ISO 21496-1 map oriented like the `png-p3` base plus its bare metadata payload, under `gain-maps/`; `render_v4_hdr.sh` runs it after `png-hdr`. The `.imi` layers themselves are written and checked by a private tool in the IMIJ repository: every file decodes to its PNG twin's pixel hash in imij and in imij-oracle, a second decoder written from the specification
 - `render-v4 png-hdr` (0ca1f11): the 16-bit PQ render of each of the 76 gain-map images, full headroom, 203-nit white, exact ST 2084, measured `cLLI`; ISO maps through ultrahdr-core, Apple legacy maps with Apple's own curve (imazen/heic#62); `scripts/hdr_oracle.py` rebuilds each from libheif, Pillow and exiftool decodes
 - `render-v4 jxl` (7502706) and `jxl-hdr` (a19c284): the `jxl-p3`/`jxl-srgb` layers (lossless twins of the PNGs; JPEG-in-JXL rebuilding each JPEG byte for byte; a bare coefficient codestream for the 12 progressive JPEGs) and each `.hdr.png`'s lossless twin; gain-map forms as `jhgm` (be48bb5): UltraHDR transcodes carry theirs, HEICs get one appended (Apple maps re-quantized to ISO, 0.006 stops)
