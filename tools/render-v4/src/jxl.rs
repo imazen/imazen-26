@@ -32,7 +32,7 @@ use super::{Colour, Pixels, Row, Source, code_values, hex, load, orient_pixels, 
 pub(crate) static EFFORT: OnceLock<u8> = OnceLock::new();
 
 /// The report columns of `jxl`.
-pub(crate) const JXL_HEADER: &str = "id\tlayer\tpath\twidth\theight\tkind\tcolour\tbytes\tsha256\tpixels_sha256\tjpeg_sha256\tjpeg_pixel_max_diff\terror";
+pub(crate) const JXL_HEADER: &str = "id\tlayer\tpath\twidth\theight\tkind\tcolour\tbytes\tsha256\tpixels_sha256\tjpeg_sha256\tjpeg_pixel_max_diff\tjhgm\terror";
 
 /// Namespace of the provenance property in the XMP packet.
 const XMP_NS: &str = "https://github.com/imazen/imazen-26#";
@@ -188,6 +188,127 @@ fn jpeg_in_jxl(data: &[u8], effort: u8) -> Result<(Vec<u8>, &'static str), Strin
     }
 }
 
+/// Whether a JXL container holds a box of this type at its top level.
+fn has_box(jxl: &[u8], ty: &[u8; 4]) -> bool {
+    let mut pos = 0usize;
+    while pos + 8 <= jxl.len() {
+        let size = u32::from_be_bytes(jxl[pos..pos + 4].try_into().unwrap()) as usize;
+        if &jxl[pos + 4..pos + 8] == ty {
+            return true;
+        }
+        let size = match size {
+            0 => return false,
+            1 if pos + 16 <= jxl.len() => {
+                u64::from_be_bytes(jxl[pos + 8..pos + 16].try_into().unwrap()) as usize
+            }
+            n => n,
+        };
+        pos = pos.saturating_add(size.max(8));
+    }
+    false
+}
+
+/// The `jhgm` payload of a gain-map form: ISO 21496-1 metadata and the gain map as a
+/// lossless JXL codestream.
+fn jhgm_payload(form: &crate::hdr::JhgmForm, effort: u8) -> Result<Vec<u8>, String> {
+    if form.map.channels != 1 {
+        return Err("gain-map form with more than one channel".into());
+    }
+    let gray: Vec<rgb::Gray<u8>> = form.map.data.iter().map(|&v| rgb::Gray::new(v)).collect();
+    let img = imgref::Img::new(&gray[..], form.map.width as usize, form.map.height as usize);
+    let codestream =
+        zenjxl::encode_gray8_lossless(img, &zenjxl::LosslessConfig::new().with_effort(effort))
+            .map_err(|e| format!("gain map encode: {e}"))?;
+    let metadata =
+        ultrahdr_core::serialize_iso21496_fmt(&form.meta, ultrahdr_core::Iso21496Format::JxlJhgm);
+    Ok(zenjxl::GainMapBundle {
+        metadata,
+        color_encoding: None,
+        alt_icc_compressed: None,
+        gain_map_codestream: codestream,
+    }
+    .serialize())
+}
+
+/// Largest |log2| ratio between two linear renditions, over values above 1e-3 in both.
+fn worst_stops(a: &[f64], b: &[f64]) -> f64 {
+    a.iter()
+        .zip(b)
+        .filter(|(x, y)| **x > 1e-3 && **y > 1e-3)
+        .map(|(x, y)| (x / y).log2().abs())
+        .fold(0.0, f64::max)
+}
+
+/// Read a gain-map form back and compare the HDR it gives with the source's own.
+fn check_jhgm(
+    jxl: &[u8],
+    px: &Pixels,
+    w: usize,
+    h: usize,
+    form: &crate::hdr::JhgmForm,
+) -> Result<f64, String> {
+    let (back, size, _, _) = decode(jxl)?;
+    if size != (w, h) || back.rgba() != px.rgba() {
+        return Err("the base changed when the jhgm box was added".into());
+    }
+    let (_, gm) = DecodeRequest::new(jxl)
+        .decode_gain_map()
+        .map_err(|e| format!("jhgm read: {e}"))?;
+    let gm = gm.ok_or("the jhgm box did not read back")?;
+    if (gm.gain_map.width, gm.gain_map.height, &gm.gain_map.data)
+        != (form.map.width, form.map.height, &form.map.data)
+    {
+        return Err("the jhgm gain map did not read back unchanged".into());
+    }
+    let ours = crate::hdr::reconstruct(px.rgba(), w, h, &form.source_map, &form.source_curve)?;
+    let from_jhgm = crate::hdr::reconstruct(
+        px.rgba(),
+        w,
+        h,
+        &gm.gain_map,
+        &crate::hdr::Curve::Iso(gm.metadata),
+    )?;
+    let worst = worst_stops(&ours, &from_jhgm);
+    // tmap: the same map and parameters (rational round trip only). Apple: half a code step.
+    let limit = match form.source_curve {
+        crate::hdr::Curve::Apple { stops } => stops / 510.0 + 1e-3,
+        crate::hdr::Curve::Iso(_) => 1e-3,
+    };
+    if worst > limit {
+        return Err(format!(
+            "HDR from jhgm differs by {worst:.4} stops (limit {limit:.4})"
+        ));
+    }
+    Ok(worst)
+}
+
+/// For an UltraHDR JPEG-in-JXL: the largest difference between the gain map its `jhgm` box
+/// decodes to and zenjpeg's decode of the JPEG's own gain map (both as stored).
+fn jpeg_jhgm_diff(jxl: &[u8], jpeg: &[u8]) -> Result<String, String> {
+    let (_, a) = DecodeRequest::new(jxl)
+        .decode_gain_map()
+        .map_err(|e| format!("jhgm read: {e}"))?;
+    let (_, b) = DecodeRequest::new(jpeg)
+        .decode_gain_map()
+        .map_err(|e| format!("jpeg gain map: {e}"))?;
+    let (a, b) = (
+        a.ok_or("jhgm did not read back")?,
+        b.ok_or("the JPEG has no gain map")?,
+    );
+    if (a.gain_map.width, a.gain_map.height) != (b.gain_map.width, b.gain_map.height) {
+        return Err("jhgm gain map size differs from the JPEG's".into());
+    }
+    let d = a
+        .gain_map
+        .data
+        .iter()
+        .zip(&b.gain_map.data)
+        .map(|(x, y)| x.abs_diff(*y))
+        .max()
+        .unwrap_or(0);
+    Ok(format!("jpeg gain map, max diff {d}"))
+}
+
 /// One file of the report.
 struct Written {
     layer: &'static str,
@@ -197,6 +318,7 @@ struct Written {
     pixels_sha256: String,
     jpeg_sha256: String,
     jpeg_diff: String,
+    jhgm: String,
 }
 
 /// `jxl`: write both JXL layers of one source.
@@ -211,6 +333,7 @@ pub(crate) fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
         px,
         w,
         h,
+        gain_map,
         ..
     } = load(row)?;
     let xmp = provenance_xmp(row.provenance);
@@ -223,8 +346,17 @@ pub(crate) fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
             .as_deref(),
         Some("jpg" | "jpeg")
     );
-    let mut files: Vec<Written> = Vec::new();
-
+    let blank =
+        |layer: &'static str, bytes: Vec<u8>, kind: &'static str, pixels_sha256: String| Written {
+            layer,
+            bytes,
+            kind,
+            colour: colour.name(),
+            pixels_sha256,
+            jpeg_sha256: String::new(),
+            jpeg_diff: String::new(),
+            jhgm: String::new(),
+        };
     let lossless =
         |px: &Pixels, colour: Colour, icc: Option<&[u8]>| -> Result<(Vec<u8>, String), String> {
             let jxl = encode_lossless(px, w, h, colour, icc, &xmp, effort)?;
@@ -260,6 +392,7 @@ pub(crate) fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
             check_colour(colour, &meta, cicp, icc)?;
             Ok((jxl, hex(&Sha256::digest(px.rgba()))))
         };
+    let mut files: Vec<Written> = Vec::new();
 
     if is_jpeg {
         let (jxl, kind) = jpeg_in_jxl(&data, effort)?;
@@ -282,73 +415,62 @@ pub(crate) fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
             ));
         }
         let diff = max_diff(&back, &px)?;
-        let written = Written {
-            layer: "jxl-p3",
-            bytes: jxl,
-            kind,
-            colour: colour.name(),
-            pixels_sha256: hex(&Sha256::digest(back.rgba())),
-            jpeg_sha256,
-            jpeg_diff: diff.to_string(),
+        // An UltraHDR JPEG's gain map must reach the JXL as a jhgm box (the transcode makes it).
+        let (kind, jhgm) = match (gain_map.is_some(), has_box(&jxl, b"jhgm")) {
+            (true, true) => (
+                if kind == "jpeg-in-jxl" {
+                    "jpeg-in-jxl+jhgm"
+                } else {
+                    "jpeg-in-jxl-codestream+jhgm"
+                },
+                jpeg_jhgm_diff(&jxl, &data)?,
+            ),
+            (true, false) => return Err("UltraHDR JPEG-in-JXL without a jhgm box".into()),
+            (false, true) => return Err("jhgm box from a JPEG without a gain map".into()),
+            (false, false) => (kind, String::new()),
         };
+        let mut p3 = blank("jxl-p3", jxl, kind, hex(&Sha256::digest(back.rgba())));
+        p3.jpeg_sha256 = jpeg_sha256;
+        p3.jpeg_diff = diff.to_string();
+        p3.jhgm = jhgm;
         if colour.is_srgb() {
-            files.push(Written {
-                layer: "jxl-srgb",
-                bytes: written.bytes.clone(),
-                kind,
-                colour: written.colour,
-                pixels_sha256: written.pixels_sha256.clone(),
-                jpeg_sha256: written.jpeg_sha256.clone(),
-                jpeg_diff: written.jpeg_diff.clone(),
-            });
+            let mut srgb = blank(
+                "jxl-srgb",
+                p3.bytes.clone(),
+                p3.kind,
+                p3.pixels_sha256.clone(),
+            );
+            srgb.jpeg_sha256 = p3.jpeg_sha256.clone();
+            srgb.jpeg_diff = p3.jpeg_diff.clone();
+            srgb.jhgm = p3.jhgm.clone();
+            files.push(srgb);
         } else {
             let (spx, _) = to_srgb(&px, w, colour)?;
             let (jxl, hash) = lossless(&spx, Colour::Srgb, None)?;
-            files.push(Written {
-                layer: "jxl-srgb",
-                bytes: jxl,
-                kind: "lossless",
-                colour: colour.name(),
-                pixels_sha256: hash,
-                jpeg_sha256: String::new(),
-                jpeg_diff: String::new(),
-            });
+            files.push(blank("jxl-srgb", jxl, "lossless", hash));
         }
-        files.push(written);
+        files.push(p3);
     } else {
         let (jxl, hash) = lossless(&px, colour, icc.as_deref())?;
         if colour.is_srgb() {
-            files.push(Written {
-                layer: "jxl-srgb",
-                bytes: jxl.clone(),
-                kind: "lossless",
-                colour: colour.name(),
-                pixels_sha256: hash.clone(),
-                jpeg_sha256: String::new(),
-                jpeg_diff: String::new(),
-            });
+            files.push(blank("jxl-srgb", jxl.clone(), "lossless", hash.clone()));
         } else {
             let (spx, _) = to_srgb(&px, w, colour)?;
             let (sjxl, shash) = lossless(&spx, Colour::Srgb, None)?;
-            files.push(Written {
-                layer: "jxl-srgb",
-                bytes: sjxl,
-                kind: "lossless",
-                colour: colour.name(),
-                pixels_sha256: shash,
-                jpeg_sha256: String::new(),
-                jpeg_diff: String::new(),
-            });
+            files.push(blank("jxl-srgb", sjxl, "lossless", shash));
         }
-        files.push(Written {
-            layer: "jxl-p3",
-            bytes: jxl,
-            kind: "lossless",
-            colour: colour.name(),
-            pixels_sha256: hash,
-            jpeg_sha256: String::new(),
-            jpeg_diff: String::new(),
-        });
+        // A HEIC with a gain map: its p3 file also carries the gain-map form (jhgm).
+        let p3 = match crate::hdr::jhgm_form(&data, row.source, (w, h))? {
+            None => blank("jxl-p3", jxl, "lossless", hash),
+            Some(form) => {
+                let with = zenjxl::append_gain_map_box(&jxl, &jhgm_payload(&form, effort)?);
+                let worst = check_jhgm(&with, &px, w, h, &form)?;
+                let mut f = blank("jxl-p3", with, "lossless+jhgm", hash);
+                f.jhgm = format!("{}, {worst:.4} stops from the source's HDR", form.kind);
+                f
+            }
+        };
+        files.push(p3);
     }
 
     let name = format!("{}_{w}x{h}.jxl", row.stem);
@@ -358,7 +480,7 @@ pub(crate) fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
         fs::create_dir_all(path.parent().unwrap()).map_err(|e| format!("mkdir: {e}"))?;
         fs::write(&path, &f.bytes).map_err(|e| format!("write: {e}"))?;
         rows.push(format!(
-            "{}\t{}\t{}/{name}\t{w}\t{h}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t",
+            "{}\t{}\t{}/{name}\t{w}\t{h}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t",
             row.id,
             f.layer,
             f.layer,
@@ -369,6 +491,7 @@ pub(crate) fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
             f.pixels_sha256,
             f.jpeg_sha256,
             f.jpeg_diff,
+            f.jhgm,
         ));
     }
     Ok(rows)

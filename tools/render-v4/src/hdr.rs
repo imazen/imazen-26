@@ -42,7 +42,7 @@ pub(crate) const HDR_HEADER: &str = "id\tlayer\tpath\twidth\theight\tcolour\tgai
 pub(crate) const INFO_HEADER: &str = "id\tsource_orientation\twidth\theight\tgain_map\tgain_map_size\tchannels\taspect\theadroom_stops\tparams\terror";
 
 /// How a gain map scales linear light.
-enum Curve {
+pub(crate) enum Curve {
     /// ISO 21496-1 parameters, applied by ultrahdr-core.
     Iso(GainMapMetadata),
     /// Apple's legacy curve, with the MakerNote headroom in stops.
@@ -219,7 +219,7 @@ fn nits_from_pq(e: f64) -> f64 {
 }
 
 /// Linear RGB (1.0 = SDR white), three values per pixel, from the base and the gain map.
-fn reconstruct(
+pub(crate) fn reconstruct(
     px_rgba: Vec<u8>,
     w: usize,
     h: usize,
@@ -342,6 +342,80 @@ fn sample_gains(map: &GainMap, lut: &[f64], w: usize, h: usize) -> Vec<f64> {
         }
     }
     out
+}
+
+/// A HEIC source's gain-map form for JPEG XL (`jhgm`, ISO 21496-1), with what it stands for.
+pub(crate) struct JhgmForm {
+    /// The gain map as written: oriented like the displayed base, ISO-form values.
+    pub(crate) map: GainMap,
+    pub(crate) meta: GainMapMetadata,
+    pub(crate) kind: &'static str,
+    /// The source's own gain map and curve, oriented alike, to compare the HDR against.
+    pub(crate) source_map: GainMap,
+    pub(crate) source_curve: Curve,
+}
+
+/// The `jhgm` form of a HEIC source with a gain map; `None` for any other source. A `tmap`
+/// gain map is already ISO 21496-1 and goes in as it is. Apple's legacy map is re-quantized
+/// onto an ISO curve with min 0, max = the headroom H in stops, gamma 1 and no offsets: each
+/// stored value g becomes round(255 * log2(1 + (H - 1) * sRGB_EOTF(g / 255)) / H), within half
+/// a code step (H / 510 stops) of Apple's curve.
+pub(crate) fn jhgm_form(
+    data: &[u8],
+    source: &str,
+    base: (usize, usize),
+) -> Result<Option<JhgmForm>, String> {
+    let ext = source.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
+    if !matches!(ext.as_str(), "heic" | "heif") {
+        return Ok(None);
+    }
+    let info = heic::ImageInfo::from_bytes(data).map_err(|e| format!("heic probe: {e:?}"))?;
+    if !info.has_gain_map {
+        return Ok(None);
+    }
+    let (map, curve, _) = decode_gain_map(data, source)?;
+    let (map, _) = orient_gain_map(map, source_orientation(data)?, base)?;
+    match curve {
+        Curve::Iso(meta) => Ok(Some(JhgmForm {
+            map: map.clone(),
+            meta: meta.clone(),
+            kind: "heic-tmap",
+            source_map: map,
+            source_curve: Curve::Iso(meta),
+        })),
+        Curve::Apple { stops } => {
+            let headroom = 2f64.powf(stops);
+            let lut: Vec<u8> = (0..256)
+                .map(|g| {
+                    let l = (1.0 + (headroom - 1.0) * srgb_eotf(f64::from(g) / 255.0)).log2();
+                    (255.0 * l / stops).round().clamp(0.0, 255.0) as u8
+                })
+                .collect();
+            let iso = GainMap {
+                width: map.width,
+                height: map.height,
+                channels: 1,
+                data: map.data.iter().map(|&g| lut[usize::from(g)]).collect(),
+            };
+            let mut meta = GainMapMetadata::default();
+            meta.base_hdr_headroom = 0.0;
+            meta.alternate_hdr_headroom = stops;
+            for c in &mut meta.channels {
+                c.min = 0.0;
+                c.max = stops;
+                c.gamma = 1.0;
+                c.base_offset = 0.0;
+                c.alternate_offset = 0.0;
+            }
+            Ok(Some(JhgmForm {
+                map: iso,
+                meta,
+                kind: "heic-apple-legacy-as-iso",
+                source_map: map,
+                source_curve: Curve::Apple { stops },
+            }))
+        }
+    }
 }
 
 /// The source's SDR base and gain map, oriented alike; shared by `hdr-info` and `png-hdr`.
