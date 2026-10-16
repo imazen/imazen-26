@@ -269,8 +269,8 @@ code, .mono { font-family: var(--mono); font-size: .82em }
       const downloads = await claude.use('downloads');
       if (!downloads) { msg.textContent = 'Saving files is unavailable in this view.'; return; }
       msg.textContent = 'Preparing…';
-      const r = await fetch(IDX.hashesFile);
-      const tsv = await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).blob();
+      const parts = await Promise.all(IDX.hashesFiles.map(f => fetch(f).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); })));
+      const tsv = new Blob(parts, { type: 'text/tab-separated-values' });
       const res = await downloads.save({ filename: 'imazen-26-v4-decoded-xxh3.tsv', data: tsv });
       msg.textContent = res.status === 'saved' ? 'Saved.' : '';
     } catch (e) { msg.textContent = e.code === 'cancelled' ? '' : `Not saved (${e.code || e.message}).`; }

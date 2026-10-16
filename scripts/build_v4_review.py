@@ -14,7 +14,7 @@
         The page and its data: v4-review.html (scripts/v4_review_page.html), data/index.json,
         data/dNN.json (details, 100 images each), thumbs/sheet_NN.webp, packs/pack_NN.webp
         (the medium previews concatenated; the index gives each one's offset and length) and
-        data/decoded-xxh3.tsv.gz. --fullpack-urls maps each full-resolution pack to the asset
+        data/decoded-xxh3-NN.txt (the hash file in parts of at most 12 MB). --fullpack-urls maps each full-resolution pack to the asset
         URL its Artifact upload returned (fp_NNN.webp<TAB>url).
 
 The details join the render's reports: manifests/, list.tsv (provenance), readback.tsv,
@@ -26,7 +26,6 @@ manifests for the originals.
 import argparse
 import collections
 import csv
-import gzip
 import json
 import os
 import shutil
@@ -195,9 +194,9 @@ def cmd_data(a):
         imi[r["path"].replace("imi-", "png-", 1).removesuffix(".imi") + ".png"] = [r["imij"], r["oracle"], r["metadata"], r["gain_map"]]
     census = collections.defaultdict(list)
     alias = collections.defaultdict(list)
-    for r in tsv(os.path.join(R, "compat-census", "aliases.tsv")):
+    for r in ([] if a.no_census else tsv(os.path.join(R, "compat-census", "aliases.tsv"))):
         alias[r["sha256"]].append(r["path"])
-    census_rows = tsv(os.path.join(R, "compat-census", "census.tsv"))
+    census_rows = [] if a.no_census else tsv(os.path.join(R, "compat-census", "census.tsv"))
     for r in census_rows:
         census[r["sha256"]].append(r)
 
@@ -305,8 +304,8 @@ def cmd_data(a):
         json.dump(chunk, open(os.path.join(S, "data", f"d{k // CHUNK:02d}.json"), "w"), separators=(",", ":"))
 
     # The hash file: our decoders' rows (decoded-xxh3.tsv) plus every census reader's, one row per
-    # path (a census row covers every path with the same bytes), gzipped; the page decompresses
-    # it for the download. It is also kept beside the render as decoded-xxh3-with-readers.tsv.
+    # path (a census row covers every path with the same bytes). It is kept beside the render as
+    # decoded-xxh3-with-readers.tsv.
     src = os.path.join(R, "decoded-xxh3.tsv")
     head, body = [], []
     for line in open(src):
@@ -326,15 +325,27 @@ def cmd_data(a):
                 "# layout; rgba8: same once both are 8-bit RGBA; no: differs).\n")
     text = "".join(head) + "\t".join(out_cols) + "\n" + "".join("\t".join(r) + "\n" for r in rows)
     open(os.path.join(R, "decoded-xxh3-with-readers.tsv"), "w").write(text)
-    with gzip.open(os.path.join(S, "data", "decoded-xxh3.tsv.gz"), "wb", 9) as g:
-        g.write(text.encode())
+    # Artifacts serve text up to 16 MB a file: parts of at most 12 MB, split at line ends; the
+    # page joins them for the download.
+    for f in os.listdir(os.path.join(S, "data")):
+        if f.startswith("decoded-xxh3"):
+            os.remove(os.path.join(S, "data", f))
+    hash_files, part, size = [], [], 0
+    for line in text.splitlines(keepends=True):
+        if size + len(line) > 12_000_000 and part:
+            hash_files.append("".join(part)); part, size = [], 0
+        part.append(line); size += len(line)
+    hash_files.append("".join(part))
+    for k, t in enumerate(hash_files):
+        open(os.path.join(S, "data", f"decoded-xxh3-{k:02d}.txt"), "w").write(t)
+    hash_files = [f"data/decoded-xxh3-{k:02d}.txt" for k in range(len(hash_files))]
     n_hash_rows = len(rows)
 
     m = meta(R)
     summary = build_summary(R, m, man, images, census_rows, n_hash_rows)
     licences = [l for l, _ in collections.Counter(im["lic"] for im in images).most_common()]
     index = {"cell": CELL, "sheetW": CELL * COLS, "classes": classes, "licences": licences, "images": images,
-             "summary": summary, "hashesFile": "data/decoded-xxh3.tsv.gz", "footer": FOOTER}
+             "summary": summary, "hashesFiles": hash_files, "footer": FOOTER}
     json.dump(index, open(os.path.join(S, "data", "index.json"), "w"), separators=(",", ":"))
     shutil.copy(os.path.join(REPO, "scripts", "v4_review_page.html"), os.path.join(S, "v4-review.html"))
     sizes = {d: sum(os.path.getsize(os.path.join(S, d, f)) for f in os.listdir(os.path.join(S, d)))
@@ -375,10 +386,6 @@ def build_summary(R, m, man, images, census_rows, n_hash_rows):
     jr = re.match(r"(\d+) of (\d+) JXL files pass; (\d+) fail", last("jxl_recheck"))
     if jr:
         gates.append(["JPEG XL check, libjxl (full)", f"{num(jr[1])} of {num(jr[2])}", "ok" if jr[3] == "0" else "bad"])
-    redos = sorted({k for k in m if re.fullmatch(r"jxl_redo_\d+_check", k)})
-    if redos:
-        gates.append(["JPEG XL redo checks", "; ".join(f"{k.split('_')[2]}: {last(k).split(';')[0].replace(' JXL files pass', '')}"
-                                                       for k in redos), "ok"])
     s.append({"title": "Gates", "rows": gates or [["Gates", "not recorded", "na"]]})
     rep = tsv(os.path.join(R, "decode-check", "report.tsv"))
     gms = tsv(os.path.join(R, "decode-check", "gain-maps.tsv"))
@@ -444,6 +451,7 @@ def main():
     p = sub.add_parser("images"); p.add_argument("render"); p.add_argument("stage"); p.add_argument("--jobs", type=int, default=12)
     p = sub.add_parser("fullpacks"); p.add_argument("render"); p.add_argument("stage")
     p = sub.add_parser("data"); p.add_argument("render"); p.add_argument("stage"); p.add_argument("--fullpack-urls", default="")
+    p.add_argument("--no-census", action="store_true", help="leave the reader census out (while it runs)")
     a = ap.parse_args()
     a.render = os.path.abspath(a.render)
     {"images": cmd_images, "fullpacks": cmd_fullpacks, "data": cmd_data}[a.cmd](a)
