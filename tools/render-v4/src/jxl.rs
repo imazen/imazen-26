@@ -192,15 +192,24 @@ fn max_diff(a: &Pixels, b: &Pixels) -> Result<u8, String> {
 }
 
 /// JPEG-in-JXL with reconstruction data, or the bare codestream when `jbrd` can't hold it.
+///
+/// jxl-encoder's transcode defaults (120 MP, 8 GiB) are for untrusted input; the corpus's
+/// ~100 MP JPEGs need more (12402 asked for 8.5 GB), so the limits follow `limits()`.
 fn jpeg_in_jxl(data: &[u8], effort: u8) -> Result<(Vec<u8>, &'static str), String> {
-    match zencodecs::transcode_jpeg_to_jxl_lossless(data, effort) {
-        Ok(t) => Ok((t.data, "jpeg-in-jxl")),
+    let config = zenjxl::LosslessConfig::new()
+        .with_effort(effort)
+        .with_limits(
+            &jxl_encoder::Limits::new()
+                .with_max_pixels(400_000_000)
+                .with_max_memory_bytes(24 << 30),
+        );
+    match config.encode_jpeg_transcode(data) {
+        Ok(jxl) => Ok((jxl, "jpeg-in-jxl")),
         Err(e)
             if e.to_string()
                 .contains("JPEG reconstruction data cannot carry") =>
         {
-            let cs = zenjxl::LosslessConfig::new()
-                .with_effort(effort)
+            let cs = config
                 .encode_jpeg_transcode_codestream(data)
                 .map_err(|e| format!("jpeg codestream transcode: {e}"))?;
             Ok((cs, "jpeg-in-jxl-codestream"))
