@@ -10,6 +10,24 @@ All runs: dev, under run-heavy, zen crates at main (`tools/render-v4/Cargo.lock`
 read files: ImageMagick 7.1.2-18 (LittleCMS, libpng), Pillow, netpbm `pngtopnm`, libpng
 `pngfix`, libheif 1.21.2 `heif-dec`, libjxl 0.11.1 `djxl`/`jxlinfo`, exiftool.
 
+## Full run
+
+`/mnt/tower/output/imazen-26-render-v4-2026-10-15` on tower (`RUN.meta` there records every
+pass's commits, hashes and results).
+
+- **SDR PNG** (render-v4 at 593a612, 10 jobs, 8,249 s, peak RSS 24.5 GiB): 2,071 of the
+  2,115 list rows rendered; the 44 failures were the 41 images with Android's P3 profile and
+  the 3 DNGs (left out of every derived layer). One redo (ee56da7, 8 jobs, 2,156 s, peak RSS
+  7.4 GiB) re-rendered 348 images: the 41, the 39 one-bit pages and the 270 with the wrong
+  bucket; the DNG rows left the list. Result: 2,112 images, `png-p3` 9.20 GB and `png-srgb`
+  9.60 GB, 0 errors; 78 files are 1-bit (the 39 pages in both layers).
+- **Colour.** 1,746 assumed sRGB, 66 tagged sRGB, 298 Display P3 and 2 Adobe RGB sources.
+  The colour oracle checked all 300 wide-gamut `png-srgb` files: 0 failed, every file within
+  1 code value of the textbook conversion of its `png-p3` twin. 299 of them clip at least one
+  pixel; the median clips 2.70% of its pixels, 53 clip 10% or more, the most 94.9% (11443),
+  86.7% (11546) and 44.7% (11068).
+- No source has an alpha channel.
+
 ## SDR PNG layers
 
 `png-p3` keeps each source's code values and colour; `png-srgb` converts Display P3 and Adobe
