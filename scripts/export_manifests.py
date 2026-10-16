@@ -8,7 +8,8 @@ list.tsv and RUN.meta, and writes <render-dir>/manifests/<layer>.tsv for png-p3,
 jxl-p3 and jxl-srgb: one row per file, HDR files in their p3 layer, with the image facts,
 the provenance and the commits that made it. A row's tool commit and Cargo.lock hash are those
 of the pass that wrote its file: the first run, a redo (redo-<n>-report.tsv lists its rows),
-the HDR pass or the JXL pass, as RUN.meta records them.
+the HDR pass, the JXL pass or a JXL redo (jxl-redo-<n>-report.tsv and
+jxl-redo-<n>-hdr-report.tsv), as RUN.meta records them.
 """
 import csv
 import json
@@ -42,16 +43,25 @@ def main():
     for line in open(os.path.join(render, "list.tsv")):
         f = line.rstrip("\n").split("\t")
         lst[f[0]] = json.loads(f[3])
-    redo = {}
+    redo, jxl_redo = {}, {}
     n = 1
     while os.path.exists(os.path.join(render, f"redo-{n}-report.tsv")):
         for r in rows(os.path.join(render, f"redo-{n}-report.tsv")):
             redo[r["id"]] = n
         n += 1
+    n = 1
+    while os.path.exists(os.path.join(render, f"jxl-redo-{n}-report.tsv")):
+        for name in (f"jxl-redo-{n}-report.tsv", f"jxl-redo-{n}-hdr-report.tsv"):
+            for r in rows(os.path.join(render, name)):
+                jxl_redo[(r["id"], r["layer"])] = n
+        n += 1
 
-    def tool(pass_name, i):
+    def tool(pass_name, i, layer=None):
         if pass_name == "sdr" and i in redo:
             k = f"redo_{redo[i]}_"
+            return m.get(k + "tool_commit", ""), m.get(k + "render_v4_cargo_lock_sha256", "")
+        if pass_name == "jxl" and (i, layer) in jxl_redo:
+            k = f"jxl_redo_{jxl_redo[(i, layer)]}_"
             return m.get(k + "tool_commit", ""), m.get(k + "render_v4_cargo_lock_sha256", "")
         prefix = {"sdr": "", "hdr": "hdr_", "jxl": "jxl_"}[pass_name]
         return m.get(prefix + "tool_commit", ""), m.get(prefix + "render_v4_cargo_lock_sha256", "")
@@ -82,7 +92,7 @@ def main():
     for name in ("jxl-report.tsv", "jxl-hdr-report.tsv"):
         for r in rows(os.path.join(render, name)):
             p = lst[r["id"]]
-            commit, lock = tool("jxl", r["id"])
+            commit, lock = tool("jxl", r["id"], r["layer"])
             layer = r["layer"].removesuffix("-hdr")
             twin = sdr.get((r["id"], layer.replace("jxl-", "png-")), {})
             row = {**{c: "" for c in COLUMNS}, "id": r["id"], "bucket": p["split"], "path": r["path"],
