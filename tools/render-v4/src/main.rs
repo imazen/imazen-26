@@ -1,6 +1,6 @@
 //! Render the imazen-26 v4 layers from the originals (EXPORT-PLAN.md, "Render v4").
 //!
-//! Four passes, each a subcommand writing beside the others in one output directory:
+//! The passes are subcommands, each writing beside the others in one output directory:
 //! - `png-sdr` (this file): the two SDR PNG layers.
 //!   - `png-p3`: each source's own colour space and code values.
 //!   - `png-srgb`: sRGB. Display P3 and Adobe RGB sources are converted relative-colorimetric
@@ -10,6 +10,8 @@
 //!   `png-p3`.
 //! - `jxl` and `jxl-hdr` (see `jxl`): the JPEG XL twins of the PNG layers, with JPEG-in-JXL for
 //!   JPEG sources and the gain-map form (`jhgm`) for gain-map sources.
+//! - `gain-maps` (see `hdr::gain_maps`): each gain-map source's gain-map form as a PNG and an
+//!   ISO 21496-1 payload under `gain-maps/`, for the `.imi` layers; not itself a layer.
 //!
 //! For the PNG layers: orientation baked into the pixels; channels and bit depth follow the
 //! source (8-bit, and the 1-bit patent pages stay 1-bit), a fully opaque alpha channel dropped
@@ -26,6 +28,7 @@
 //!        render-v4 hdr-info [--jobs N] <list.tsv> <out-dir>   (what png-hdr would use; writes nothing)
 //!        render-v4 jxl --effort E [--jobs N] <list.tsv> <out-dir>   (the JPEG XL layers; see `jxl`)
 //!        render-v4 jxl-hdr --effort E [--jobs N] <list.tsv> <out-dir>   (each .hdr.png's JXL twin)
+//!        render-v4 gain-maps [--jobs N] <list.tsv> <out-dir>  (the gain-map sources' gain-map forms)
 //!   list: id<TAB>source path<TAB>out stem (class/newid_name, no _WxH)<TAB>provenance JSON
 //!   → <out-dir>/png-p3/<stem>_<W>x<H>.png and <out-dir>/png-srgb/<stem>_<W>x<H>.png, and a
 //!     report on stdout: id, layer, path, width, height, layout, source_alpha (none, kept or
@@ -655,6 +658,7 @@ fn main() {
         (Some("hdr-info"), 3) => (hdr::info, hdr::INFO_HEADER),
         (Some("jxl"), 3) => (jxl::render, jxl::JXL_HEADER),
         (Some("jxl-hdr"), 3) => (jxl::render_hdr, jxl::JXL_HEADER),
+        (Some("gain-maps"), 3) => (hdr::gain_maps, hdr::GAIN_MAPS_HEADER),
         _ => usage(),
     };
     let columns = header.split('\t').count();
@@ -726,7 +730,7 @@ fn main() {
 
 fn usage() -> ! {
     eprintln!(
-        "usage: render-v4 <png-sdr|png-hdr|hdr-info|jxl|jxl-hdr> [--jobs N] [--effort N (jxl)] <list.tsv: id, source, out stem, provenance JSON> <out-dir>"
+        "usage: render-v4 <png-sdr|png-hdr|hdr-info|jxl|jxl-hdr|gain-maps> [--jobs N] [--effort N (jxl)] <list.tsv: id, source, out stem, provenance JSON> <out-dir>"
     );
     std::process::exit(2);
 }

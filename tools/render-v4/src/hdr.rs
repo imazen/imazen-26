@@ -587,6 +587,119 @@ pub(crate) fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
     )])
 }
 
+/// The report columns of `gain-maps`.
+pub(crate) const GAIN_MAPS_HEADER: &str = "id\tpath\tmetadata_path\twidth\theight\tchannels\tkind\tbase_width\tbase_height\theadroom_stops\tworst_stops\tmap_sha256\tmetadata_sha256\terror";
+
+/// `gain-maps`: each gain-map source's gain-map form, for a format whose files carry one
+/// beside the SDR base (the IMIJ `.imi` layers). An intermediate that no layer exports,
+/// written under `gain-maps/`:
+/// - `<stem>.gainmap.png`: the map in ISO 21496-1 form, oriented like the `png-p3` base,
+///   8-bit grey or RGB, without colour or text chunks;
+/// - `<stem>.iso21496`: its metadata, the bare ISO 21496-1 payload a JPEG XL `jhgm` box
+///   carries.
+///
+/// A HEIC source gets the form its JPEG XL file carries ([`jhgm_form`]: a `tmap` map as it
+/// is, Apple's legacy map re-quantized onto an ISO curve). An UltraHDR JPEG keeps its own map
+/// and parameters, decoded by zenjpeg like the base. Both files are read back, and the HDR the
+/// read-back form gives must match the source's own: the rational round trip for ISO maps,
+/// half a code step for Apple's (the `jhgm` limits).
+pub(crate) fn gain_maps(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
+    let data = fs::read(row.source).map_err(|e| format!("read: {e}"))?;
+    let p = prepare(row)?;
+    let (w, h) = (p.source.w, p.source.h);
+    let (map, meta, kind, source_map, source_curve) = match jhgm_form(&data, row.source, (w, h))? {
+        Some(f) => (f.map, f.meta, f.kind, f.source_map, f.source_curve),
+        None => match p.curve {
+            Curve::Iso(meta) => (p.map.clone(), meta.clone(), p.kind, p.map, Curve::Iso(meta)),
+            Curve::Apple { .. } => return Err("an Apple legacy gain map outside HEIC".into()),
+        },
+    };
+    let gray: Vec<rgb::Gray<u8>>;
+    let rgb: Vec<rgb::Rgb<u8>>;
+    let (gw, gh) = (map.width as usize, map.height as usize);
+    let cfg = EncodeConfig::default().with_compression(Compression::Effort(EFFORT));
+    let png = match map.channels {
+        1 => {
+            gray = map.data.iter().map(|&v| rgb::Gray::new(v)).collect();
+            zenpng::encode_gray8(
+                imgref::Img::new(&gray[..], gw, gh),
+                None,
+                &cfg,
+                &Unstoppable,
+                &Unstoppable,
+            )
+        }
+        3 => {
+            rgb = map
+                .data
+                .as_chunks::<3>()
+                .0
+                .iter()
+                .map(|c| rgb::Rgb {
+                    r: c[0],
+                    g: c[1],
+                    b: c[2],
+                })
+                .collect();
+            zenpng::encode_rgb8(
+                imgref::Img::new(&rgb[..], gw, gh),
+                None,
+                &cfg,
+                &Unstoppable,
+                &Unstoppable,
+            )
+        }
+        n => return Err(format!("gain map with {n} channels")),
+    }
+    .map_err(|e| format!("gain map encode: {e:?}"))?;
+    let iso = ultrahdr_core::serialize_iso21496_fmt(&meta, ultrahdr_core::Iso21496Format::JxlJhgm);
+
+    // Read both back; the HDR they give must be the source's own.
+    let d = zenpng::decode(&png, &zenpng::PngDecodeConfig::default(), &Unstoppable)
+        .map_err(|e| format!("gain map re-decode: {e:?}"))?;
+    if (d.info.width as usize, d.info.height as usize) != (gw, gh)
+        || d.pixels.copy_to_contiguous_bytes() != map.data
+    {
+        return Err("the gain map PNG did not read back unchanged".into());
+    }
+    let back = ultrahdr_core::parse_iso21496_fmt(&iso, ultrahdr_core::Iso21496Format::JxlJhgm)
+        .map_err(|e| format!("ISO 21496-1 read-back: {e:?}"))?;
+    let ours = reconstruct(p.source.px.rgba(), w, h, &source_map, &source_curve)?;
+    let from_form = reconstruct(p.source.px.rgba(), w, h, &map, &Curve::Iso(back))?;
+    let worst = ours
+        .iter()
+        .zip(&from_form)
+        .filter(|(x, y)| **x > 1e-3 && **y > 1e-3)
+        .map(|(x, y)| (x / y).log2().abs())
+        .fold(0.0, f64::max);
+    let limit = match source_curve {
+        Curve::Apple { stops } => stops / 510.0 + 1e-3,
+        Curve::Iso(_) => 1e-3,
+    };
+    if worst > limit {
+        return Err(format!(
+            "HDR from the gain-map form differs by {worst:.4} stops (limit {limit:.4})"
+        ));
+    }
+
+    let dir = out_dir.join("gain-maps");
+    let (name, meta_name) = (
+        format!("{}.gainmap.png", row.stem),
+        format!("{}.iso21496", row.stem),
+    );
+    fs::create_dir_all(dir.join(&name).parent().unwrap()).map_err(|e| format!("mkdir: {e}"))?;
+    fs::write(dir.join(&name), &png).map_err(|e| format!("write: {e}"))?;
+    fs::write(dir.join(&meta_name), &iso).map_err(|e| format!("write: {e}"))?;
+    Ok(vec![format!(
+        "{}\tgain-maps/{name}\tgain-maps/{meta_name}\t{gw}\t{gh}\t{}\t{kind}\t{w}\t{h}\t{:.3}\t{worst:.4}\t{}\t{}\t",
+        row.id,
+        map.channels,
+        meta.alternate_hdr_headroom,
+        hex(&Sha256::digest(&map.data)),
+        hex(&Sha256::digest(&iso)),
+    )])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
