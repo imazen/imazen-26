@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Gate for the render v4 JPEG XL layers (EXPORT-PLAN.md, "Gates").
 
-    render_v4_jxl_check.py <out-dir> [--jobs 8] [--ids 11044,13005]
+    render_v4_jxl_check.py <out-dir> [--jobs 8] [--ids 11044,13005] [--out FILE]
 
 Reads <out-dir>/jxl-report.tsv (render-v4 jxl), <out-dir>/report.tsv (the PNG twins) and
 <out-dir>/list.tsv (each original's sha256), and checks every JXL with libjxl:
@@ -16,9 +16,11 @@ Reads <out-dir>/jxl-report.tsv (render-v4 jxl), <out-dir>/report.tsv (the PNG tw
   libjxl's JPEG decode, so no hash to compare);
 - the 16-bit PQ `.hdr.jxl` files (<out-dir>/jxl-hdr-report.tsv, when present): render-v4's
   and libjxl's 16-bit decodes give the `.hdr.png` twin's sample hash (<out-dir>/hdr-report.tsv),
-  and `jxlinfo` states P3 primaries with the PQ transfer function.
+  and `jxlinfo` states P3 primaries with the PQ transfer function;
+- a gain-map form (kind `…+jhgm`): the check of its kind, and libjxl's `jxlinfo -v` reads
+  the `jhgm` bundle (version 0, a gain map and its metadata).
 
-Writes <out-dir>/jxl-check.tsv and exits 1 on any failure.
+Writes <out-dir>/jxl-check.tsv (or --out) and exits 1 on any failure.
 """
 import argparse
 import csv
@@ -86,8 +88,15 @@ def check(job):
     try:
         info = subprocess.run(["jxlinfo", path], capture_output=True, text=True, check=True).stdout
         colour_line = next((l for l in info.splitlines() if l.startswith("Color space:")), "")
+        kind = r["kind"].removesuffix("+jhgm")
+        if kind != r["kind"]:
+            verbose = subprocess.run(["jxlinfo", "-v", path], capture_output=True, text=True,
+                                     check=True).stdout
+            if not any(l.startswith("Gain map (jhgm) box: version = 0,") and "-byte gain map" in l
+                       for l in verbose.splitlines()):
+                raise ValueError("libjxl reads no jhgm gain-map bundle")
         with tempfile.TemporaryDirectory(dir=os.path.expanduser("~/tmp")) as tmp:
-            if r["kind"] == "lossless":
+            if kind == "lossless":
                 if twin is None:
                     raise ValueError("no PNG twin row")
                 if r["pixels_sha256"] != twin["rgba_sha256"]:
@@ -111,7 +120,7 @@ def check(job):
                 if not ok:
                     raise ValueError(f"colour statement differs from the twin: {colour_line}")
                 res["result"] = "ok"
-            elif r["kind"] == "jpeg-in-jxl":
+            elif kind == "jpeg-in-jxl":
                 if r["jpeg_sha256"] != original_sha:
                     raise ValueError("render-v4's rebuild is not the original")
                 out = os.path.join(tmp, "r.jpg")
@@ -119,7 +128,7 @@ def check(job):
                 if hashlib.sha256(open(out, "rb").read()).hexdigest() != original_sha:
                     raise ValueError("libjxl's rebuild is not the original")
                 res["result"] = "ok"
-            elif r["kind"] == "lossless-pq":
+            elif kind == "lossless-pq":
                 if twin is None:
                     raise ValueError("no .hdr.png twin row")
                 if r["pixels_sha256"] != twin["rgb16_sha256"]:
@@ -132,7 +141,7 @@ def check(job):
                 if "P3 primaries, PQ transfer function" not in colour_line:
                     raise ValueError(f"colour statement: {colour_line}")
                 res["result"] = "ok"
-            elif r["kind"] == "jpeg-in-jxl-codestream":
+            elif kind == "jpeg-in-jxl-codestream":
                 subprocess.run(["djxl", path, os.path.join(tmp, "d.ppm"), "--quiet"], capture_output=True, check=True)
                 res["result"] = "ok (decodes; no rebuild data by design)"
             else:
@@ -150,6 +159,7 @@ def main():
     ap.add_argument("out_dir")
     ap.add_argument("--jobs", type=int, default=8)
     ap.add_argument("--ids")
+    ap.add_argument("--out")
     a = ap.parse_args()
     keep = set(a.ids.split(",")) if a.ids else None
     twins = {(r["id"], r["layer"]): r for r in csv.DictReader(open(os.path.join(a.out_dir, "report.tsv")), delimiter="\t")
@@ -180,7 +190,7 @@ def main():
         jobs.append((a.out_dir, r, twin, original[r["id"]]))
     cols = ["id", "layer", "kind", "path", "result", "colour", "error"]
     failed = sum(1 for j in jobs if j is None)
-    with ProcessPoolExecutor(a.jobs) as ex, open(os.path.join(a.out_dir, "jxl-check.tsv"), "w") as out:
+    with ProcessPoolExecutor(a.jobs) as ex, open(a.out or os.path.join(a.out_dir, "jxl-check.tsv"), "w") as out:
         out.write("\t".join(cols) + "\n")
         for res in ex.map(check, [j for j in jobs if j is not None], chunksize=4):
             out.write("\t".join(str(res.get(c, "")) for c in cols) + "\n")
