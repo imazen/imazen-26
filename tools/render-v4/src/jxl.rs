@@ -313,26 +313,44 @@ fn check_jhgm(
 }
 
 /// For an UltraHDR JPEG-in-JXL: the largest difference between the gain map its `jhgm` box
-/// decodes to and zenjpeg's decode of the JPEG's own gain map (both as stored).
+/// decodes to and zenjpeg's decode of the JPEG's own gain map, turned by the JPEG's
+/// orientation. The JPEG stores its gain map like the primary's pixels; the `jhgm` gain-map
+/// codestream carries the primary's orientation (jxl-encoder d73b6c98), so it decodes turned.
 fn jpeg_jhgm_diff(jxl: &[u8], jpeg: &[u8]) -> Result<String, String> {
     let (_, a) = DecodeRequest::new(jxl)
         .decode_gain_map()
         .map_err(|e| format!("jhgm read: {e}"))?;
-    let (_, b) = DecodeRequest::new(jpeg)
+    let (out, b) = DecodeRequest::new(jpeg)
         .decode_gain_map()
         .map_err(|e| format!("jpeg gain map: {e}"))?;
+    let orientation = out.info().orientation;
     let (a, b) = (
         a.ok_or("jhgm did not read back")?,
         b.ok_or("the JPEG has no gain map")?,
     );
-    if (a.gain_map.width, a.gain_map.height) != (b.gain_map.width, b.gain_map.height) {
-        return Err("jhgm gain map size differs from the JPEG's".into());
+    let stored = match b.gain_map.channels {
+        1 => Pixels::Gray(b.gain_map.data.clone()),
+        3 => Pixels::Rgb(b.gain_map.data.clone()),
+        c => return Err(format!("JPEG gain map with {c} channels")),
+    };
+    let (turned, w, h) = orient_pixels(
+        stored,
+        b.gain_map.width as usize,
+        b.gain_map.height as usize,
+        orientation,
+    );
+    if (a.gain_map.width as usize, a.gain_map.height as usize) != (w, h) {
+        return Err(format!(
+            "jhgm gain map is {}x{}, the JPEG's {w}x{h} once oriented",
+            a.gain_map.width, a.gain_map.height
+        ));
     }
+    let (Pixels::Gray(want) | Pixels::Rgb(want) | Pixels::Rgba(want)) = turned;
     let d = a
         .gain_map
         .data
         .iter()
-        .zip(&b.gain_map.data)
+        .zip(&want)
         .map(|(x, y)| x.abs_diff(*y))
         .max()
         .unwrap_or(0);
