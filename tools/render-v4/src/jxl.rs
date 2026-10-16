@@ -59,6 +59,7 @@ fn limits() -> Limits {
 }
 
 /// Lossless JXL of 8-bit pixels with their colour and the provenance XMP.
+#[allow(clippy::too_many_arguments)] // the image, its colour and the encode settings
 fn encode_lossless(
     px: &Pixels,
     w: usize,
