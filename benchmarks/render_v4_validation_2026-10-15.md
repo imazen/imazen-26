@@ -61,8 +61,47 @@ pass's commits, hashes and results).
   11231's JPEG-in-JXL `jbrd` box holds the UltraHDR gain-map JPEG, the original's MPF
   secondary image, all 173,712 bytes verbatim. The byte-exact rebuild needs it; brotli stored
   those already-compressed bytes raw here, and compressed them in the other 32 UltraHDR
-  transcodes. It waits on an owner decision (an allow-list entry, as for the originals'
-  MPF gain maps).
+  transcodes. The owner allowed it on 2026-10-16, on the condition that the gain maps decode
+  in jxl-rs, libjxl and zenjxl (below); `manifests/byte_scan_allowlist.tsv` lists it.
+
+### 2026-10-16: licences, gain-map orientation, re-check
+
+- **Licences** (owner decision): the 32 phone screenshots became CC0 and the 12 lkml.org and 5
+  Wayback Machine captures plain PD. Redo 2 (3a24186, 12 jobs, 81 s, peak RSS 5.0 GiB)
+  re-rendered the 49 images' PNGs; the colour oracle passed them. JXL redo 2 (render-v4 at
+  3a24186) wrote their JPEG XL files, and `.imi` redo 1 (zqi c08b4d87) their 98 `.imi` files,
+  0 failures in imij and imij-oracle; the provenance text of every file now carries the new
+  label.
+- **Gain-map orientation.** zenjxl's `GainMapRender::ReconstructHdr` against the PQ renders
+  (`tools/jxl-decode-check hdr`), stops over samples at or above 5% of SDR white: the 43
+  lossless gain-map files at most 0.006 stops; the 8 unrotated UltraHDR transcodes a median of
+  0.0001-0.005 stops (their tail, up to 0.27, is JPEG decoding: zenjxl's decode of the
+  JPEG-in-JXL base against zenjpeg's of the JPEG); the 25 rotated ones (Exif orientation 6) a
+  median of 0.025-0.198 stops and up to 1.50. Their `jhgm` gain-map codestreams carried
+  orientation 1 under a base with orientation 6, so zenjxl laid the landscape map over the
+  portrait base. jxl-encoder d73b6c98 gives the gain-map codestream the primary's orientation
+  (`tests/it/jpeg_gainmap.rs`, `iso_gain_map_follows_primary_orientation`); render-v4's check
+  then compared stored and turned maps and refused all 25 files in JXL redo 2, fixed in
+  54b6643 (the JPEG's gain map is turned by the JPEG's orientation first). JXL redo 3 (25 ids,
+  270 s and 452 s, peak RSS 17.9 and 27.0 GiB) passed libjxl's check on 75 of 75 files, and
+  the 25 now match like the unrotated ones: median 0.002-0.005 stops, at most 0.17-0.23.
+- **Gates re-run** after the redos: read-back 4,300 of 4,300, inventory 0 violations on 8,600
+  files, byte scan 0 findings plus 11231's allowed one.
+- **Three JPEG XL decoders** (`scripts/render_v4_decode_check.sh`, 12 jobs, 20 min; peak RSS
+  2.1 GiB for zenjxl and jxl-rs, 7.1 GiB for the HDR comparison): zenjxl, jxl-rs 0.7.4 and
+  libjxl v0.12.0 (a7a9c787, built from source because the gain-map bundle parser lives in
+  libjxl's extras library) decode all 4,300 JPEG XL files at the manifest's size. All 3,644
+  lossless files give their PNG twin's bitmap in all three. On the 656 JPEG-in-JXL files the
+  three give three different bitmaps every time, as JPEG decoders do. All 76 `jhgm` gain maps
+  decode in all three and line up with the displayed base, the three read byte-identical ISO
+  21496-1 metadata equal to the gain-map form's, the 43 lossless maps equal their gain-map
+  PNG exactly, and the 33 JPEG-derived maps are within 1-4 code values of zenjpeg's decode of
+  the JPEG's own. zenjxl's HDR reconstruction is on target for all 76 (median within 0.01
+  stops of the PQ render). Every decoded bitmap's XXH3 is in `decoded-xxh3.tsv` beside the
+  layers. The first run flagged the 78 one-bit pages because the libjxl leg reported the
+  header's bit depth (1) instead of the 8-bit samples it decodes; the bitmaps were identical.
+  It also showed that zenpng's and zenjxl's default decode limits (120 MP) refuse the 124 MP
+  panorama 11449; the check passes explicit limits, as render-v4 does.
 
 ## SDR PNG layers
 

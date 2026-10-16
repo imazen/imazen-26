@@ -3,6 +3,14 @@
 ## [Unreleased]
 
 ### Changed
+- Licence labels (owner decision 2026-10-16, 3d77e71): the 32 phone screenshots are CC0 and the 12 lkml.org and 5 Wayback Machine captures PD; README, CORPUS-MANIFEST.README.md and the web-screenshot provenance state the public-domain status plainly; render v4 re-rendered the 49 images in every layer
+- render-v4 builds against jxl-encoder d73b6c98 (3a24186): an UltraHDR transcode's `jhgm` gain-map codestream takes the primary JPEG's orientation, which the 25 rotated Samsung UltraHDR photos needed for zenjxl's HDR reconstruction to place their gain maps; render-v4 compares the `jhgm` map with the JPEG's turned by the JPEG's orientation (54b6643)
+- The byte-scan gate allows 11231's UltraHDR gain-map JPEG inside its `jbrd` box (ce99f73), owner OK on the condition that the gain maps decode in jxl-rs, libjxl and zenjxl
+- `r2_originals_sync.py` recomputes multipart ETags at s5cmd's 50 MiB part size, so a plan puts only changed objects (741fd16)
+
+### Added
+- `tools/jxl-decode-check` and `scripts/render_v4_decode_check.sh` (5ea95ca): zenjxl, jxl-rs (crates.io `jxl` 0.7.4) and libjxl v0.12.0 decode every JPEG XL file and read every `jhgm` gain map; `decoded-xxh3.tsv` gives the XXH3 of every decoded bitmap
+
 - The public originals prefix follows the manifests (2026-10-16, owner go): `r2_originals_sync.py` put 1,945 objects and deleted 518 after a checkpoint into the new private bucket `imazen-26-originals` (`2026-10-16-before/`, `2026-10-16-after/`, both lock-protected); `verify` read all 2,174 objects back by sha256. The checkpoint copies keys with a space through a local file (s5cmd's server-side copy sends them unencoded, which R2 answers with NoSuchKey) and takes `--resume`
 - Render lists take each image's bucket from the successor family map (ee56da7): the full render of 2026-10-15 wrote the id's last-digit bucket into the provenance of 270 images (143 web pages, 67 patent rescans, 39 burst photos, 17 plots, 4 charts), which are re-rendered; `render_v4_redo.sh` re-renders rows whose list entry changed and records the manifest and family-map hashes, and `export_sizing.py` refuses a list that disagrees with the map
 - Originals pass of 2026-10-15 (manifests point at the staged bytes; the R2 objects follow the owner's go): 314 camera files are their whitelist-v2 versions with colour and HDR structure kept, 1214 its camera original, 1044 a quality-100 JPEG of its still image (`…_4000x3000.jpg`), 9869 and 9874 background-cleaned; the camera metadata policy covers the 32 phone screenshots and, in place, the 3 DNGs' JPEG previews; C2PA stores leave 106 PNGs and 5 JPEGs; every PNG is recompressed by zenpng at effort 22 (4.06 → 3.38 GB). 1,924 of 2,115 sha256s change; 5314's `train.tsv` sha256, wrong since the seed commit, is now right

@@ -129,6 +129,16 @@ Git LFS only where GitHub's limits leave no choice.
     ISO 21496-1 gain map, in the `p3` file itself. A JPEG-in-JXL transcode of an UltraHDR JPEG
     carries the JPEG's gain map as `jhgm` already; a HEIC's lossless `p3` file gets the box
     appended.
+  - A `jhgm` gain-map codestream carries its base's orientation. The JPEG stores its gain map
+    like the primary's pixels, and the primary codestream signals the JPEG's Exif orientation,
+    so jxl-encoder (since d73b6c98) writes that orientation into the gain-map codestream too: a
+    decoder that orients each codestream, as JPEG XL decoders do by default, then gets a map
+    that lines up with the displayed base. Before the fix, zenjxl's `ReconstructHdr` laid a
+    landscape map over the portrait base of the 25 rotated Samsung UltraHDR photos, missing the
+    PQ render by a median of up to 0.2 stops and at most 1.5; after it, those files match like
+    the unrotated ones (median 0.002-0.005 stops; their tail is the JPEG decoders' own
+    differences). The libjxl documentation and the spec text available to us say nothing on
+    the point (checked 2026-10-16).
   - The 24 Apple legacy gain maps are re-encoded in ISO form (min 0, max = headroom, gamma 1,
     no offsets), within half a code step of Apple's curve: 0.006 stops measured.
   - `jhgm` support, checked 2026-10-15 on each project's main:
@@ -190,3 +200,15 @@ A file ships only if all of these pass:
 - **Lossless twins.** The PNG, JXL and `.imi` copies of one image decode to one pixel hash
   and state one colour description.
 - **JPEG-in-JXL.** The rebuilt JPEG's sha256 equals the original's.
+- **Three JPEG XL decoders.** zenjxl, jxl-rs and libjxl v0.12.0 each decode every JPEG XL
+  file and read every `jhgm` gain map: a lossless file gives its PNG twin's bitmap in all
+  three, every gain map decodes and lines up with the displayed base, the three read the
+  same ISO 21496-1 metadata, a lossless gain map equals its gain-map form, and zenjxl's HDR
+  reconstruction matches the PQ render (`scripts/render_v4_decode_check.sh`,
+  `tools/jxl-decode-check`; owner condition of 2026-10-16). It also writes
+  `decoded-xxh3.tsv`: the XXH3 of every decoded bitmap, per file and decoder.
+- **Reader census** (reported, not a gate). Each distinct file through the image-compat
+  readers in Docker, its bitmap compared with ours (`scripts/render_v4_compat_census.py`).
+- **Allow-listed findings.** The byte scan allows 11231's UltraHDR gain-map JPEG inside its
+  JPEG-in-JXL `jbrd` box, which the byte-exact rebuild needs (owner OK 2026-10-16), beside the
+  museum thumbnails (`manifests/byte_scan_allowlist.tsv`).
