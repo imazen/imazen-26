@@ -21,6 +21,7 @@
 //! Usage: render-v4 png-sdr [--jobs N] <list.tsv> <out-dir>
 //!        render-v4 png-hdr [--jobs N] <list.tsv> <out-dir>    (the gain-map sources; see `hdr`)
 //!        render-v4 hdr-info [--jobs N] <list.tsv> <out-dir>   (what png-hdr would use; writes nothing)
+//!        render-v4 jxl --effort E [--jobs N] <list.tsv> <out-dir>   (the JPEG XL layers; see `jxl`)
 //!   list: id<TAB>source path<TAB>out stem (class/newid_name, no _WxH)<TAB>provenance JSON
 //!   → <out-dir>/png-p3/<stem>_<W>x<H>.png and <out-dir>/png-srgb/<stem>_<W>x<H>.png, and a
 //!     report on stdout: id, layer, path, width, height, layout, source_alpha (none, kept or
@@ -30,6 +31,7 @@
 #![forbid(unsafe_code)]
 
 mod hdr;
+mod jxl;
 
 use std::fs;
 use std::io::Write as _;
@@ -224,6 +226,38 @@ fn code_values(buf: PixelBuffer) -> Result<(Pixels, &'static str), String> {
         (_, false) => Pixels::Rgba(rgba),
     };
     Ok((px, alpha))
+}
+
+/// Apply `orientation` to decoded pixels (for decoders that report it instead of applying
+/// it): each source pixel moves to `forward_map` of its position. Returns the new size.
+fn orient_pixels(
+    px: Pixels,
+    w: usize,
+    h: usize,
+    orientation: zencodec::Orientation,
+) -> (Pixels, usize, usize) {
+    if orientation.is_identity() {
+        return (px, w, h);
+    }
+    let (ow, oh) = orientation.output_dimensions(w as u32, h as u32);
+    let turn = |src: &[u8], c: usize| {
+        let mut out = vec![0u8; src.len()];
+        for sy in 0..h {
+            for sx in 0..w {
+                let (dx, dy) = orientation.forward_map(sx as u32, sy as u32, w as u32, h as u32);
+                let s = (sy * w + sx) * c;
+                let d = (dy as usize * ow as usize + dx as usize) * c;
+                out[d..d + c].copy_from_slice(&src[s..s + c]);
+            }
+        }
+        out
+    };
+    let px = match px {
+        Pixels::Gray(p) => Pixels::Gray(turn(&p, 1)),
+        Pixels::Rgb(p) => Pixels::Rgb(turn(&p, 3)),
+        Pixels::Rgba(p) => Pixels::Rgba(turn(&p, 4)),
+    };
+    (px, ow as usize, oh as usize)
 }
 
 /// Convert code values from `colour` to sRGB: linear light, the gamut matrix, clip, encode.
@@ -537,11 +571,20 @@ fn main() {
             .unwrap_or_else(|| usage());
         args.drain(i..i + 2);
     }
+    if let Some(i) = args.iter().position(|a| a == "--effort") {
+        let effort = args
+            .get(i + 1)
+            .and_then(|v| v.parse().ok())
+            .unwrap_or_else(|| usage());
+        jxl::EFFORT.set(effort).expect("effort set once");
+        args.drain(i..i + 2);
+    }
     type Command = fn(&Row, &Path) -> Result<Vec<String>, String>;
     let (command, header): (Command, &str) = match (args.first().map(String::as_str), args.len()) {
         (Some("png-sdr"), 3) => (render, SDR_HEADER),
         (Some("png-hdr"), 3) => (hdr::render, hdr::HDR_HEADER),
         (Some("hdr-info"), 3) => (hdr::info, hdr::INFO_HEADER),
+        (Some("jxl"), 3) => (jxl::render, jxl::JXL_HEADER),
         _ => usage(),
     };
     let columns = header.split('\t').count();
@@ -613,7 +656,7 @@ fn main() {
 
 fn usage() -> ! {
     eprintln!(
-        "usage: render-v4 <png-sdr|png-hdr|hdr-info> [--jobs N] <list.tsv: id, source, out stem, provenance JSON> <out-dir>"
+        "usage: render-v4 <png-sdr|png-hdr|hdr-info|jxl> [--jobs N] [--effort N (jxl)] <list.tsv: id, source, out stem, provenance JSON> <out-dir>"
     );
     std::process::exit(2);
 }
@@ -624,6 +667,19 @@ mod tests {
 
     fn buf(bytes: &[u8], w: u32, desc: PixelDescriptor) -> PixelBuffer {
         PixelBuffer::from_vec(bytes.to_vec(), w, 1, desc).unwrap()
+    }
+
+    #[test]
+    fn orient_pixels_turns_like_exif_6() {
+        // 3x2 stored, EXIF 6 (rotate 90 degrees clockwise) displays 2x3: the stored bottom-left
+        // pixel lands top-left.
+        let px = Pixels::Gray(vec![1, 2, 3, 4, 5, 6]);
+        let (out, w, h) = orient_pixels(px, 3, 2, zencodec::Orientation::Rotate90);
+        assert_eq!((w, h), (2, 3));
+        let Pixels::Gray(g) = out else {
+            panic!("layout changed")
+        };
+        assert_eq!(g, vec![4, 1, 5, 2, 6, 3]);
     }
 
     #[test]

@@ -12,6 +12,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "alloc-no-stdlib"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c2fb6cfd47bf496ff64095c20eaba0c201404ee38714d4142fcfa1dc334fcc7a"
+
+[[package]]
+name = "alloc-stdlib"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b5c1865780388bfa186411ab5f247819487fc4864c6e9c3106611fa347586e1"
+dependencies = [
+ "alloc-no-stdlib",
+]
+
+[[package]]
 name = "almost-enough"
 version = "0.4.5"
 source = "git+https://github.com/imazen/enough?branch=main#ca2a13c48e270aba990b11d96879b7774d799c92"
@@ -42,6 +57,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "array-init"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d62b7694a562cdf5a74227903507c56ab2cc8bdd1f781ed5cb4cf9c9f810bfc"
+
+[[package]]
+name = "atomic_refcell"
+version = "0.1.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "21e4227379beff4205943696e6c3e0cd809bacdf3f0edd6e3dd153e2269571a4"
+
+[[package]]
 name = "autocfg"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -63,6 +90,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "brotli"
+version = "9.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8b851b75c23ca7873623d612fe49bd1989aeb03d08fb9432187eb253d3d4c6b"
+dependencies = [
+ "alloc-no-stdlib",
+ "alloc-stdlib",
+ "brotli-decompressor",
+]
+
+[[package]]
+name = "brotli-decompressor"
+version = "6.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "941cd9bd4ddab83cb46fa5a2d428f1c857b24ac78cb876cf7beb710840934bd7"
+dependencies = [
+ "alloc-no-stdlib",
+ "alloc-stdlib",
+]
+
+[[package]]
 name = "bytemuck"
 version = "1.25.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -81,6 +129,12 @@ dependencies = [
  "quote",
  "syn 3.0.9",
 ]
+
+[[package]]
+name = "byteorder"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
 name = "byteorder-lite"
@@ -264,6 +318,48 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e44b0a4eaa4c82f441d50a963f2d5f05a787240aeee097597033e72accfd22f"
 
 [[package]]
+name = "jxl-encoder"
+version = "0.4.0"
+source = "git+https://github.com/imazen/jxl-encoder?branch=main#801132ca50b218ca16dc632266778417be5124fb"
+dependencies = [
+ "archmage",
+ "brotli",
+ "bytemuck",
+ "enough",
+ "hashbrown",
+ "imgref",
+ "jxl-encoder-macros",
+ "jxl-encoder-simd",
+ "once_cell",
+ "rgb",
+ "thiserror",
+ "ultrahdr-core",
+ "whereat",
+ "zenjpeg",
+ "zenpixels-convert",
+]
+
+[[package]]
+name = "jxl-encoder-macros"
+version = "0.4.0"
+source = "git+https://github.com/imazen/jxl-encoder?branch=main#801132ca50b218ca16dc632266778417be5124fb"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.9",
+]
+
+[[package]]
+name = "jxl-encoder-simd"
+version = "0.4.0"
+source = "git+https://github.com/imazen/jxl-encoder?branch=main#801132ca50b218ca16dc632266778417be5124fb"
+dependencies = [
+ "archmage",
+ "libm",
+ "magetypes",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.190"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -314,6 +410,17 @@ name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
+
+[[package]]
+name = "num-derive"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4e98dc3b890f6c23a0f9d3d491a2823d0dea0fa656302a13dd225fa924112a8"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.9",
+]
 
 [[package]]
 name = "num-traits"
@@ -369,6 +476,7 @@ dependencies = [
  "zencodec",
  "zencodecs",
  "zenjpeg",
+ "zenjxl",
  "zenpixels",
  "zenpixels-convert",
  "zenpng",
@@ -433,6 +541,12 @@ dependencies = [
  "cpufeatures",
  "digest",
 ]
+
+[[package]]
+name = "smallvec"
+version = "1.16.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5b3dc8af474f516a851ff4bd12db780f948b9250ad37211e4eec0bccea54e01b"
 
 [[package]]
 name = "syn"
@@ -578,6 +692,8 @@ dependencies = [
  "whereat",
  "zencodec",
  "zenjpeg",
+ "zenjxl",
+ "zenjxl-decoder",
  "zenpixels",
  "zenpixels-convert",
  "zenpng",
@@ -621,6 +737,66 @@ dependencies = [
  "zenpixels-convert",
  "zentone",
  "zenyuv",
+]
+
+[[package]]
+name = "zenjxl"
+version = "0.3.0"
+source = "git+https://github.com/imazen/zenjxl?branch=main#8a02e3698f9021502b3519bb53672d96fdc43e92"
+dependencies = [
+ "enough",
+ "imgref",
+ "jxl-encoder",
+ "linear-srgb",
+ "rgb",
+ "thiserror",
+ "whereat",
+ "zencodec",
+ "zenjpeg",
+ "zenjxl-decoder",
+ "zenpixels",
+ "zenpixels-convert",
+]
+
+[[package]]
+name = "zenjxl-decoder"
+version = "0.4.0"
+source = "git+https://github.com/imazen/zenjxl-decoder?branch=main#231d7710987fb1671fed692ead9ea7129fa6d47f"
+dependencies = [
+ "aligned-vec",
+ "array-init",
+ "atomic_refcell",
+ "brotli",
+ "bytemuck",
+ "byteorder",
+ "enough",
+ "num-derive",
+ "num-traits",
+ "paste",
+ "smallvec",
+ "thiserror",
+ "whereat",
+ "zenjxl-decoder-macros",
+ "zenjxl-decoder-simd",
+]
+
+[[package]]
+name = "zenjxl-decoder-macros"
+version = "0.3.9"
+source = "git+https://github.com/imazen/zenjxl-decoder?branch=main#231d7710987fb1671fed692ead9ea7129fa6d47f"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.9",
+]
+
+[[package]]
+name = "zenjxl-decoder-simd"
+version = "0.3.9"
+source = "git+https://github.com/imazen/zenjxl-decoder?branch=main#231d7710987fb1671fed692ead9ea7129fa6d47f"
+dependencies = [
+ "archmage",
+ "paste",
 ]
 
 [[package]]
