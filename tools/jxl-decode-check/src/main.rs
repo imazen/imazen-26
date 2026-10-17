@@ -20,7 +20,9 @@
 //!       sRGB the way render-v4 makes its sRGB layer, for a wide-gamut JPEG-in-JXL file: its
 //!       twin comes from the PNG layer, another decode of the JPEG. `alt_same` is then `within`
 //!       when every sample is within what a decode one code value from ours becomes after the
-//!       conversion, plus 2 (`srgb_of`).
+//!       conversion, plus 2 (`srgb_of`). `same` is native, rgba8, no or size, or `stored` when an
+//!       output of a JPEG XL file matches our decode in the file's stored orientation (the
+//!       codestream's orientation not applied) better, and the differences are then against it.
 //!   jxl-decode-check hdr [--jobs N] < pairs > rows.tsv
 //!       Each `<jxl>\t<hdr.png>` pair: zenjxl's own HDR reconstruction of the JXL's gain map
 //!       (GainMapRender::ReconstructHdr), compared in stops with the 16-bit PQ render.
@@ -632,6 +634,21 @@ fn hdr_line(jxl_path: &str, png_path: &str) -> String {
     format!("{jxl_path}\t{png_path}\tzenjxl-reconstruct-hdr\t{tail}")
 }
 
+/// Our decode of a JPEG XL file in its stored orientation: the codestream's orientation left
+/// unapplied, as a reader that hands orientation to the caller (ImageMagick) returns it.
+fn stored_bitmap(path: &str) -> Result<Bitmap, String> {
+    let data = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
+    let out = zenjxl::JxlDecoderConfig::new()
+        .job()
+        .with_limits(job_limits())
+        .with_orientation(zencodec::OrientationHint::Preserve)
+        .decoder(data.as_slice().into(), &[])
+        .map_err(|e| format!("zenjxl: {e}"))?
+        .decode()
+        .map_err(|e| format!("zenjxl: {e}"))?;
+    zen_bitmap(&out.pixels())
+}
+
 /// Our decode of `path`: zenjxl for a JPEG XL file, zenpng for anything else.
 fn reference_bitmap(path: &str) -> Result<Bitmap, String> {
     let data = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
@@ -815,6 +832,7 @@ fn compare_group(reference: &str, outputs: &[(String, Option<String>)]) -> Vec<S
     let want_rgba = want.as_ref().ok().map(rgba8);
     let mut alts: std::collections::HashMap<String, AltReference> =
         std::collections::HashMap::new();
+    let mut stored: Option<Result<(u32, u32, Vec<u8>), String>> = None;
     outputs
         .iter()
         .map(|(out, alt)| {
@@ -851,11 +869,27 @@ fn compare_group(reference: &str, outputs: &[(String, Option<String>)]) -> Vec<S
             } else {
                 "no"
             };
-            let (max, mean, pixels) = if same == "size" {
-                (String::new(), String::new(), String::new())
-            } else {
-                let (m, a, p) = diff_stats(&got_rgba, want.1);
-                (m.to_string(), format!("{a:.4}"), p.to_string())
+            let mut stats = (same != "size").then(|| diff_stats(&got_rgba, want.1));
+            // A reader that leaves a JPEG XL file's orientation to the caller: compared with our
+            // decode in the stored orientation, it is `stored` when that is the closer match.
+            let mut same = same;
+            if reference.ends_with(".jxl") && (same == "size" || stats.is_some_and(|s| s.0 > 6)) {
+                let s = stored.get_or_insert_with(|| {
+                    stored_bitmap(reference).map(|b| (b.width, b.height, rgba8(&b)))
+                });
+                if let Ok((sw, sh, sr)) = s
+                    && (*sw, *sh) == (w, h)
+                {
+                    let st = diff_stats(&got_rgba, sr);
+                    if stats.is_none_or(|x| st.0 < x.0) {
+                        same = "stored";
+                        stats = Some(st);
+                    }
+                }
+            }
+            let (max, mean, pixels) = match stats {
+                None => (String::new(), String::new(), String::new()),
+                Some((m, a, p)) => (m.to_string(), format!("{a:.4}"), p.to_string()),
             };
             let (alt_same, alt_max) = match alt {
                 None => (String::new(), String::new()),
