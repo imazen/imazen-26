@@ -421,6 +421,23 @@ On the 16-image test set: 32 of 32 files pass; on the six HDR files: 6 of 6.
 - **libjxl's box order** (JXL redo 4, 2026-10-17): the codestream header in the first `jxlp`
   box, then `jbrd`, Exif, XMP and `jhgm`, then the frames, and no box after the codestream.
   The check fails a file in any other order.
+- **Rendering intent differs from cjxl's on 3,566 of the 3,644 lossless files** (measured
+  2026-10-17 with cjxl v0.12.0 on one PNG twin of each kind; open owner question). cjxl
+  takes the intent from the PNG: the twins' `sRGB` chunk says Perceptual, and a `cICP` chunk
+  leaves the spec default, Relative. jxl-encoder ignores the input's intent:
+
+  | lossless files | PNG twin | cjxl | ours |
+  |---|---|---|---|
+  | sRGB (3,360) | `sRGB` chunk, Perceptual | Perceptual | Relative |
+  | Display P3, with or without `jhgm` (130) | `iCCP` + `cICP` 12/13 | Relative | Perceptual |
+  | P3 PQ (76) | `cICP` 12/16 | Relative | Perceptual |
+  | 1-bit gray (78) | `sRGB` chunk, Perceptual | Perceptual | Perceptual |
+
+  Primaries, white point and transfer function agree on every kind. The JPEG-in-JXL headers
+  equal cjxl's transcode of the rebuilt JPEG on all 6 colour kinds sampled (four ICC
+  profiles, sRGB and gray). The intent does not change decoded samples, and the census
+  readers that colour-manage matched our references with the current intents. jxl-encoder's
+  `docs/LIBJXL_DIVERGENCES.md` records the divergence (33ae2413).
 
 ### Gain-map form (`jhgm`)
 
