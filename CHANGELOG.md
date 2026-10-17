@@ -6,9 +6,12 @@
 - Licence labels (owner decision 2026-10-16, 3d77e71): the 32 phone screenshots are CC0 and the 12 lkml.org and 5 Wayback Machine captures PD; README, CORPUS-MANIFEST.README.md and the web-screenshot provenance state the public-domain status plainly; render v4 re-rendered the 49 images in every layer
 - render-v4 builds against jxl-encoder d73b6c98 (3a24186): an UltraHDR transcode's `jhgm` gain-map codestream takes the primary JPEG's orientation, which the 25 rotated Samsung UltraHDR photos needed for zenjxl's HDR reconstruction to place their gain maps; render-v4 compares the `jhgm` map with the JPEG's turned by the JPEG's orientation (54b6643)
 - The byte-scan gate allows 11231's UltraHDR gain-map JPEG inside its `jbrd` box (ce99f73), owner OK on the condition that the gain maps decode in jxl-rs, libjxl and zenjxl
+- `tools/corpus-thumbs` skips the resize when a preview is no smaller than the image, which zenresize's 100 MP output cap refused for the 124 MP panorama (47f7279)
 - `r2_originals_sync.py` recomputes multipart ETags at s5cmd's 50 MiB part size, so a plan puts only changed objects (741fd16)
 
 ### Added
+- `scripts/render_v4_compat_census.py` (378c706, 044bf24): each distinct file of the PNG and JPEG XL layers through the image-compat reader images in Docker (Ubuntu 24.04 LTS, a rolling distribution, Chromium, Firefox and WebKit), every reader's bitmap hashed and compared with ours and with the sRGB twin; chunks bounded to 60 MP and resumable by file
+- `scripts/build_v4_review.py` and `scripts/v4_review_page.html` (378c706, af222d7, ea0d4a8): the v4 Review artifact (thumbnails, full-resolution zoom, per-file provenance, inventory, gates, decoder hashes and reader verdicts, removal marks, the decoded-bitmap hash download)
 - `tools/jxl-decode-check` and `scripts/render_v4_decode_check.sh` (5ea95ca): zenjxl, jxl-rs (crates.io `jxl` 0.7.4) and libjxl v0.12.0 decode every JPEG XL file and read every `jhgm` gain map; `decoded-xxh3.tsv` gives the XXH3 of every decoded bitmap
 
 - The public originals prefix follows the manifests (2026-10-16, owner go): `r2_originals_sync.py` put 1,945 objects and deleted 518 after a checkpoint into the new private bucket `imazen-26-originals` (`2026-10-16-before/`, `2026-10-16-after/`, both lock-protected); `verify` read all 2,174 objects back by sha256. The checkpoint copies keys with a space through a local file (s5cmd's server-side copy sends them unencoded, which R2 answers with NoSuchKey) and takes `--resume`
