@@ -223,20 +223,12 @@ def jxl_bits_per_sample(path):
     return u32(8, 10, 12, (6, 1))
 
 
-def boxes_after_codestream(inv_rows):
-    """The top-level boxes after a JPEG XL container's last codestream box, from its
-    inventory-full.tsv rows ([offset, length, depth, kind, tag, disposition, label])."""
-    top = sorted((x for x in inv_rows if x[2] == 0 and x[3] == "box"), key=lambda x: x[0])
-    last = max((k for k, x in enumerate(top) if x[4] in ("jxlc", "jxlp")), default=len(top))
-    return [(f"brob {x[6]}" if x[4] == "brob" else x[4]).strip() for x in top[last + 1:]]
-
-
-def jxl_census_info(R, paths, inv, jxlcheck):
-    """What the census verdicts need of each JPEG XL file: its bits per sample, whether it is
-    gray (jxl-check.tsv's colour), and the boxes after its codestream (inventory-full.tsv)."""
+def jxl_census_info(R, paths, jxlcheck):
+    """What the census verdicts need of each JPEG XL file: its bits per sample and whether it is
+    gray (jxl-check.tsv's colour)."""
     return {p: {"bits": jxl_bits_per_sample(os.path.join(R, p)),
-                "gray": jxlcheck.get(p, {}).get("colour", "").startswith("Grayscale"),
-                "after": boxes_after_codestream(inv.get(p, []))} for p in paths if p.endswith(".jxl")}
+                "gray": jxlcheck.get(p, {}).get("colour", "").startswith("Grayscale")}
+            for p in paths if p.endswith(".jxl")}
 
 
 def cmd_data(a):
@@ -298,7 +290,7 @@ def cmd_data(a):
             jxl_seen[(r["image"], r["reader"])] += 1
             jxl_ok[(r["image"], r["reader"])] += r["status"] == "ok"
     jxl_support = {k: jxl_ok[k] / n for k, n in jxl_seen.items()}
-    jxl_info = jxl_census_info(R, {r["path"] for r in census_rows}, inv, jxlcheck)
+    jxl_info = jxl_census_info(R, {r["path"] for r in census_rows}, jxlcheck)
     form_of ={f["path"]: f["form"] for rows_ in by_id.values() for f in rows_}
     pixels_of = {f["path"]: int(f["width"]) * int(f["height"]) for rows_ in by_id.values() for f in rows_}
 
@@ -492,14 +484,6 @@ def verdict(c, form, jxl_support, bitmap_bytes=0, jxl=None):
     """What a census row means: (label, problem?). bitmap_bytes: the decoded image's size; jxl: a
     JPEG XL file's jxl_census_info entry."""
     jxl = jxl or {}
-    # Ubuntu 24.04's ffmpeg (6.1, libjxl 0.7) reads a bare codestream and a container whose last
-    # box is the codestream, but on any box after the codestream (xml, brob, jhgm) it loops,
-    # printing "invalid signature" until the container's memory cap kills it or it crashes (3
-    # files, at 3.5 and 8.5 GB caps). Checked 2026-10-17: four of those layouts with the boxes
-    # moved ahead of the codestream decode exactly, a 42 MP file it crashed on decodes, and
-    # libjxl 0.12's cjxl layout (the boxes between codestream parts) decodes exactly.
-    if (c["image"], c["reader"]) == ("lts", "ffmpeg") and jxl.get("after") and c["status"] in ("crash", "timeout"):
-        return "fails on a box after the codestream (ffmpeg 6.1)", False
     if c["status"] in ("crash", "unreadable-output"):
         return c["status"], True
     if c["status"] != "ok":
@@ -674,12 +658,8 @@ def cmd_census(a):
     jxl_support = {k: ok[k] / n for k, n in seen.items()}
     info = {}
     if a.format == "jxl":
-        inv = collections.defaultdict(list)
-        for r in tsv(os.path.join(R, "inventory-full.tsv")):
-            inv[os.path.relpath(r["file"], R)].append([int(r["offset"] or 0), int(r["length"] or 0), int(r["depth"] or 0),
-                                                       r["kind"], r["tag"], r["disposition"], r["label"]])
         jxlcheck = {r["path"]: r for r in tsv(os.path.join(R, "jxl-check.tsv"))}
-        info = jxl_census_info(R, {r["path"] for r in rows}, inv, jxlcheck)
+        info = jxl_census_info(R, {r["path"] for r in rows}, jxlcheck)
     hashes = collections.defaultdict(list)
     for r in tsv(os.path.join(R, "decoded-xxh3.tsv")):
         hashes[r["path"]].append(r)
