@@ -18,7 +18,10 @@ Reads <out-dir>/jxl-report.tsv (render-v4 jxl), <out-dir>/report.tsv (the PNG tw
   and libjxl's 16-bit decodes give the `.hdr.png` twin's sample hash (<out-dir>/hdr-report.tsv),
   and `jxlinfo` states P3 primaries with the PQ transfer function;
 - a gain-map form (kind `…+jhgm`): the check of its kind, and libjxl's `jxlinfo -v` reads
-  the `jhgm` bundle (version 0, a gain map and its metadata).
+  the `jhgm` bundle (version 0, a gain map and its metadata);
+- every container is in libjxl's box order (`box_order_error`): the codestream header in the
+  first `jxlp` box, then the other boxes, then the frames, with no box after the last
+  codestream box (a box there makes Ubuntu 24.04's ffmpeg 6.1 loop; 2026-10-17 census).
 
 Writes <out-dir>/jxl-check.tsv (or --out) and exits 1 on any failure.
 """
@@ -81,11 +84,59 @@ def png_iccp(path):
     return None
 
 
+def box_order_error(path):
+    """Why a JPEG XL file is not in libjxl's box order, or None if it is.
+
+    libjxl (encode.cc, v0.12) writes JXL, ftyp, jxll (level 10 only), then either the whole
+    codestream in one jxlc box, or, when boxes come before the frames, the codestream header in
+    jxlp 0, those boxes, and the frames in jxlp 1, 2, ... with the last flag on the final one.
+    A bare codestream has no boxes."""
+    with open(path, "rb") as f:
+        if f.read(2) == b"\xff\x0a":
+            return None
+        f.seek(0, 2)
+        end, pos, boxes = f.tell(), 0, []
+        while pos < end:
+            f.seek(pos)
+            head = f.read(16)
+            size, kind = struct.unpack(">I4s", head[:8])
+            if size == 1:
+                size = struct.unpack(">Q", head[8:16])[0]
+            elif size == 0:
+                size = end - pos
+            index = None
+            if kind == b"jxlp":
+                f.seek(pos + (16 if head[:4] == b"\0\0\0\1" else 8))
+                index = struct.unpack(">I", f.read(4))[0]
+            boxes.append((kind.decode("latin1"), index))
+            pos += size
+    kinds = [k for k, _ in boxes]
+    lead = 3 if kinds[2:3] == ["jxll"] else 2
+    if kinds[:2] != ["JXL ", "ftyp"]:
+        return f"starts {kinds[:2]}"
+    cs = [i for i, k in enumerate(kinds) if k in ("jxlc", "jxlp")]
+    if not cs:
+        return "no codestream box"
+    if cs[-1] != len(kinds) - 1:
+        return f"{kinds[cs[-1] + 1:]} after the last codestream box"
+    if kinds[cs[0]] == "jxlc":
+        return None if cs == [lead] and len(kinds) == lead + 1 else f"jxlc with other boxes: {kinds}"
+    parts = [boxes[i][1] for i in cs]
+    if cs[0] != lead or parts != list(range(len(parts) - 1)) + [(len(parts) - 1) | 0x80000000]:
+        return f"jxlp parts {[hex(p) for p in parts]} at {cs} in {kinds}"
+    if any(cs[i + 1] != cs[i] + 1 for i in range(1, len(cs) - 1)):
+        return f"boxes between frame parts: {kinds}"
+    return None
+
+
 def check(job):
     out_dir, r, twin, original_sha = job
     path = os.path.join(out_dir, r["path"])
     res = {"id": r["id"], "layer": r["layer"], "kind": r["kind"], "path": r["path"]}
     try:
+        order = box_order_error(path)
+        if order:
+            raise ValueError(f"not in libjxl's box order: {order}")
         info = subprocess.run(["jxlinfo", path], capture_output=True, text=True, check=True).stdout
         colour_line = next((l for l in info.splitlines() if l.startswith("Color space:")), "")
         kind = r["kind"].removesuffix("+jhgm")
