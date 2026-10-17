@@ -208,7 +208,8 @@ Three findings on the first JXL files changed the census before the JXL half ran
   Our files have the boxes after the codestream because jxl-encoder writes the XMP and Exif
   there and `zenjxl::append_gain_map_box` appends `jhgm`. Moving them ahead would make the
   JPEG XL layers readable by Ubuntu 24.04's ffmpeg. That needs a change to those crates and a
-  re-render, and has not been made.
+  re-render, and has not been made. (Made the same day without a re-render: JXL redo 4
+  below.)
 - **1-bit files.** The codestream header of each of the 39 patent pages named `-1bit_` says 1
   bit per sample: render-v4 keeps a sub-byte gray depth. These readers return the same pixels
   as zenjxl, jxl-rs and libjxl do in the decode check: djxl 0.12, ffmpeg 9, ImageMagick 7,
@@ -232,6 +233,76 @@ Three findings on the first JXL files changed the census before the JXL half ran
   stayed at or above 8.7 GiB. Only Ubuntu 24.04's ffmpeg containers had OOM kills (the loops
   above). The largest cap was 11.5 GB (Chromium on the 124 MP panorama). The largest peak
   outside that ffmpeg was vips 8.15's 5.7 GiB on the same file, at an 8.5 GB cap.
+
+### 2026-10-17: libjxl's box order (JXL redo 4)
+
+The owner's call after the census: "if libjxl does box orders that way we should too", and
+"match 1 bit files".
+
+- **libjxl's order.** libjxl's encoder (`encode.cc`, `ProcessOneEnqueuedInput`, v0.12) puts
+  the codestream header (signature, SizeHeader, ImageMetadata, CustomTransformData, ICC
+  profile) in its own first `jxlp` box when boxes come before the frames, then those boxes,
+  then the frames in the last `jxlp`. cjxl queues Exif, XMP, JUMBF and `jhgm` that way, and a
+  JPEG transcode puts its `jbrd`, Exif and XMP there. No box follows the codestream.
+  jxl-encoder 11ffbf9c writes the same order (main a8c9fd78; zenjxl 5b593da2 does it for
+  animations). The layers now read:
+
+  | layout | files |
+  |---|---|
+  | `JXL ftyp jxlp xml jxlp` (lossless) | 3,525 |
+  | `JXL ftyp jxlp jbrd jxlp` (JPEG-in-JXL without metadata) | 328 |
+  | `JXL ftyp jxlp jbrd brob(Exif) jxlp` | 235 |
+  | `JXL ftyp jxll jxlp xml jxlp` (16-bit PQ, level 10) | 76 |
+  | `JXL ftyp jxlp xml jhgm jxlp` (HEIC gain-map form) | 43 |
+  | `JXL ftyp jxlp jbrd brob(xml) jxlp` | 36 |
+  | `JXL ftyp jxlp jbrd brob(Exif) brob(xml) jhgm jxlp` (UltraHDR) | 33 |
+  | bare codestream (no reconstruction data) | 24 |
+
+- **Checked against libjxl.** jxl-encoder finds the header's end by parsing the header (an
+  embedded ICC profile by encoding the encoder's profile again and checking the bits). On 20
+  files cjxl v0.12 wrote with Exif or XMP (lossless and lossy, 1-bit and 8-bit gray, 16-bit,
+  P3, PQ, gamma, orientation, intensity target, a 3-frame animation, JPEG reconstruction) it
+  splits where cjxl split (`examples/libjxl_header_split.rs` in jxl-encoder).
+  `scripts/render_v4_jxl_check.py` now fails any file that is not in libjxl's order.
+- **Found on the way:** jxl-encoder wrote the intrinsic size in a form neither libjxl nor
+  jxl-oxide could read (fixed in 5923e603). No v4 file sets it.
+- **1-bit files.** cjxl v0.12 also writes the 1-bit pages as 1-bit grayscale JPEG XL. From
+  our PNG twin it writes a codestream header identical to ours, Perceptual intent included
+  (from the twin's sRGB chunk; from the original, which has no colour chunk, it writes
+  Relative). GraphicsMagick 1.3.42 and 1.3.48 and OpenCV 5 refuse cjxl's own 1-bit file with
+  the same errors as ours, and libjxl 0.7's `djxl` writes it as 0 and 1 too. So the 1-bit
+  files already matched libjxl; only their box order changed.
+- **Rewritten, not re-encoded.** A trial render of one id of each kind (11 ids, 25 files,
+  render-v4 jxl at effort 9) gave every file the codestream it had before. A full re-render
+  would have repeated 3 h 52 min of effort-9 encodes to move boxes, so JXL redo 4
+  (`scripts/render_v4_jxl_remux.sh`, render-v4 87eb975f) rewrote the containers instead:
+  `render-v4 jxl-remux` passes each `jxlc` file through the calls `jxl` makes
+  (`jxl_encoder::wrap_in_container`, then `zenjxl::append_gain_map_box`) and moves a
+  JPEG-in-JXL file's trailing boxes ahead of its frames. It matches render-v4 jxl byte for
+  byte on 431 of 431 files (the trial's 25 and the 406 a stopped full re-render had
+  finished). All 4,300 files took 218 s (12 jobs, peak RSS 1.2 GiB); the old layers stay in
+  `before-box-order/`.
+- **Checks.** The JXL check passes 4,300 of 4,300 files, box order included. Every
+  codestream is the old file's (`scripts/jxl_codestream_compare.py`). The manifests change
+  sha256 for 3,948 files (the 352 with no box after the codestream keep theirs) and size by
+  16 bytes for the lossless ones (two `jxlp` headers for one `jxlc`). The inventory
+  (`jxl-decode-check jxl-inventory`, which reproduces the zencodecs CLI's rows on all 4,300
+  old files) lists every metadata box with the disposition it had: the 3,644 `xml ` and 337
+  `brob` boxes read as metadata, `jbrd` and `jhgm` as before; 0 gate violations on 8,600
+  files. Byte scan: nothing new. The three decoders give the same bitmaps as before:
+  `decoded-xxh3.tsv` is byte-identical to the 2026-10-16 one.
+- **Readers.** The census read the 2,488 distinct rewritten files again: 0 unexplained of
+  52,248 decodes. Ubuntu 24.04's ffmpeg 6.1 now reads all of them: the 2,075 lossless files
+  (the PQ and gain-map-form files included) give our decode's samples, and the 413
+  JPEG-in-JXL files are within 1 code value, as in the other libjxl-based readers. The other
+  49,937 (file, reader) pairs, ffmpeg 6.1's 177 earlier reads among them, gave the same
+  output as before the rewrite: the same status, XXH3 and differences. In the census table
+  above, "the same samples" becomes 22,475, "within 1 code value" 4,163, and the ffmpeg 6.1
+  row is gone; the review no longer excuses an ffmpeg 6.1 failure (68d12aa). The run took
+  4 h 17 min with 12 jobs in the 20 GB budget, with no OOM kill or failed container and at
+  least 26.9 GiB available; the largest peak was 5.7 GiB (vips 8.18 and ffmpeg 6.1 on the
+  124 MP panorama, at an 8.5 GB cap). The earlier JXL rows are in
+  `compat-census/census.jxl-before-box-order-2026-10-17.tsv`.
 
 ## SDR PNG layers
 
@@ -347,6 +418,9 @@ On the 16-image test set: 32 of 32 files pass; on the six HDR files: 6 of 6.
   values of zenjpeg's decode of the JPEG.
 - **Effort** (8 sources, both layers, under load): e5 47.4 MB in 39 s, e7 44.0 MB in 75 s,
   e9 41.3 MB in 507 s. JPEG-in-JXL sizes are equal at e7 and e9 (owner question 7).
+- **libjxl's box order** (JXL redo 4, 2026-10-17): the codestream header in the first `jxlp`
+  box, then `jbrd`, Exif, XMP and `jhgm`, then the frames, and no box after the codestream.
+  The check fails a file in any other order.
 
 ### Gain-map form (`jhgm`)
 
