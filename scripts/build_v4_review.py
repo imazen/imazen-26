@@ -493,6 +493,10 @@ def build_summary(R, m, man, images, census_rows, n_hash_rows, tally):
         jxl = [c for c in census_rows if c["path"].endswith(".jxl")]
         rows = [["Readers", f"{len(readers)}"], ["Distinct files read", f"{distinct:,}"], ["Decodes", f"{len(census_rows):,}"]]
         for fmt_, name in (("png", "PNG"), ("jxl", "JPEG XL")):
+            total = len({r["sha256"] for layer, rs in man.items() if layer.startswith(fmt_) for r in rs})
+            read = len({c["sha256"] for c in census_rows if c["path"].endswith("." + fmt_)})
+            rows.append([f"{name} files read", f"{read:,} of {total:,}" + ("" if read == total else " (census running)"),
+                         "ok" if read == total else "na"])
             n = sum(v for (f, _), v in tally.items() if f == fmt_)
             if n:
                 rows += [[f"{name}: exact", f"{tally[(fmt_, 'exact')]:,} of {n:,}", "ok"],
