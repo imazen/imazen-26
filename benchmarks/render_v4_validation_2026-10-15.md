@@ -103,6 +103,73 @@ pass's commits, hashes and results).
   It also showed that zenpng's and zenjxl's default decode limits (120 MP) refuse the 124 MP
   panorama 11449; the check passes explicit limits, as render-v4 does.
 
+### 2026-10-17: reader census
+
+`scripts/render_v4_compat_census.py` reads each distinct file of the four layers (4,976 files
+behind 8,600 paths) with 21 readers in the compat matrix images: Ubuntu 24.04 packages
+(`imazen26-compat:lts`: libjxl 0.7.0, ImageMagick 6.9.12, GraphicsMagick 1.3.42, vips 8.15.1,
+Pillow 10.2.0, gdk-pixbuf 2.42.10, OpenCV 4.6.0, Qt 6.4.2, ffmpeg 6.1.1, Netpbm 11.5.2), Arch
+Linux (`:latest`: libjxl 0.12.0, ImageMagick 7.1.2-30, GraphicsMagick 1.3.48, vips 8.18.6,
+Pillow 12.3.0, gdk-pixbuf 2.44.7 with glycin, OpenCV 5.0.0, Qt 6.11.2, ffmpeg 9.0.1, Netpbm
+10.86.50) and Chromium 153, Firefox 155 and WebKit 26.6 (`:browsers`). Each reader runs in a
+container with no network, a read-only root, 2 CPUs and a memory cap without swap.
+`tools/jxl-decode-check compare` hashes every output (XXH3-64 in its own layout and as 8-bit
+RGBA) and compares it with our decode (zenpng, zenjxl) and, for a wide-gamut file, with an sRGB
+reference. `compat-census/census.tsv` holds one row per file and reader, `memory.tsv` each
+container's cap and peak.
+
+**PNG:** 2,488 files, 52,248 decodes, 0 unexplained.
+
+| outcome | decodes |
+|---|---|
+| the same samples | 38,748 |
+| the same pixels as 8-bit RGBA (the reader returns another layout) | 12,240 |
+| Display P3 converted to sRGB, within 1 of our sRGB twin: Chromium and WebKit 299 each, gdk-pixbuf 2.44 2 | 600 |
+| a PQ file shown as SDR or narrowed to 8 bits: Chromium, WebKit, Pillow, OpenCV, gdk-pixbuf (both images) | 608 (76 each) |
+| over Qt's default image limit, 128 MB in 6.4.2 and 256 MB in 6.11.2 | 52 (47 and 5) |
+
+**Transport.** The first PNG pass (2026-10-16, `census.data-url-2026-10-16.tsv`) handed the
+browsers each file inside a `data:` URL, as the compat matrix's adapter does: WebKit failed every
+file of 51.5 MB and up, and Chromium's renderer crashed on every file of 87.6 MB and up. The
+census now serves the files over loopback HTTP (3958a5d). On the 327 files both passes read,
+all 6,817 (file, reader) pairs that decoded in both gave the same bitmap, 948 of them in
+browsers; 33 browser reads that had failed now decode (10 Chromium, 23 WebKit), and 17 Qt
+refusals stayed.
+
+**Memory.** The first full run held 12 containers of 8 GB, with docker's default swap allowance
+of as much again. When it reached the JPEG XL files at 02:43Z, Ubuntu 24.04's ffmpeg grew to
+the cap on each one, and dev ran out of memory for an hour; at 03:43Z the kernel's OOM killing
+took down the session's systemd user manager, and the census and other running jobs with it.
+The census now caps each container by the chunk's largest file, without swap, and keeps the caps
+of the running containers and the compare steps within one budget (1b7e45c8; 20 GB). The 119
+JXL files read in that hour are kept in `census.jxl-oom-2026-10-17.tsv` and were read again.
+
+Three findings on the first JXL files changed the census before the JXL half ran:
+
+- **ffmpeg 6.1 and the JPEG XL container.** Ubuntu 24.04's ffmpeg (6.1.1, libjxl 0.7.0) read
+  none of our container files: it prints `invalid signature` from libjxl without end, the
+  adapter's bash holds the text until the container's cap kills it, and on a test file with
+  the output kept the error stream reached 25 GB in five minutes. The same file's bare
+  codestream decodes, to our decode exactly; ffmpeg 9.0.1 reads the containers. libjxl 0.7.0's
+  own `djxl` reads them too.
+- **Orientation.** ImageMagick and GraphicsMagick read a JPEG XL file's orientation as
+  metadata and return the stored pixels (62 transposed outputs and 2 turned 180° of 119 files).
+  Turned by the orientation, ImageMagick's output equals our decode within 1 (orientations 3
+  and 6 checked). Compare now also matches an output against our decode in the stored
+  orientation (b6186507).
+- **Colour management of wide-gamut JPEG-in-JXL files.** WebKit and gdk-pixbuf 2.44 (glycin,
+  with jxl-oxide) convert these files to sRGB and missed our sRGB twin by 5 to 30 on all 77
+  such files in that hour. The twin is made from the PNG layer, a different decode of the same
+  JPEG, which lands up to 4 code values from the JXL's decode (11010); converting from P3 to
+  sRGB magnifies that where a saturated colour puts an sRGB channel near zero. glycin's output
+  on 11010 is libjxl's 8-bit decode converted by LittleCMS (within 3), and our twin is the
+  LittleCMS conversion of the PNG (within 1), so both sides convert correctly. Every
+  libjxl-based reader and glycin decode these files within 1 code value of zenjxl. Compare now
+  converts our decode of each of the 170 files to sRGB as render-v4 makes the sRGB layer and
+  accepts a sample within what a decode 1 code value from ours becomes after the conversion,
+  plus 2 (0c5ed595; its message says 13 to 30 on 95 files, the measured figures are 5 to 30
+  on 77).
+
 ## SDR PNG layers
 
 `png-p3` keeps each source's code values and colour; `png-srgb` converts Display P3 and Adobe
