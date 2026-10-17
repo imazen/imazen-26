@@ -10,12 +10,14 @@
         The full-resolution WebPs concatenated into packs of about 8 MiB for the artifact's
         asset store (1 GiB, 5,000 files): <stage>/work/fullpacks/fp_NNN.webp and fullpacks.tsv
         (id, pack, offset, length, width, height).
-    build_v4_review.py data <render-dir> <stage-dir> [--fullpack-urls TSV]
+    build_v4_review.py data <render-dir> <stage-dir> [--fullpack-urls TSV] [--hash-urls TSV]
         The page and its data: v4-review.html (scripts/v4_review_page.html), data/index.json,
         data/dNN.json (details, 100 images each), thumbs/sheet_NN.webp, packs/pack_NN.webp
         (the medium previews concatenated; the index gives each one's offset and length) and
-        data/decoded-xxh3-NN.txt (the hash file in parts of at most 12 MB). --fullpack-urls maps each full-resolution pack to the asset
-        URL its Artifact upload returned (fp_NNN.webp<TAB>url).
+        hashes/decoded-xxh3-NN.txt (the hash file in parts of at most 12 MB). --fullpack-urls
+        maps each full-resolution pack to the asset URL its Artifact upload returned
+        (fp_NNN.webp<TAB>url); --hash-urls does the same for the hash parts, with each part's
+        sha256 (decoded-xxh3-NN.txt<TAB>sha256<TAB>url), and the build stops if a part changed.
     build_v4_review.py census <render-dir> png|jxl
         The reader census's verdicts for one format, counted per reader and outcome, with an
         example of each unexplained one.
@@ -29,6 +31,7 @@ manifests for the originals.
 import argparse
 import collections
 import csv
+import hashlib
 import json
 import os
 import re
@@ -434,20 +437,38 @@ def cmd_data(a):
                 "# layout; rgba8: same once both are 8-bit RGBA; no: differs).\n")
     text = "".join(head) + "\t".join(out_cols) + "\n" + "".join("\t".join(r) + "\n" for r in rows)
     open(os.path.join(R, "decoded-xxh3-with-readers.tsv"), "w").write(text)
-    # Artifacts serve text up to 16 MB a file: parts of at most 12 MB, split at line ends; the
-    # page joins them for the download.
-    for f in os.listdir(os.path.join(S, "data")):
-        if f.startswith("decoded-xxh3"):
-            os.remove(os.path.join(S, "data", f))
-    hash_files, part, size = [], [], 0
+    # Artifacts serve text up to 16 MB a file: parts of at most 12 MB, split at line ends, in
+    # <stage>/hashes/; the page joins them for the download. With --hash-urls (part name, sha256
+    # and URL per line: the parts uploaded to the artifact's asset store, which keeps their 40 MB
+    # out of the version's 256 MiB) the index points at those URLs instead.
+    hdir = os.path.join(S, "hashes")
+    os.makedirs(hdir, exist_ok=True)
+    for d in (hdir, os.path.join(S, "data")):  # data/ held the parts before 2026-10-17
+        for f in os.listdir(d):
+            if f.startswith("decoded-xxh3"):
+                os.remove(os.path.join(d, f))
+    parts, part, size = [], [], 0
     for line in text.splitlines(keepends=True):
         if size + len(line) > 12_000_000 and part:
-            hash_files.append("".join(part)); part, size = [], 0
+            parts.append("".join(part)); part, size = [], 0
         part.append(line); size += len(line)
-    hash_files.append("".join(part))
-    for k, t in enumerate(hash_files):
-        open(os.path.join(S, "data", f"decoded-xxh3-{k:02d}.txt"), "w").write(t)
-    hash_files = [f"data/decoded-xxh3-{k:02d}.txt" for k in range(len(hash_files))]
+    parts.append("".join(part))
+    names = [f"decoded-xxh3-{k:02d}.txt" for k in range(len(parts))]
+    for n, t in zip(names, parts):
+        open(os.path.join(hdir, n), "w").write(t)
+    if a.hash_urls:
+        uploaded = {}
+        for line in open(a.hash_urls):
+            n, sha, url = line.rstrip("\n").split("\t")
+            uploaded[n] = (sha, url)
+        hash_files = []
+        for n in names:
+            sha = hashlib.sha256(open(os.path.join(hdir, n), "rb").read()).hexdigest()
+            if uploaded.get(n, ("",))[0] != sha:
+                sys.exit(f"hashes/{n} (sha256 {sha}) is not the part {a.hash_urls} names; upload it and update the file")
+            hash_files.append(uploaded[n][1])
+    else:
+        hash_files = [f"hashes/{n}" for n in names]
     n_hash_rows = len(rows)
 
     m = meta(R)
@@ -685,6 +706,7 @@ def main():
     p = sub.add_parser("images"); p.add_argument("render"); p.add_argument("stage"); p.add_argument("--jobs", type=int, default=12)
     p = sub.add_parser("fullpacks"); p.add_argument("render"); p.add_argument("stage")
     p = sub.add_parser("data"); p.add_argument("render"); p.add_argument("stage"); p.add_argument("--fullpack-urls", default="")
+    p.add_argument("--hash-urls", default="", help="the hash parts' asset URLs (part name, sha256, URL per line)")
     p.add_argument("--no-census", action="store_true", help="leave the reader census out (while it runs)")
     p = sub.add_parser("census", help="count the census verdicts of one format")
     p.add_argument("render"); p.add_argument("format", choices=("png", "jxl"))
