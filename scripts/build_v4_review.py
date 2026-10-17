@@ -297,7 +297,8 @@ def cmd_data(a):
             vs = [verdict(c, form, jxl_support, pixels_of.get(rows[0]["path"], 0) * px_bytes) for c in rows]
             for (label, problem), c in zip(vs, rows):
                 fmt_ = "jxl" if c["path"].endswith(".jxl") else "png"
-                tally[(fmt_, "problem" if problem else "exact" if label.startswith("exact") else "expected")] += 1
+                tally[(fmt_, "problem" if problem else "exact" if label.startswith("exact")
+                       else "refused" if c["status"] != "ok" else "expected")] += 1
             cen.append({"layer": rows[0]["layer"], "path": rows[0]["path"], "also": [x for x in paths if x != rows[0]["path"]],
                         "rows": [[f"{c['image']} {c['reader']} {short_version(c['version'])}".strip(), c["status"], c["same"],
                                   c["max_diff"], c["srgb_twin_same"], c["srgb_twin_max_diff"],
@@ -479,6 +480,7 @@ def build_summary(R, m, man, images, census_rows, n_hash_rows, tally):
             if n:
                 rows += [[f"{name}: exact", f"{tally[(fmt_, 'exact')]:,} of {n:,}", "ok"],
                          [f"{name}: expected differences", f"{tally[(fmt_, 'expected')]:,}", "na"],
+                         [f"{name}: not read (no support, reader limits)", f"{tally[(fmt_, 'refused')]:,}", "na"],
                          [f"{name}: unexplained", f"{tally[(fmt_, 'problem')]:,}", "ok" if not tally[(fmt_, 'problem')] else "warn"]]
         s.append({"title": "Reader census (Docker)", "rows": rows,
                   "download": f"Download decoded-bitmap hashes ({n_hash_rows:,} rows)"})
