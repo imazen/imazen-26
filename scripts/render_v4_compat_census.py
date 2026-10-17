@@ -5,7 +5,8 @@ headless browsers), each reader's decode hashed and compared with ours (EXPORT-P
 The browsers run scripts/census_browser_batch.mjs: the adapter's canvas decode, with the file
 served over loopback HTTP instead of a data: URL and one browser launch per chunk.
 
-    render_v4_compat_census.py <render-dir> [--jobs 4] [--chunk 10] [--ids 11064,...] [--outdir DIR]
+    render_v4_compat_census.py <render-dir> [--jobs 4] [--chunk 10] [--mem-budget 16] [--ids 11064,...]
+                               [--outdir DIR]
 
 The readers are the compat matrix's adapters (`/opt/adapters/<reader> <in> <out.png> <out.json>`)
 in the images imazen26-compat:lts, :latest and :browsers, built from
@@ -19,13 +20,24 @@ file, with our decode of its sRGB twin, which is what a colour-managed reader sh
 Files with the same bytes in two layers are read once. Chunks hold at most --chunk files and
 60 MP, and wait while the work disk has under 25 GB free. Writes under <render-dir>/compat-census/:
 census.tsv (one row per file and reader; a rerun skips files it has), done.txt (finished chunks),
-images.tsv (the reader images' ids) and summary.txt; RUN.meta gets the results unless --outdir
-points elsewhere (a trial run).
+memory.tsv (each container's cap and peak), images.tsv (the reader images' ids) and summary.txt;
+RUN.meta gets the results unless --outdir points elsewhere (a trial run).
+
+Memory: each container gets a cap sized to the chunk's largest file, with no swap, and the caps
+of the running containers plus the compare steps' estimates stay within --mem-budget GB. At the
+cap the kernel kills the decoding process, the container's loop records the failure when the
+adapter could not, and the files after it still run; a file the batch container left without a
+result is run again in a container of its own. (On 2026-10-17, 12 containers of 8 GB each with docker's default swap allowance, as
+much again, ran the host out of memory: Ubuntu 24.04's ffmpeg grows to the cap on JPEG XL files.)
 """
 import argparse
+import collections
 import concurrent.futures
+import contextlib
 import csv
+import itertools
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -75,7 +87,94 @@ def distinct_files(render, ids):
     return files, alias, pixels
 
 
-def run_chunk(render, work, n, chunk, images, out_lock, out_file):
+class MemoryBudget:
+    """Reservations of GB against a total, granted in arrival order (a large one is not starved
+    by small ones behind it); one larger than the total waits until it can run alone."""
+
+    def __init__(self, total):
+        self.total, self.used, self.queue = total, 0, collections.deque()
+        self.cond = threading.Condition()
+
+    @contextlib.contextmanager
+    def hold(self, gb):
+        gb = min(gb, self.total)
+        me = object()
+        with self.cond:
+            self.queue.append(me)
+            self.cond.wait_for(lambda: self.queue[0] is me and self.used + gb <= self.total)
+            self.queue.popleft()
+            self.used += gb
+            self.cond.notify_all()
+        try:
+            yield gb
+        finally:
+            with self.cond:
+                self.used -= gb
+                self.cond.notify_all()
+
+
+def container_gb(max_px):
+    """A reader container's memory cap. Measured on 12 MP files (memory.tsv): the libraries peak
+    at 0.6-0.7 GB (the adapter's statistics pass holds the output as numpy float64), the browsers
+    at up to 1.0 GB; 64 bytes a pixel plus 1.5 GB leaves room above both."""
+    return min(12, max(2, math.ceil(1.5 + 64e-9 * max_px)))
+
+
+def compare_gb(pxs):
+    """`jxl-decode-check compare --jobs 4` holds our decode, its 8-bit copy, the sRGB twin's and
+    the output's for up to four files at once."""
+    return math.ceil(0.5 + 48e-9 * sum(sorted(pxs)[-4:]))
+
+
+NAMES = itertools.count()
+KILLS = "sed -n 's/^oom_kill //p' /sys/fs/cgroup/memory.events"
+
+
+def run_role(render, rdir, image, reader, args, entries, gb, images, budget):
+    """One container of the reader over entries [(i, path)]: (peak bytes, OOM kills, rc, seconds)."""
+    tmp = rdir + ".tmp"
+    os.makedirs(tmp, exist_ok=True)
+    with open(os.path.join(rdir, "list.tsv"), "w") as f:
+        f.writelines(f"{i}\t/r/{path}\n" for i, path in entries)
+    if reader == "browser":
+        # One browser launch per chunk (scripts/census_browser_batch.mjs): the adapter's
+        # canvas decode over loopback HTTP, without a launch per file.
+        script = f"node /x/census_browser_batch.mjs {args[0]} /o/list.tsv /o >/dev/null 2>&1"
+    else:
+        # The kernel kills the largest process at the cap, never this loop: an adapter it killed
+        # (bash buffers the reader's stderr) gets its record here, and the next file runs.
+        script = ('while IFS=$(printf "\\t") read -r i p; do '
+                  f'k0=$({KILLS}); /opt/adapters/{reader} "$p" "/o/$i.png" "/o/$i.json" >/dev/null 2>&1; '
+                  f'rc=$?; k1=$({KILLS}); [ -s "/o/$i.json" ] || printf \'{{"status":"crash","error_head":'
+                  f'"the adapter exited %s without a result; %s processes killed at the {gb} GB memory cap"}}\\n\' '
+                  '"$rc" "$((k1 - k0))" > "/o/$i.json"; done < /o/list.tsv')
+    script += f"; {{ cat /sys/fs/cgroup/memory.peak; {KILLS}; }} > /o/memory.txt 2>/dev/null"
+    name = f"cm-census-{os.getpid()}-{next(NAMES)}"
+    cmd = ["docker", "run", "--rm", "--name", name, "--network", "none", "--read-only",
+           "-v", f"{tmp}:/tmp", "-e", "HOME=/tmp", "--user", f"{os.getuid()}:{os.getgid()}",
+           "-e", f"CM_IMAGE_ID={images[image]}", "--pids-limit", "2048", "--cpus", "2",
+           "--memory", f"{gb}g", "--memory-swap", f"{gb}g", "-v", f"{render}:/r:ro",
+           "-v", f"{os.path.join(REPO, 'scripts')}:/x:ro",
+           "-v", f"{rdir}:/o", "--entrypoint", "/usr/bin/nice", f"imazen26-compat:{image}",
+           "-n", "19", "/bin/bash", "-c", script]
+    with budget.hold(gb):
+        t0 = time.time()
+        try:
+            rc = subprocess.run(cmd, capture_output=True, timeout=7200).returncode
+        except subprocess.TimeoutExpired:  # the client's timeout doesn't stop the container
+            subprocess.run(["docker", "kill", name], capture_output=True)
+            rc = "timeout"
+    shutil.rmtree(tmp, ignore_errors=True)
+    secs = f"{time.time() - t0:.0f}"
+    try:
+        peak, kills = open(os.path.join(rdir, "memory.txt")).read().split()
+        os.remove(os.path.join(rdir, "memory.txt"))
+    except (OSError, ValueError):
+        peak, kills = "", ""
+    return peak, kills, rc, secs
+
+
+def run_chunk(render, work, n, chunk, images, out_lock, out_file, pixels, budget):
     # Readers' outputs share the disk with everything else: wait for room before starting.
     while shutil.disk_usage(work).free < 25e9:
         time.sleep(30)
@@ -83,31 +182,32 @@ def run_chunk(render, work, n, chunk, images, out_lock, out_file):
     shutil.rmtree(cdir, ignore_errors=True)
     os.makedirs(cdir)
     fmt = "jxl" if chunk[0][1][1].endswith(".jxl") else "png"
-    uid = f"{os.getuid()}:{os.getgid()}"
+    entries = [(i, path) for i, (sha, (layer, path, alt)) in enumerate(chunk)]
+    max_px = max(pixels[sha] for sha, _ in chunk)
+    gb = container_gb(max_px)
+    memory = []
     for image, reader, args in READERS[fmt]:
         role = role_name(image, reader, args)
         rdir = os.path.join(cdir, role)
-        tmp = os.path.join(cdir, f"{role}.tmp")
         os.makedirs(rdir)
-        os.makedirs(tmp)
-        with open(os.path.join(rdir, "list.tsv"), "w") as f:
-            f.writelines(f"{i}\t/r/{path}\n" for i, (sha, (layer, path, alt)) in enumerate(chunk))
-        if reader == "browser":
-            # One browser launch per chunk (scripts/census_browser_batch.mjs): the adapter's
-            # canvas decode over loopback HTTP, without a launch per file.
-            script = f"node /x/census_browser_batch.mjs {args[0]} /o/list.tsv /o >/dev/null 2>&1"
-        else:
-            script = ('while IFS=$(printf "\\t") read -r i p; do '
-                      f'/opt/adapters/{reader} "$p" "/o/$i.png" "/o/$i.json" >/dev/null 2>&1; '
-                      'done < /o/list.tsv')
-        cmd = ["timeout", "7200", "docker", "run", "--rm", "--network", "none", "--read-only",
-               "-v", f"{tmp}:/tmp", "-e", "HOME=/tmp", "--user", uid, "-e", f"CM_IMAGE_ID={images[image]}",
-               "--pids-limit", "2048", "--cpus", "2", "--memory", "8g", "-v", f"{render}:/r:ro",
-               "-v", f"{os.path.join(REPO, 'scripts')}:/x:ro",
-               "-v", f"{rdir}:/o", "--entrypoint", "/usr/bin/nice", f"imazen26-compat:{image}",
-               "-n", "19", "/bin/bash", "-c", script]
-        subprocess.run(cmd, capture_output=True)
-        shutil.rmtree(tmp, ignore_errors=True)
+        peak, kills, rc, secs = run_role(render, rdir, image, reader, args, entries, gb, images, budget)
+        memory.append([n, role, "batch", len(entries), f"{max_px / 1e6:.1f}", gb, peak, kills, rc, secs])
+        # A file the batch left without a result (the container died, or a browser took the
+        # rest with it) runs again alone, in a fresh container.
+        for i, path in entries:
+            if not os.path.exists(os.path.join(rdir, f"{i}.json")):
+                one = os.path.join(rdir, f"single-{i}")
+                os.makedirs(one)
+                peak, kills, rc, secs = run_role(render, one, image, reader, args, [(i, path)], gb, images, budget)
+                memory.append([n, role, f"single-{i}", 1, f"{pixels[chunk[i][0]] / 1e6:.1f}", gb, peak, kills, rc, secs])
+                for ext in ("json", "png"):
+                    if os.path.exists(os.path.join(one, f"{i}.{ext}")):
+                        os.replace(os.path.join(one, f"{i}.{ext}"), os.path.join(rdir, f"{i}.{ext}"))
+                if not os.path.exists(os.path.join(rdir, f"{i}.json")):
+                    with open(os.path.join(rdir, f"{i}.json"), "w") as f:
+                        killed = f", killed at the container's {gb} GB memory cap" if kills not in ("", "0") else ""
+                        json.dump({"status": "crash", "error_head": f"no json: container exit {rc}{killed}"}, f)
+                shutil.rmtree(one, ignore_errors=True)
     # Compare every output with our decode of its file (and of the sRGB twin).
     lines, cells = [], []
     for image, reader, args in READERS[fmt]:
@@ -125,7 +225,8 @@ def run_chunk(render, work, n, chunk, images, out_lock, out_file):
     cmp_in = os.path.join(cdir, "compare.in")
     with open(cmp_in, "w") as f:
         f.writelines(lines)
-    res = subprocess.run([TOOL, "compare", "--jobs", "4"], stdin=open(cmp_in), capture_output=True, text=True)
+    with budget.hold(compare_gb([pixels[sha] for sha, _ in chunk])):
+        res = subprocess.run([TOOL, "compare", "--jobs", "4"], stdin=open(cmp_in), capture_output=True, text=True)
     compared = {}
     for row in csv.DictReader(res.stdout.splitlines(), delimiter="\t"):
         compared[row["output"]] = row
@@ -144,6 +245,8 @@ def run_chunk(render, work, n, chunk, images, out_lock, out_file):
     with out_lock:
         with open(out_file, "a") as f:
             f.writelines("\t".join(r) + "\n" for r in rows)
+        with open(os.path.join(os.path.dirname(out_file), "memory.tsv"), "a") as f:
+            f.writelines("\t".join(map(str, m)) + "\n" for m in memory)
         with open(os.path.join(os.path.dirname(out_file), "done.txt"), "a") as f:
             f.write(f"{n}\n")
     shutil.rmtree(cdir, ignore_errors=True)
@@ -155,6 +258,8 @@ def main():
     ap.add_argument("render")
     ap.add_argument("--jobs", type=int, default=4)
     ap.add_argument("--chunk", type=int, default=10)
+    ap.add_argument("--mem-budget", type=int, default=16,
+                    help="GB for the running containers' caps and the compare steps together")
     ap.add_argument("--ids", default="")
     ap.add_argument("--work", default=os.path.expanduser("~/tmp/compat-census"))
     ap.add_argument("--outdir", default="", help="default <render-dir>/compat-census")
@@ -174,6 +279,9 @@ def main():
     if not os.path.exists(out_file):
         with open(out_file, "w") as f:
             f.write("\t".join(COLUMNS) + "\n")
+    if not os.path.exists(os.path.join(outdir, "memory.tsv")):
+        with open(os.path.join(outdir, "memory.tsv"), "w") as f:
+            f.write("chunk\trole\tpass\tfiles\tmax_mp\tcap_gb\tpeak_bytes\toom_kills\texit\tseconds\n")
     # A chunk appends all its rows at once, so a file with rows is done (a rerun resumes).
     with open(out_file, newline="") as f:
         done = {r["sha256"] for r in csv.DictReader(f, delimiter="\t")}
@@ -198,10 +306,12 @@ def main():
           f"{len(todo)} chunks to run", file=sys.stderr, flush=True)
     os.makedirs(a.work, exist_ok=True)
     lock = threading.Lock()
+    budget = MemoryBudget(a.mem_budget)
     t0 = time.time()
     finished = 0
     with concurrent.futures.ThreadPoolExecutor(a.jobs) as pool:
-        futs = {pool.submit(run_chunk, render, a.work, n, c, images, lock, out_file): n for n, c in todo}
+        futs = {pool.submit(run_chunk, render, a.work, n, c, images, lock, out_file, pixels, budget): n
+                for n, c in todo}
         for fut in concurrent.futures.as_completed(futs):
             finished += 1
             try:
@@ -211,7 +321,8 @@ def main():
                 continue
             el = time.time() - t0
             print(f"{finished}/{len(todo)} chunks ({rows} cells in chunk {futs[fut]}), {el / 60:.1f} min, "
-                  f"eta {el / finished * (len(todo) - finished) / 60:.0f} min", file=sys.stderr, flush=True)
+                  f"eta {el / finished * (len(todo) - finished) / 60:.0f} min, {budget.used}/{budget.total} GB held",
+                  file=sys.stderr, flush=True)
     with open(os.path.join(outdir, "aliases.tsv"), "w") as f:
         f.write("sha256\tpath\n")
         f.writelines(f"{sha}\t{p}\n" for sha, ps in sorted(alias.items()) for p in ps)
