@@ -2,8 +2,8 @@
 """Compatibility census of a render v4 output: every distinct file of the PNG and JPEG XL layers
 through the reader images of the compat matrix (Ubuntu LTS packages, a rolling distribution,
 headless browsers), each reader's decode hashed and compared with ours (EXPORT-PLAN.md, "Gates").
-The browsers run scripts/census_browser_batch.mjs: the adapter's canvas decode path with one
-browser launch per chunk.
+The browsers run scripts/census_browser_batch.mjs: the adapter's canvas decode, with the file
+served over loopback HTTP instead of a data: URL and one browser launch per chunk.
 
     render_v4_compat_census.py <render-dir> [--jobs 4] [--chunk 10] [--ids 11064,...] [--outdir DIR]
 
@@ -19,7 +19,8 @@ file, with our decode of its sRGB twin, which is what a colour-managed reader sh
 Files with the same bytes in two layers are read once. Chunks hold at most --chunk files and
 60 MP, and wait while the work disk has under 25 GB free. Writes under <render-dir>/compat-census/:
 census.tsv (one row per file and reader; a rerun skips files it has), done.txt (finished chunks),
-images.tsv (the reader images' ids) and summary.txt; RUN.meta gets the results.
+images.tsv (the reader images' ids) and summary.txt; RUN.meta gets the results unless --outdir
+points elsewhere (a trial run).
 """
 import argparse
 import concurrent.futures
@@ -93,7 +94,7 @@ def run_chunk(render, work, n, chunk, images, out_lock, out_file):
             f.writelines(f"{i}\t/r/{path}\n" for i, (sha, (layer, path, alt)) in enumerate(chunk))
         if reader == "browser":
             # One browser launch per chunk (scripts/census_browser_batch.mjs): the adapter's
-            # canvas decode path, without a launch per file.
+            # canvas decode over loopback HTTP, without a launch per file.
             script = f"node /x/census_browser_batch.mjs {args[0]} /o/list.tsv /o >/dev/null 2>&1"
         else:
             script = ('while IFS=$(printf "\\t") read -r i p; do '
@@ -214,10 +215,10 @@ def main():
     with open(os.path.join(outdir, "aliases.tsv"), "w") as f:
         f.write("sha256\tpath\n")
         f.writelines(f"{sha}\t{p}\n" for sha, ps in sorted(alias.items()) for p in ps)
-    summarize(render, outdir, images)
+    summarize(render, outdir, images, write_meta=not a.outdir)
 
 
-def summarize(render, outdir, images):
+def summarize(render, outdir, images, write_meta=True):
     """summary.txt (per reader and format: decoded, equal to ours, errors) and RUN.meta lines."""
     with open(os.path.join(outdir, "census.tsv"), newline="") as f:
         rows = list(csv.DictReader(f, delimiter="\t"))
@@ -235,6 +236,8 @@ def summarize(render, outdir, images):
         lines.append(f"{image} {reader} {fmt}: {c['ok']} of {c['n']} decoded, {c['same']} equal to ours, "
                      f"{c['close']} within 1 code value; {' | '.join(sorted(c['versions']))}")
     open(os.path.join(outdir, "summary.txt"), "w").write("\n".join(lines) + "\n")
+    if not write_meta:
+        return
     tools = ["scripts/render_v4_compat_census.py", "scripts/census_browser_batch.mjs", "tools/jxl-decode-check"]
     commit = subprocess.run(["git", "-C", REPO, "log", "-1", "--format=%H", "--"] + tools, capture_output=True, text=True).stdout.strip()
     dirty = subprocess.run(["git", "-C", REPO, "status", "--porcelain", "--"] + tools, capture_output=True, text=True).stdout
