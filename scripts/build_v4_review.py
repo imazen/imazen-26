@@ -28,6 +28,7 @@ import collections
 import csv
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -206,6 +207,7 @@ def cmd_data(a):
             jxl_ok[(r["image"], r["reader"])] += r["status"] == "ok"
     jxl_support = {k: jxl_ok[k] / n for k, n in jxl_seen.items()}
     form_of = {f["path"]: f["form"] for rows_ in by_id.values() for f in rows_}
+    pixels_of = {f["path"]: int(f["width"]) * int(f["height"]) for rows_ in by_id.values() for f in rows_}
 
     # Images, in id order, with their sheet cells and previews.
     sheet_cells = {}
@@ -289,7 +291,10 @@ def cmd_data(a):
                 continue
             paths = alias.get(sha, [])
             form = form_of.get(rows[0]["path"], "")
-            vs = [verdict(c, form, jxl_support) for c in rows]
+            # The bitmap a reader allocates: our decode's channels and sample size.
+            ours = next((h for h in hashes.get(rows[0]["path"], []) if h[0] in ("zenpng", "zenjxl")), None)
+            px_bytes = (1 if ours and ours[3] == "1" else 4) * (2 if ours and int(ours[4] or 8) > 8 else 1)
+            vs = [verdict(c, form, jxl_support, pixels_of.get(rows[0]["path"], 0) * px_bytes) for c in rows]
             for (label, problem), c in zip(vs, rows):
                 fmt_ = "jxl" if c["path"].endswith(".jxl") else "png"
                 tally[(fmt_, "problem" if problem else "exact" if label.startswith("exact") else "expected")] += 1
@@ -365,13 +370,24 @@ def cmd_data(a):
     print(f"{len(images)} images; " + ", ".join(f"{d} {v / 1e6:.1f} MB" for d, v in sizes.items()), file=sys.stderr)
 
 
-def verdict(c, form, jxl_support):
-    """What a census row means: (label, problem?)."""
+# QImageReader.allocationLimit() in MB in imazen26-compat:lts and :latest, read 2026-10-16. Both
+# read the 108 MP 11415 with QT_IMAGEIO_MAXALLOC=1024 and refuse it without.
+QT_DEFAULT_ALLOC_MB = {"6.4.2": 128, "6.11.2": 256}
+
+
+def verdict(c, form, jxl_support, bitmap_bytes=0):
+    """What a census row means: (label, problem?). bitmap_bytes: the decoded image's size."""
     if c["status"] in ("crash", "unreadable-output"):
         return c["status"], True
     if c["status"] != "ok":
         if "readback returned all-zero" in c["error"]:
             return "canvas readback failed (WebKit)", False
+        if c["reader"] == "qt":
+            said = re.search(r"allocation limit of (\d+) megabytes", c["error"])
+            v = re.search(r"Qt (\d+\.\d+\.\d+)", c["version"])
+            limit = int(said[1]) if said else QT_DEFAULT_ALLOC_MB.get(v[1] if v else "")
+            if limit and (said or ("Unable to read image data" in c["error"] and bitmap_bytes > limit << 20)):
+                return f"over Qt's default {limit} MB image limit", False
         if c["path"].endswith(".jxl") and jxl_support.get((c["image"], c["reader"]), 0) < 0.5:
             return "no JPEG XL support", False
         return "error", True
