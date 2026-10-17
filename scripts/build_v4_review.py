@@ -16,6 +16,9 @@
         (the medium previews concatenated; the index gives each one's offset and length) and
         data/decoded-xxh3-NN.txt (the hash file in parts of at most 12 MB). --fullpack-urls maps each full-resolution pack to the asset
         URL its Artifact upload returned (fp_NNN.webp<TAB>url).
+    build_v4_review.py census <render-dir> png|jxl
+        The reader census's verdicts for one format, counted per reader and outcome, with an
+        example of each unexplained one.
 
 The details join the render's reports: manifests/, list.tsv (provenance), readback.tsv,
 jxl-check.tsv, byte-scan-<layer>.tsv, inventory-full.tsv (every part of every file),
@@ -30,6 +33,7 @@ import json
 import os
 import re
 import shutil
+import struct
 import subprocess
 import sys
 
@@ -147,6 +151,91 @@ def meta(render):
     return out
 
 
+def jxl_codestream_head(path, n=512):
+    """The first n bytes of a JPEG XL file's codestream: the file itself, or its jxlc box or its
+    jxlp boxes joined."""
+    with open(path, "rb") as f:
+        if f.read(2) == b"\xff\x0a":
+            f.seek(0)
+            return f.read(n)
+        size, pos, out = os.fstat(f.fileno()).st_size, 0, bytearray()
+        while pos + 8 <= size and len(out) < n:
+            f.seek(pos)
+            h = f.read(16)
+            length, kind = struct.unpack(">I4s", h[:8])
+            head = 8
+            if length == 1:
+                length, head = struct.unpack(">Q", h[8:16])[0], 16
+            elif length == 0:
+                length = size - pos
+            if kind in (b"jxlc", b"jxlp"):
+                skip = head + (4 if kind == b"jxlp" else 0)  # a jxlp box starts with its index
+                f.seek(pos + skip)
+                out += f.read(min(length - skip, n - len(out)))
+            pos += length
+        return bytes(out)
+
+
+def jxl_bits_per_sample(path):
+    """The bits per sample a JPEG XL file's codestream header states (ISO/IEC 18181-1: the
+    SizeHeader, then the ImageMetadata up to its BitDepth)."""
+    b, pos = jxl_codestream_head(path), 0
+
+    def u(n):
+        nonlocal pos
+        v = 0
+        for k in range(n):
+            v |= (b[pos >> 3] >> (pos & 7) & 1) << k
+            pos += 1
+        return v
+
+    def u32(*d):  # each choice is a value, or (bits, offset)
+        c = d[u(2)]
+        return c if isinstance(c, int) else u(c[0]) + c[1]
+
+    def size_header():
+        small = u(1)
+        _ = u(5) if small else u32((9, 1), (13, 1), (18, 1), (30, 1))
+        if u(3) == 0:
+            _ = u(5) if small else u32((9, 1), (13, 1), (18, 1), (30, 1))
+
+    if u(16) != 0x0AFF:
+        raise ValueError(f"{path}: no JPEG XL codestream signature")
+    size_header()
+    if u(1):  # all_default
+        return 8
+    if u(1):  # extra_fields
+        u(3)  # orientation
+        if u(1):  # intrinsic size
+            size_header()
+        if u(1):  # preview
+            d = (16, 32, (5, 1), (9, 33)) if u(1) else ((6, 1), (8, 65), (10, 321), (12, 1345))
+            u32(*d)
+            if u(3) == 0:
+                u32(*d)
+        if u(1):  # animation
+            u32(100, 1000, (10, 1), (30, 1)), u32(1, 1001, (8, 1), (10, 1)), u32(0, (3, 0), (16, 0), (32, 0)), u(1)
+    if u(1):  # float samples
+        return u32(32, 16, 24, (6, 1))
+    return u32(8, 10, 12, (6, 1))
+
+
+def boxes_after_codestream(inv_rows):
+    """The top-level boxes after a JPEG XL container's last codestream box, from its
+    inventory-full.tsv rows ([offset, length, depth, kind, tag, disposition, label])."""
+    top = sorted((x for x in inv_rows if x[2] == 0 and x[3] == "box"), key=lambda x: x[0])
+    last = max((k for k, x in enumerate(top) if x[4] in ("jxlc", "jxlp")), default=len(top))
+    return [(f"brob {x[6]}" if x[4] == "brob" else x[4]).strip() for x in top[last + 1:]]
+
+
+def jxl_census_info(R, paths, inv, jxlcheck):
+    """What the census verdicts need of each JPEG XL file: its bits per sample, whether it is
+    gray (jxl-check.tsv's colour), and the boxes after its codestream (inventory-full.tsv)."""
+    return {p: {"bits": jxl_bits_per_sample(os.path.join(R, p)),
+                "gray": jxlcheck.get(p, {}).get("colour", "").startswith("Grayscale"),
+                "after": boxes_after_codestream(inv.get(p, []))} for p in paths if p.endswith(".jxl")}
+
+
 def cmd_data(a):
     R, S = a.render, a.stage
     work = os.path.join(S, "work")
@@ -206,7 +295,8 @@ def cmd_data(a):
             jxl_seen[(r["image"], r["reader"])] += 1
             jxl_ok[(r["image"], r["reader"])] += r["status"] == "ok"
     jxl_support = {k: jxl_ok[k] / n for k, n in jxl_seen.items()}
-    form_of = {f["path"]: f["form"] for rows_ in by_id.values() for f in rows_}
+    jxl_info = jxl_census_info(R, {r["path"] for r in census_rows}, inv, jxlcheck)
+    form_of ={f["path"]: f["form"] for rows_ in by_id.values() for f in rows_}
     pixels_of = {f["path"]: int(f["width"]) * int(f["height"]) for rows_ in by_id.values() for f in rows_}
 
     # Images, in id order, with their sheet cells and previews.
@@ -294,7 +384,8 @@ def cmd_data(a):
             # The bitmap a reader allocates: our decode's channels and sample size.
             ours = next((h for h in hashes.get(rows[0]["path"], []) if h[0] in ("zenpng", "zenjxl")), None)
             px_bytes = (1 if ours and ours[3] == "1" else 4) * (2 if ours and int(ours[4] or 8) > 8 else 1)
-            vs = [verdict(c, form, jxl_support, pixels_of.get(rows[0]["path"], 0) * px_bytes) for c in rows]
+            vs = [verdict(c, form, jxl_support, pixels_of.get(rows[0]["path"], 0) * px_bytes, jxl_info.get(c["path"]))
+                  for c in rows]
             for (label, problem), c in zip(vs, rows):
                 fmt_ = "jxl" if c["path"].endswith(".jxl") else "png"
                 tally[(fmt_, "problem" if problem else "exact" if label.startswith("exact")
@@ -376,15 +467,18 @@ def cmd_data(a):
 QT_DEFAULT_ALLOC_MB = {"6.4.2": 128, "6.11.2": 256}
 
 
-def verdict(c, form, jxl_support, bitmap_bytes=0):
-    """What a census row means: (label, problem?). bitmap_bytes: the decoded image's size."""
-    # Ubuntu 24.04's ffmpeg (6.1, libjxl 0.7) reads a bare JPEG XL codestream (checked: our decode
-    # exactly) but loops on the container, printing "invalid signature" until killed: the
-    # adapter's bash, holding the error text, reaches the container's memory cap, or the
-    # adapter's 90 s timeout.
-    if (c["image"], c["reader"]) == ("lts", "ffmpeg") and c["path"].endswith(".jxl") and form != "jpeg-in-jxl-codestream" \
-            and c["status"] in ("crash", "timeout") and ("memory cap" in c["error"] or "invalid signature" in c["error"]):
-        return "no JPEG XL container support (ffmpeg 6.1 loops)", False
+def verdict(c, form, jxl_support, bitmap_bytes=0, jxl=None):
+    """What a census row means: (label, problem?). bitmap_bytes: the decoded image's size; jxl: a
+    JPEG XL file's jxl_census_info entry."""
+    jxl = jxl or {}
+    # Ubuntu 24.04's ffmpeg (6.1, libjxl 0.7) reads a bare codestream and a container whose last
+    # box is the codestream, but on any box after the codestream (xml, brob, jhgm) it loops,
+    # printing "invalid signature" until the container's memory cap kills it or it crashes (3
+    # files, at 3.5 and 8.5 GB caps). Checked 2026-10-17: four of those layouts with the boxes
+    # moved ahead of the codestream decode exactly, a 42 MP file it crashed on decodes, and
+    # libjxl 0.12's cjxl layout (the boxes between codestream parts) decodes exactly.
+    if (c["image"], c["reader"]) == ("lts", "ffmpeg") and jxl.get("after") and c["status"] in ("crash", "timeout"):
+        return "fails on a box after the codestream (ffmpeg 6.1)", False
     if c["status"] in ("crash", "unreadable-output"):
         return c["status"], True
     if c["status"] != "ok":
@@ -398,6 +492,12 @@ def verdict(c, form, jxl_support, bitmap_bytes=0):
                 return f"over Qt's default {limit} MB image limit", False
         if c["path"].endswith(".jxl") and jxl_support.get((c["image"], c["reader"]), 0) < 0.5:
             return "no JPEG XL support", False
+        # GraphicsMagick 1.3.42 and 1.3.48 ("Invalid colormap index", "An error has occurred
+        # reading from file") and OpenCV 5.0 read every other JPEG XL file but not the 1-bit
+        # patent pages, which djxl 0.12, ffmpeg 9, ImageMagick 7, vips 8.15 and 8.18, WebKit and
+        # glycin read exactly, as our three decoders do.
+        if jxl.get("bits") == 1:
+            return "1-bit JPEG XL not read", False
         return "error", True
     if c["same"] == "native":
         return "exact", False
@@ -420,6 +520,16 @@ def verdict(c, form, jxl_support, bitmap_bytes=0):
         return f"colour-managed to sRGB (twin ±{c['srgb_twin_max_diff']})", False
     if md <= 1:
         return "rounding (±1)", False
+    # libjxl 0.7's djxl writes a 1-bit image into an 8-bit PNG unscaled, as 0 and 1; djxl 0.12
+    # writes 0 and 255, and libjxl 0.7 under vips 8.15 reads the same files exactly.
+    if (c["image"], c["reader"]) == ("lts", "djxl") and jxl.get("bits") == 1 and md == 254:
+        return "1-bit samples written as 0 and 1 (djxl 0.7)", False
+    # glycin 2.1.5 (gdk-pixbuf 2.44.7) decodes a gray JPEG XL file with the sRGB curve its header
+    # states but re-encodes it with a gamma 2.2 curve (twice the value below 8): up to 9 code
+    # values lighter in the shadows, within 1 above 73. Checked 2026-10-17 on the 37 gray
+    # JPEG-in-JXL files and on gray lossless and lossy files from cjxl; gray PNG reads exactly.
+    if c["reader"] == "gdkpixbuf" and jxl.get("gray") and md <= 10:
+        return f"gray re-encoded with gamma 2.2 (glycin, ±{md})", False
     if form.startswith("jpeg-in-jxl") and md <= 6:
         return f"JPEG decoding (±{md})", False
     return f"differs (±{md})", True
@@ -521,8 +631,52 @@ FOOTER = [
     "RGBA; 8-bit, or 16-bit little-endian above 8 bits), rows packed, in displayed orientation: equal hashes mean equal pixels.",
     "Reader census: each distinct file through the adapters of the image-compat matrix in Docker (Ubuntu 24.04 LTS "
     "packages, a rolling distribution, and Chromium, Firefox and WebKit through Playwright), with no network; each "
-    "reader's bitmap is compared with ours (zenpng or zenjxl) and, for a wide-gamut file, with its sRGB twin.",
+    "reader's bitmap is compared with ours (zenpng or zenjxl); for a wide-gamut file, also with an sRGB reference "
+    "(its sRGB twin, or for a JPEG-in-JXL file our decode converted to sRGB, with a tolerance per pixel); and for a "
+    "JPEG XL file a reader leaves unrotated, with our decode in the stored orientation.",
 ]
+
+
+def cmd_census(a):
+    """The census verdicts of one format, counted per reader and outcome, with an example of
+    each unexplained one."""
+    R = a.render
+    man = {}
+    for l in ("png-p3", "png-srgb", "jxl-p3", "jxl-srgb"):
+        for r in tsv(os.path.join(R, "manifests", f"{l}.tsv")):
+            man[r["path"]] = r
+    rows = [r for r in tsv(os.path.join(R, "compat-census", "census.tsv")) if r["path"].endswith("." + a.format)]
+    seen, ok = collections.Counter(), collections.Counter()
+    for r in rows:
+        seen[(r["image"], r["reader"])] += 1
+        ok[(r["image"], r["reader"])] += r["status"] == "ok"
+    jxl_support = {k: ok[k] / n for k, n in seen.items()}
+    info = {}
+    if a.format == "jxl":
+        inv = collections.defaultdict(list)
+        for r in tsv(os.path.join(R, "inventory-full.tsv")):
+            inv[os.path.relpath(r["file"], R)].append([int(r["offset"] or 0), int(r["length"] or 0), int(r["depth"] or 0),
+                                                       r["kind"], r["tag"], r["disposition"], r["label"]])
+        jxlcheck = {r["path"]: r for r in tsv(os.path.join(R, "jxl-check.tsv"))}
+        info = jxl_census_info(R, {r["path"] for r in rows}, inv, jxlcheck)
+    hashes = collections.defaultdict(list)
+    for r in tsv(os.path.join(R, "decoded-xxh3.tsv")):
+        hashes[r["path"]].append(r)
+    count, example = collections.Counter(), {}
+    for c in rows:
+        m = man[c["path"]]
+        ours = next((h for h in hashes.get(c["path"], []) if h["decoder"] in ("zenpng", "zenjxl")), None)
+        px_bytes = (1 if ours and ours["channels"] == "1" else 4) * (2 if ours and int(ours["bits"] or 8) > 8 else 1)
+        label, problem = verdict(c, m["form"], jxl_support, int(m["width"]) * int(m["height"]) * px_bytes, info.get(c["path"]))
+        k = (problem, f"{c['image']} {c['reader']}", re.sub(r" \(±\d+\)$", "", label) if problem else label)
+        count[k] += 1
+        example.setdefault(k, c)
+    print(f"{len(rows):,} rows, {len({r['sha256'] for r in rows}):,} files, "
+          f"{sum(v for k, v in count.items() if k[0]):,} unexplained")
+    for k in sorted(count, key=lambda k: (not k[0], k[1], k[2])):
+        c = example[k]
+        print(("UNEXPLAINED " if k[0] else "") + f"{count[k]:6,}  {k[1]:22} {k[2]}"
+              + (f"  e.g. {c['path'].split('/')[-1][:60]} {c['same']} {c['max_diff']} {c['error'][:80]}" if k[0] else ""))
 
 
 def main():
@@ -532,9 +686,11 @@ def main():
     p = sub.add_parser("fullpacks"); p.add_argument("render"); p.add_argument("stage")
     p = sub.add_parser("data"); p.add_argument("render"); p.add_argument("stage"); p.add_argument("--fullpack-urls", default="")
     p.add_argument("--no-census", action="store_true", help="leave the reader census out (while it runs)")
+    p = sub.add_parser("census", help="count the census verdicts of one format")
+    p.add_argument("render"); p.add_argument("format", choices=("png", "jxl"))
     a = ap.parse_args()
     a.render = os.path.abspath(a.render)
-    {"images": cmd_images, "fullpacks": cmd_fullpacks, "data": cmd_data}[a.cmd](a)
+    {"images": cmd_images, "fullpacks": cmd_fullpacks, "data": cmd_data, "census": cmd_census}[a.cmd](a)
 
 
 if __name__ == "__main__":
