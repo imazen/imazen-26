@@ -15,7 +15,12 @@
 //!       Each `<reference>\t<output.png>[\t<alternate reference>]` line: the output (a reader's
 //!       decode, as the compatibility census's adapters write it) hashed in its own layout and
 //!       as 8-bit RGBA, and compared with our decode of the reference file (zenpng or zenjxl)
-//!       and of the alternate one (the sRGB twin of a wide-gamut file).
+//!       and of the alternate one (the sRGB twin of a wide-gamut file). An alternate of
+//!       `=srgb:display-p3` or `=srgb:adobe-rgb` is our decode of the reference converted to
+//!       sRGB the way render-v4 makes its sRGB layer, for a wide-gamut JPEG-in-JXL file: its
+//!       twin comes from the PNG layer, another decode of the JPEG. `alt_same` is then `within`
+//!       when every sample is within what a decode one code value from ours becomes after the
+//!       conversion, plus 2 (`srgb_of`).
 //!   jxl-decode-check hdr [--jobs N] < pairs > rows.tsv
 //!       Each `<jxl>\t<hdr.png>` pair: zenjxl's own HDR reconstruction of the JXL's gain map
 //!       (GainMapRender::ReconstructHdr), compared in stops with the 16-bit PQ render.
@@ -642,6 +647,118 @@ fn reference_bitmap(path: &str) -> Result<Bitmap, String> {
     }
 }
 
+/// Our decode converted to sRGB as render-v4's `to_srgb` makes the sRGB layer (8-bit code values
+/// to linear light through the gamut matrix, clipped, encoded as 8-bit sRGB; alpha unchanged),
+/// and how far each sample of a correct colour-managed decode may land from it.
+///
+/// A wide-gamut JPEG-in-JXL file decodes up to a few code values away from the PNG its sRGB twin
+/// was made from (another decode of the JPEG), and conforming decoders of the file land within
+/// one code value of ours (measured: every libjxl-based reader and glycin's jxl-oxide). The
+/// conversion is steep where a saturated colour puts an sRGB channel near zero, so one code
+/// value in the wide gamut can move the sRGB value by ten or more. The tolerance of a sample is
+/// the most any decode within one code value per channel of ours moves it after the
+/// conversion, plus 2 for the reader's own colour arithmetic.
+fn srgb_of(b: &Bitmap, colour: &str) -> Result<(Bitmap, Vec<u8>), String> {
+    use zenpixels::{ColorPrimaries, PixelDescriptor, TransferFunction};
+    use zenpixels_convert::{ConvertOptions, ConvertPlan, convert_row};
+    let (primaries, transfer) = match colour {
+        "display-p3" => (ColorPrimaries::DisplayP3, TransferFunction::Srgb),
+        "adobe-rgb" => (ColorPrimaries::AdobeRgb, TransferFunction::Gamma22),
+        other => return Err(format!("no sRGB conversion for colour {other}")),
+    };
+    if b.bits != 8 || !matches!(b.channels, 3 | 4) {
+        return Err(format!(
+            "the sRGB conversion takes 8-bit RGB or RGBA, not {} channels of {} bits",
+            b.channels, b.bits
+        ));
+    }
+    let from = PixelDescriptor::RGB8_SRGB
+        .with_primaries(primaries)
+        .with_transfer(transfer);
+    let linear = PixelDescriptor::RGBF32_LINEAR.with_primaries(ColorPrimaries::Bt709);
+    let opts = ConvertOptions::permissive().with_clip_out_of_gamut(false);
+    let plan =
+        ConvertPlan::new_explicit(from, linear, &opts).map_err(|e| format!("plan: {e:?}"))?;
+    let encode = ConvertPlan::new_explicit(
+        linear,
+        PixelDescriptor::RGB8_SRGB,
+        &ConvertOptions::permissive(),
+    )
+    .map_err(|e| format!("plan: {e:?}"))?;
+    let (w, c) = (b.width as usize, b.channels as usize);
+    let mut lin = vec![0f32; w * 3];
+    let mut convert = |rgb: &[u8], out: &mut [u8]| {
+        convert_row(&plan, rgb, bytemuck::cast_slice_mut(&mut lin), w as u32);
+        for v in &mut lin {
+            *v = v.clamp(0.0, 1.0);
+        }
+        convert_row(&encode, bytemuck::cast_slice(&lin), out, w as u32);
+    };
+    let mut samples = b.samples.clone();
+    let mut tolerance = vec![0u8; b.width as usize * b.height as usize * 4];
+    let (mut rgb, mut out, mut moved, mut shifted, mut far) = (
+        vec![0u8; w * 3],
+        vec![0u8; w * 3],
+        vec![0u8; w * 3],
+        vec![0u8; w * 3],
+        vec![0u8; w * 3],
+    );
+    for (row, tol) in samples
+        .chunks_exact_mut(w * c)
+        .zip(tolerance.chunks_exact_mut(w * 4))
+    {
+        for (d, s) in rgb
+            .as_chunks_mut::<3>()
+            .0
+            .iter_mut()
+            .zip(row.chunks_exact(c))
+        {
+            d.copy_from_slice(&s[..3]);
+        }
+        convert(&rgb, &mut out);
+        far.fill(0);
+        for e in 0..27u8 {
+            let step = [e % 3, e / 3 % 3, e / 9];
+            if step == [1, 1, 1] {
+                continue;
+            }
+            for (d, s) in moved
+                .as_chunks_mut::<3>()
+                .0
+                .iter_mut()
+                .zip(rgb.as_chunks::<3>().0)
+            {
+                for k in 0..3 {
+                    d[k] = (s[k] as i16 + step[k] as i16 - 1).clamp(0, 255) as u8;
+                }
+            }
+            convert(&moved, &mut shifted);
+            for ((f, x), y) in far.iter_mut().zip(&shifted).zip(&out) {
+                *f = (*f).max(x.abs_diff(*y));
+            }
+        }
+        for ((d, s), (t, f)) in row.chunks_exact_mut(c).zip(out.as_chunks::<3>().0).zip(
+            tol.as_chunks_mut::<4>()
+                .0
+                .iter_mut()
+                .zip(far.as_chunks::<3>().0),
+        ) {
+            d[..3].copy_from_slice(s);
+            for k in 0..3 {
+                t[k] = f[k].saturating_add(2);
+            }
+        }
+    }
+    let bitmap = Bitmap {
+        width: b.width,
+        height: b.height,
+        channels: b.channels,
+        bits: 8,
+        samples,
+    };
+    Ok((bitmap, tolerance))
+}
+
 /// A bitmap as 8-bit RGBA: gray spread to RGB, an opaque alpha where there is none, 16-bit
 /// samples rounded to 8 bits.
 fn rgba8(b: &Bitmap) -> Vec<u8> {
@@ -688,8 +805,9 @@ fn diff_stats(a: &[u8], b: &[u8]) -> (u8, f64, u64) {
 const COMPARE_HEADER: &str = "reference\toutput\tstatus\twidth\theight\tchannels\tbits\txxh3\t\
 rgba8_xxh3\tsame\tmax_diff\tmean_diff\tdiff_pixels\talt_same\talt_max_diff\terror";
 
-/// An alternate reference's size and RGBA8 samples, or why it didn't decode.
-type AltReference = Result<(u32, u32, Vec<u8>), String>;
+/// An alternate reference's size and RGBA8 samples, with each sample's tolerance for a converted
+/// one (`srgb_of`), or why it didn't decode.
+type AltReference = Result<(u32, u32, Vec<u8>, Option<Vec<u8>>), String>;
 
 /// One reference and the outputs compared with it.
 fn compare_group(reference: &str, outputs: &[(String, Option<String>)]) -> Vec<String> {
@@ -742,13 +860,25 @@ fn compare_group(reference: &str, outputs: &[(String, Option<String>)]) -> Vec<S
             let (alt_same, alt_max) = match alt {
                 None => (String::new(), String::new()),
                 Some(a) => {
-                    let r = alts.entry(a.clone()).or_insert_with(|| {
-                        reference_bitmap(a).map(|b| (b.width, b.height, rgba8(&b)))
+                    let r = alts.entry(a.clone()).or_insert_with(|| match a.strip_prefix("=srgb:") {
+                        Some(colour) => srgb_of(want.0, colour)
+                            .map(|(b, t)| (b.width, b.height, rgba8(&b), Some(t))),
+                        None => reference_bitmap(a).map(|b| (b.width, b.height, rgba8(&b), None)),
                     });
                     match r {
-                        Ok((aw, ah, ar)) if (*aw, *ah) == (w, h) => {
+                        Ok((aw, ah, ar, tol)) if (*aw, *ah) == (w, h) => {
                             let (m, _, _) = diff_stats(&got_rgba, ar);
-                            ((if *ar == got_rgba { "yes" } else { "no" }).to_string(), m.to_string())
+                            let within = |t: &Vec<u8>| {
+                                got_rgba.iter().zip(ar.iter()).zip(t).all(|((x, y), t)| x.abs_diff(*y) <= *t)
+                            };
+                            let same = if *ar == got_rgba {
+                                "yes"
+                            } else if tol.as_ref().is_some_and(within) {
+                                "within"
+                            } else {
+                                "no"
+                            };
+                            (same.to_string(), m.to_string())
                         }
                         Ok(_) => ("size".to_string(), String::new()),
                         Err(e) => (format!("error: {e}"), String::new()),

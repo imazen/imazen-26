@@ -224,6 +224,7 @@ dependencies = [
 name = "jxl-decode-check"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
  "jxl",
  "rayon",
  "xxhash-rust",
@@ -231,6 +232,7 @@ dependencies = [
  "zencodecs",
  "zenjxl",
  "zenpixels",
+ "zenpixels-convert",
 ]
 
 [[package]]

@@ -64,17 +64,20 @@ def role_name(image, reader, args):
 
 
 def distinct_files(render, ids):
-    """sha256 -> (layer, path, alternate reference or ''), first path per sha; plus every path."""
+    """sha256 -> (layer, path, alternate reference or ''), first path per sha; plus every path.
+    The alternate reference of a wide-gamut file is its sRGB twin, or for a JPEG-in-JXL file
+    `=srgb:<colour>`: our decode of the file converted to sRGB by `jxl-decode-check compare`,
+    because the twin comes from the PNG layer, another decode of the JPEG."""
     rows, pixels = {}, {}
     for layer in ("png-p3", "png-srgb", "jxl-p3", "jxl-srgb"):
         with open(os.path.join(render, "manifests", f"{layer}.tsv"), newline="") as f:
             for r in csv.DictReader(f, delimiter="\t"):
                 if ids and r["id"] not in ids:
                     continue
-                rows[r["path"]] = (layer, r["sha256"])  # the path starts with the layer
+                rows[r["path"]] = (layer, r["sha256"], r["form"], r["colour"])  # the path starts with the layer
                 pixels[r["sha256"]] = int(r["width"]) * int(r["height"])
     files, alias = {}, {}
-    for path, (layer, sha) in sorted(rows.items()):
+    for path, (layer, sha, form, colour) in sorted(rows.items()):
         alias.setdefault(sha, []).append(path)
         if sha in files:
             continue
@@ -82,7 +85,7 @@ def distinct_files(render, ids):
         if layer.endswith("-p3"):
             twin = path.replace("-p3/", "-srgb/", 1)
             if twin in rows and rows[twin][1] != sha:
-                alt = twin
+                alt = f"=srgb:{colour}" if form.startswith("jpeg-in-jxl") else twin
         files[sha] = (layer, path, alt)
     return files, alias, pixels
 
@@ -113,11 +116,12 @@ class MemoryBudget:
                 self.cond.notify_all()
 
 
-def container_gb(max_px):
-    """A reader container's memory cap. Measured on 12 MP files (memory.tsv): the libraries peak
-    at 0.6-0.7 GB (the adapter's statistics pass holds the output as numpy float64), the browsers
-    at up to 1.0 GB; 64 bytes a pixel plus 1.5 GB leaves room above both."""
-    return min(12, max(2, math.ceil(1.5 + 64e-9 * max_px)))
+def container_gb(max_px, browser):
+    """A reader container's memory cap, in half GB. Measured on 12 MP files (memory.tsv): the
+    libraries peak at 0.6-0.75 GB (the adapter's statistics pass holds the output as numpy
+    float64, 48 bytes a pixel), the browsers at up to 1.25 GB."""
+    gb = 1.5 + 80e-9 * max_px if browser else 0.5 + 64e-9 * max_px
+    return min(14, max(1, math.ceil(gb * 2) / 2))
 
 
 def compare_gb(pxs):
@@ -184,12 +188,12 @@ def run_chunk(render, work, n, chunk, images, out_lock, out_file, pixels, budget
     fmt = "jxl" if chunk[0][1][1].endswith(".jxl") else "png"
     entries = [(i, path) for i, (sha, (layer, path, alt)) in enumerate(chunk)]
     max_px = max(pixels[sha] for sha, _ in chunk)
-    gb = container_gb(max_px)
     memory = []
     for image, reader, args in READERS[fmt]:
         role = role_name(image, reader, args)
         rdir = os.path.join(cdir, role)
         os.makedirs(rdir)
+        gb = container_gb(max_px, reader == "browser")
         peak, kills, rc, secs = run_role(render, rdir, image, reader, args, entries, gb, images, budget)
         memory.append([n, role, "batch", len(entries), f"{max_px / 1e6:.1f}", gb, peak, kills, rc, secs])
         # A file the batch left without a result (the container died, or a browser took the
@@ -221,7 +225,8 @@ def run_chunk(render, work, n, chunk, images, out_lock, out_file, pixels, budget
                 meta = {"status": "crash", "error_head": "no json"}
             cells.append((sha, layer, path, image, reader if not args else f"{reader}-{args[0]}", meta, png))
             if meta.get("status") == "ok" and os.path.exists(png):
-                lines.append(f"{render}/{path}\t{png}\t{render + '/' + alt if alt else ''}\n")
+                ref = alt if alt.startswith("=") or not alt else f"{render}/{alt}"
+                lines.append(f"{render}/{path}\t{png}\t{ref}\n")
     cmp_in = os.path.join(cdir, "compare.in")
     with open(cmp_in, "w") as f:
         f.writelines(lines)

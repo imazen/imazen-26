@@ -15,6 +15,8 @@ description = "Decode the imazen-26 JPEG XL layers with zenjxl and jxl-rs (and, 
 zencodecs = { git = "https://github.com/imazen/zenpipe", branch = "main", default-features = false, features = ["png", "jxl-decode", "jpeg-ultrahdr"] }
 zencodec = { git = "https://github.com/imazen/zencodec", branch = "main" }
 zenpixels = { git = "https://github.com/imazen/zenpixels", branch = "main", default-features = false, features = ["std", "icc"] }
+zenpixels-convert = { git = "https://github.com/imazen/zenpixels", branch = "main" }
+bytemuck = "1.25.2"
 zenjxl = { git = "https://github.com/imazen/zenjxl", branch = "main", default-features = false, features = ["zencodec", "decode", "reconstruct-hdr"] }
 jxl = "0.7.4"
 xxhash-rust = { version = "0.8.19", features = ["xxh3"] }
