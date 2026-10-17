@@ -8,6 +8,8 @@
 - The byte-scan gate allows 11231's UltraHDR gain-map JPEG inside its `jbrd` box (ce99f73), owner OK on the condition that the gain maps decode in jxl-rs, libjxl and zenjxl
 - `tools/corpus-thumbs` skips the resize when a preview is no smaller than the image, which zenresize's 100 MP output cap refused for the 124 MP panorama (47f7279)
 - `r2_originals_sync.py` recomputes multipart ETags at s5cmd's 50 MiB part size, so a plan puts only changed objects (741fd16)
+- The reader census serves each file to the browsers from a loopback server inside the container and takes the canvas pixels back the same way (3958a5d): the data: URLs it shared with the compat matrix made WebKit fail every file of 51.5 MB and up and crashed Chromium from 87.6 MB, before any decoder saw the bytes; the first pass's 6,867 rows stay in the render tree as `compat-census/census.data-url-2026-10-16.tsv`. The v4 review calls a refusal by Qt's default allocation limit (128 MB in Qt 6.4.2, 256 MB in Qt 6.11.2) a reader limit (65f1f87)
+- The six imij-set archives were packed again from the relabelled `.imi` files and read back (2026-10-17); the earlier sets are kept beside them
 
 ### Added
 - `scripts/render_v4_compat_census.py` (378c706, 044bf24): each distinct file of the PNG and JPEG XL layers through the image-compat reader images in Docker (Ubuntu 24.04 LTS, a rolling distribution, Chromium, Firefox and WebKit), every reader's bitmap hashed and compared with ours and with the sRGB twin; chunks bounded to 60 MP and resumable by file
