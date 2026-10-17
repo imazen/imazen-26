@@ -12,6 +12,8 @@
 //!   JPEG sources and the gain-map form (`jhgm`) for gain-map sources.
 //! - `gain-maps` (see `hdr::gain_maps`): each gain-map source's gain-map form as a PNG and an
 //!   ISO 21496-1 payload under `gain-maps/`, for the `.imi` layers; not itself a layer.
+//! - `jxl-remux` (see `remux`): a finished `jxl` pass's files in libjxl's box order, the
+//!   codestreams kept.
 //!
 //! For the PNG layers: orientation baked into the pixels; channels and bit depth follow the
 //! source (8-bit, and the 1-bit patent pages stay 1-bit), a fully opaque alpha channel dropped
@@ -29,6 +31,8 @@
 //!        render-v4 jxl --effort E [--jobs N] <list.tsv> <out-dir>   (the JPEG XL layers; see `jxl`)
 //!        render-v4 jxl-hdr --effort E [--jobs N] <list.tsv> <out-dir>   (each .hdr.png's JXL twin)
 //!        render-v4 gain-maps [--jobs N] <list.tsv> <out-dir>  (the gain-map sources' gain-map forms)
+//!        render-v4 jxl-remux --from DIR [--jobs N] <list.tsv> <out-dir>   (a finished jxl pass's
+//!          files under DIR rewritten into libjxl's box order; see `remux`)
 //!   list: id<TAB>source path<TAB>out stem (class/newid_name, no _WxH)<TAB>provenance JSON
 //!   → <out-dir>/png-p3/<stem>_<W>x<H>.png and <out-dir>/png-srgb/<stem>_<W>x<H>.png, and a
 //!     report on stdout: id, layer, path, width, height, layout, source_alpha (none, kept or
@@ -39,6 +43,7 @@
 
 mod hdr;
 mod jxl;
+mod remux;
 
 use std::fs;
 use std::io::Write as _;
@@ -643,6 +648,11 @@ fn main() {
             .unwrap_or_else(|| usage());
         args.drain(i..i + 2);
     }
+    if let Some(i) = args.iter().position(|a| a == "--from") {
+        let from = args.get(i + 1).cloned().unwrap_or_else(|| usage());
+        remux::FROM.set(from.into()).expect("from set once");
+        args.drain(i..i + 2);
+    }
     if let Some(i) = args.iter().position(|a| a == "--effort") {
         let effort = args
             .get(i + 1)
@@ -659,6 +669,7 @@ fn main() {
         (Some("jxl"), 3) => (jxl::render, jxl::JXL_HEADER),
         (Some("jxl-hdr"), 3) => (jxl::render_hdr, jxl::JXL_HEADER),
         (Some("gain-maps"), 3) => (hdr::gain_maps, hdr::GAIN_MAPS_HEADER),
+        (Some("jxl-remux"), 3) => (remux::remux, jxl::JXL_HEADER),
         _ => usage(),
     };
     let columns = header.split('\t').count();
@@ -730,7 +741,7 @@ fn main() {
 
 fn usage() -> ! {
     eprintln!(
-        "usage: render-v4 <png-sdr|png-hdr|hdr-info|jxl|jxl-hdr|gain-maps> [--jobs N] [--effort N (jxl)] <list.tsv: id, source, out stem, provenance JSON> <out-dir>"
+        "usage: render-v4 <png-sdr|png-hdr|hdr-info|jxl|jxl-hdr|gain-maps|jxl-remux> [--jobs N] [--effort N (jxl)] [--from DIR (jxl-remux)] <list.tsv: id, source, out stem, provenance JSON> <out-dir>"
     );
     std::process::exit(2);
 }
