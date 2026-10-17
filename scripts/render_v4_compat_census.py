@@ -16,8 +16,9 @@ a chunk of files; the adapter decodes with the reader's plain path and writes th
 RGBA) and compares it with our decode of the file (zenpng or zenjxl) and, for a wide-gamut
 file, with our decode of its sRGB twin, which is what a colour-managed reader should show.
 
-Files with the same bytes in two layers are read once. Writes under <render-dir>/compat-census/:
-census.tsv (one row per file and reader), done.txt (finished chunks: a rerun resumes),
+Files with the same bytes in two layers are read once. Chunks hold at most --chunk files and
+60 MP, and wait while the work disk has under 25 GB free. Writes under <render-dir>/compat-census/:
+census.tsv (one row per file and reader; a rerun skips files it has), done.txt (finished chunks),
 images.tsv (the reader images' ids) and summary.txt; RUN.meta gets the results.
 """
 import argparse
@@ -51,13 +52,14 @@ def role_name(image, reader, args):
 
 def distinct_files(render, ids):
     """sha256 -> (layer, path, alternate reference or ''), first path per sha; plus every path."""
-    rows = {}
+    rows, pixels = {}, {}
     for layer in ("png-p3", "png-srgb", "jxl-p3", "jxl-srgb"):
         with open(os.path.join(render, "manifests", f"{layer}.tsv"), newline="") as f:
             for r in csv.DictReader(f, delimiter="\t"):
                 if ids and r["id"] not in ids:
                     continue
                 rows[r["path"]] = (layer, r["sha256"])  # the path starts with the layer
+                pixels[r["sha256"]] = int(r["width"]) * int(r["height"])
     files, alias = {}, {}
     for path, (layer, sha) in sorted(rows.items()):
         alias.setdefault(sha, []).append(path)
@@ -69,10 +71,13 @@ def distinct_files(render, ids):
             if twin in rows and rows[twin][1] != sha:
                 alt = twin
         files[sha] = (layer, path, alt)
-    return files, alias
+    return files, alias, pixels
 
 
 def run_chunk(render, work, n, chunk, images, out_lock, out_file):
+    # Readers' outputs share the disk with everything else: wait for room before starting.
+    while shutil.disk_usage(work).free < 25e9:
+        time.sleep(30)
     cdir = os.path.join(work, f"chunk-{n:05d}")
     shutil.rmtree(cdir, ignore_errors=True)
     os.makedirs(cdir)
@@ -155,7 +160,7 @@ def main():
     a = ap.parse_args()
     render = os.path.abspath(a.render)
     ids = {i for i in a.ids.split(",") if i}
-    files, alias = distinct_files(render, ids)
+    files, alias, pixels = distinct_files(render, ids)
     images = {}
     for t in ("lts", "latest", "browsers"):
         images[t] = subprocess.run(["docker", "image", "inspect", "-f", "{{.Id}}", f"imazen26-compat:{t}"],
@@ -168,22 +173,28 @@ def main():
     if not os.path.exists(out_file):
         with open(out_file, "w") as f:
             f.write("\t".join(COLUMNS) + "\n")
-    done = set()
-    if os.path.exists(os.path.join(outdir, "done.txt")):
-        done = {int(x) for x in open(os.path.join(outdir, "done.txt")).read().split()}
-    # Chunks of one format, PNG first; the numbering is stable across reruns.
-    items = sorted(files.items(), key=lambda kv: (kv[1][1].endswith(".jxl"), kv[1][1]))
-    chunks, cur = [], []
+    # A chunk appends all its rows at once, so a file with rows is done (a rerun resumes).
+    with open(out_file, newline="") as f:
+        done = {r["sha256"] for r in csv.DictReader(f, delimiter="\t")}
+    # Chunks of one format, PNG first, of at most --chunk files and 60 MP: every reader's output
+    # of a chunk stays on disk until the chunk is compared.
+    items = sorted(((sha, v) for sha, v in files.items() if sha not in done),
+                   key=lambda kv: (kv[1][1].endswith(".jxl"), kv[1][1]))
+    chunks, cur, mp = [], [], 0
     for kv in items:
-        if cur and (len(cur) == a.chunk or cur[0][1][1].endswith(".jxl") != kv[1][1].endswith(".jxl")):
+        px = pixels[kv[0]]
+        if cur and (len(cur) == a.chunk or mp + px > 60e6 or cur[0][1][1].endswith(".jxl") != kv[1][1].endswith(".jxl")):
             chunks.append(cur)
-            cur = []
+            cur, mp = [], 0
         cur.append(kv)
+        mp += px
     if cur:
         chunks.append(cur)
-    todo = [(n, c) for n, c in enumerate(chunks) if n not in done]
-    print(f"{len(files)} distinct files ({sum(len(v) for v in alias.values())} paths) in {len(chunks)} chunks; "
-          f"{len(todo)} to run", file=sys.stderr, flush=True)
+    first = 1 + max([int(x) for x in open(os.path.join(outdir, "done.txt")).read().split()] or [-1]) \
+        if os.path.exists(os.path.join(outdir, "done.txt")) else 0
+    todo = [(first + n, c) for n, c in enumerate(chunks)]
+    print(f"{len(files)} distinct files ({sum(len(v) for v in alias.values())} paths); {len(done)} done; "
+          f"{len(todo)} chunks to run", file=sys.stderr, flush=True)
     os.makedirs(a.work, exist_ok=True)
     lock = threading.Lock()
     t0 = time.time()
