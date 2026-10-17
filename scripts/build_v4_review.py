@@ -378,6 +378,13 @@ QT_DEFAULT_ALLOC_MB = {"6.4.2": 128, "6.11.2": 256}
 
 def verdict(c, form, jxl_support, bitmap_bytes=0):
     """What a census row means: (label, problem?). bitmap_bytes: the decoded image's size."""
+    # Ubuntu 24.04's ffmpeg (6.1, libjxl 0.7) reads a bare JPEG XL codestream (checked: our decode
+    # exactly) but loops on the container, printing "invalid signature" until killed: the
+    # adapter's bash, holding the error text, reaches the container's memory cap, or the
+    # adapter's 90 s timeout.
+    if (c["image"], c["reader"]) == ("lts", "ffmpeg") and c["path"].endswith(".jxl") and form != "jpeg-in-jxl-codestream" \
+            and c["status"] in ("crash", "timeout") and ("memory cap" in c["error"] or "invalid signature" in c["error"]):
+        return "no JPEG XL container support (ffmpeg 6.1 loops)", False
     if c["status"] in ("crash", "unreadable-output"):
         return c["status"], True
     if c["status"] != "ok":
@@ -397,8 +404,18 @@ def verdict(c, form, jxl_support, bitmap_bytes=0):
     if c["same"] == "rgba8":
         return "exact as 8-bit RGBA", False
     md = int(c["max_diff"]) if c["max_diff"] else 99
+    if c["same"] == "stored":
+        # ImageMagick and GraphicsMagick read a JPEG XL file's orientation as metadata and hand
+        # back the stored pixels; the differences are against our decode in that orientation.
+        if md <= 1 or (form.startswith("jpeg-in-jxl") and md <= 6):
+            return f"orientation not applied (±{md})" if md else "orientation not applied (pixels exact)", False
+        return f"orientation not applied, differs (±{md})", True
     if form in ("hdr-pq", "lossless-pq"):
         return "HDR shown differently (tone map or 8-bit)", False
+    if c["srgb_twin_same"] == "within":
+        # A wide-gamut JPEG-in-JXL file against our decode converted to sRGB, within what a decode
+        # one code value from ours becomes after the conversion (jxl-decode-check srgb_of).
+        return f"colour-managed to sRGB (±{c['srgb_twin_max_diff']}, within tolerance)", False
     if c["srgb_twin_max_diff"] != "" and int(c["srgb_twin_max_diff"]) <= 2:
         return f"colour-managed to sRGB (twin ±{c['srgb_twin_max_diff']})", False
     if md <= 1:
