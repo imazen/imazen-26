@@ -170,6 +170,69 @@ Three findings on the first JXL files changed the census before the JXL half ran
   plus 2 (0c5ed595; its message says 13 to 30 on 95 files, the measured figures are 5 to 30
   on 77).
 
+**JPEG XL:** 2,488 files, 52,248 decodes, 0 unexplained (`scripts/build_v4_review.py census
+<render> jxl` counts them per reader).
+
+| outcome | decodes |
+|---|---|
+| the same samples | 20,400 |
+| the same pixels as 8-bit RGBA | 1,917 |
+| within 1 code value: mostly JPEG-in-JXL files, which libjxl decodes within 1 of zenjxl (412 or 413 in each libjxl-based reader) | 3,927 |
+| Display P3 converted to sRGB: WebKit within 1 of our sRGB twin (129); WebKit and glycin within tolerance of our decode converted to sRGB (170 each, ±2 to ±18) | 469 |
+| orientation left to the caller, within 1 of our decode in the stored orientation: ImageMagick 7, GraphicsMagick 1.3.42 and 1.3.48 | 408 (136 each) |
+| a PQ file shown as SDR or narrowed to 8 bits: WebKit, glycin, OpenCV 5 | 228 (76 each) |
+| JPEG decoding, ±2 (WebKit) | 3 |
+| gray re-encoded with a gamma 2.2 curve (glycin; below) | 37 |
+| 1-bit samples written as 0 and 1 (djxl 0.7; below) | 39 |
+| no JPEG XL support: Chromium, Firefox, Pillow 10.2 and 12.3, Qt 6.4 and 6.11, ImageMagick 6.9, OpenCV 4.6, gdk-pixbuf 2.42 | 22,392 (2,488 each) |
+| ffmpeg 6.1 on a box after the codestream (below) | 2,311 |
+| 1-bit files not read: GraphicsMagick 1.3.42 and 1.3.48, OpenCV 5 (below) | 117 (39 each) |
+
+- **ffmpeg 6.1 and boxes after the codestream.** This corrects the first finding above, which
+  came from the first 119 files. Over all 2,488, Ubuntu 24.04's ffmpeg read 177, all within 1
+  of our decode: the 12 bare codestreams and the 165 JPEG-in-JXL containers whose last box is
+  the codestream (`jxlp jbrd jxlp`). It failed on all 2,311 files with a box after the
+  codestream: the `xml ` box of the lossless files' provenance XMP, `brob` Exif or XMP boxes,
+  or `jhgm`. Each loops until the container's cap kills it, except 3 that crashed at their
+  3.5 and 8.5 GB caps. Checked on reordered copies (2026-10-17):
+  - A 3 KB lossless file decodes exactly with its `xml ` box moved ahead of the codestream or
+    dropped, and loops with the box after it.
+  - Three more layouts decode exactly once reordered: a JPEG-in-JXL file with Exif, a
+    lossless file with a gain map, and a JPEG-in-JXL file with Exif, XMP and a gain map.
+  - 15002 (42 MP), one of the crashes, decodes once reordered.
+  - libjxl 0.12's `cjxl` writes these boxes between the codestream parts (`jxlp jbrd brob brob
+    jxlp`), and ffmpeg 6.1 reads that layout exactly too.
+  - libjxl 0.12, zenjxl and jxl-rs decode the reordered files to the same pixels and gain
+    maps, and libjxl rebuilds the same JPEG bytes from them.
+
+  Our files have the boxes after the codestream because jxl-encoder writes the XMP and Exif
+  there and `zenjxl::append_gain_map_box` appends `jhgm`. Moving them ahead would make the
+  JPEG XL layers readable by Ubuntu 24.04's ffmpeg. That needs a change to those crates and a
+  re-render, and has not been made.
+- **1-bit files.** The codestream header of each of the 39 patent pages named `-1bit_` says 1
+  bit per sample: render-v4 keeps a sub-byte gray depth. These readers return the same pixels
+  as zenjxl, jxl-rs and libjxl do in the decode check: djxl 0.12, ffmpeg 9, ImageMagick 7,
+  vips 8.15 and 8.18, WebKit and glycin. These do not:
+  - GraphicsMagick 1.3.42 stops with `Invalid colormap index (index 255 >= 2 colors)`.
+  - GraphicsMagick 1.3.48 stops with `An error has occurred reading from file`.
+  - OpenCV 5.0's `imread` returns nothing.
+  - libjxl 0.7's `djxl` writes them into an 8-bit PNG as 0 and 1 instead of 0 and 255.
+    libjxl 0.7 itself reads them correctly under vips 8.15.
+- **glycin and gray JPEG XL.** glycin 2.1.5 (gdk-pixbuf 2.44.7) returns the 37 gray
+  JPEG-in-JXL files (the patent rescans and one Met manuscript) up to 9 code values lighter.
+  - The mapping is the same on every pixel of every file: 2v below 8; from 8 up, the sRGB
+    value re-encoded with a plain 2.2 power (8 → 17, 16 → 23, 32 → 37, 64 → 66); within 1
+    from 73 up.
+  - The files' headers say gray with the sRGB transfer function. libjxl, WebKit and OpenCV
+    agree with our decode within 1.
+  - A gray gradient encoded by cjxl, lossless and lossy, shows the same curve, and the same
+    gradient as a PNG reads exactly. The cause is glycin's handling of gray JPEG XL, not these
+    files.
+- **Memory.** The JPEG XL half ran 4 h 52 min within the 20 GB budget, and available memory
+  stayed at or above 8.7 GiB. Only Ubuntu 24.04's ffmpeg containers had OOM kills (the loops
+  above). The largest cap was 11.5 GB (Chromium on the 124 MP panorama). The largest peak
+  outside that ffmpeg was vips 8.15's 5.7 GiB on the same file, at an 8.5 GB cap.
+
 ## SDR PNG layers
 
 `png-p3` keeps each source's code values and colour; `png-srgb` converts Display P3 and Adobe
