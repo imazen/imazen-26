@@ -471,9 +471,10 @@ code, .mono { font-family: var(--mono); font-size: .82em }
     },
     readers(m, d) {
       if (!d.census || !d.census.length) return '<p class="d">The reader census has not reached this image yet.</p>';
-      return d.census.map(c => `<h3>${esc(c.layer)} <code>${esc(c.path.split('/').pop())}</code>${c.also.length ? ` <span class="d">(same bytes: ${c.also.map(a => esc(a.split('/')[0])).join(', ')})</span>` : ''}</h3>` + table(['reader', 'status', 'same as ours', 'max diff', 'vs sRGB twin', 'ms'],
-        c.rows.map(r => [esc(r[0]), okc(r[1]) + (r[7] ? ` <span class="d">${esc(r[7])}</span>` : ''), okc(r[2]), esc(r[3]), r[4] ? `${okc(r[4])} ${esc(r[5])}` : '', fmt(r[6])]))).join('') +
-        '<p class="d" style="margin-top:8px">Same as ours: <span class="g">native</span> = identical samples and layout; <span class="y">rgba8</span> = identical once both are 8-bit RGBA; anything else differs, by at most the max diff (8-bit code values).</p>';
+      const vc = r => r[9] ? `<span class="r">${esc(r[8])}</span>` : r[8].startsWith('exact') ? `<span class="g">${esc(r[8])}</span>` : `<span class="y">${esc(r[8])}</span>`;
+      return d.census.map(c => `<h3>${esc(c.layer)} <code>${esc(c.path.split('/').pop())}</code>${c.also.length ? ` <span class="d">(same bytes: ${c.also.map(a => esc(a.split('/')[0])).join(', ')})</span>` : ''}</h3>` + table(['reader', 'verdict', 'max diff', 'vs sRGB twin', 'ms'],
+        c.rows.map(r => [esc(r[0]), vc(r) + (r[7] && r[1] !== 'ok' ? ` <span class="d">${esc(r[7])}</span>` : ''), esc(r[3]), r[4] ? `${esc(r[5])}` : '', fmt(r[6])]))).join('') +
+        '<p class="d" style="margin-top:8px">Each reader decodes the file in Docker; its bitmap is compared with ours (zenpng or zenjxl). <span class="g">exact</span>: the same samples; <span class="y">yellow</span>: an expected difference (rounding, colour management to sRGB that matches our sRGB twin, HDR display, JPEG decoding, no JPEG XL support); <span class="r">red</span>: an error or a difference none of those explain. Max diff is in 8-bit code values.</p>';
     },
   };
 })();

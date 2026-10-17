@@ -199,6 +199,13 @@ def cmd_data(a):
     census_rows = [] if a.no_census else tsv(os.path.join(R, "compat-census", "census.tsv"))
     for r in census_rows:
         census[r["sha256"]].append(r)
+    jxl_seen, jxl_ok = collections.Counter(), collections.Counter()
+    for r in census_rows:
+        if r["path"].endswith(".jxl"):
+            jxl_seen[(r["image"], r["reader"])] += 1
+            jxl_ok[(r["image"], r["reader"])] += r["status"] == "ok"
+    jxl_support = {k: jxl_ok[k] / n for k, n in jxl_seen.items()}
+    form_of = {f["path"]: f["form"] for rows_ in by_id.values() for f in rows_}
 
     # Images, in id order, with their sheet cells and previews.
     sheet_cells = {}
@@ -233,6 +240,7 @@ def cmd_data(a):
 
     classes = sorted({r["path"].split("/")[1] for r in sdr_rows(R)})
     images, details = [], {}
+    tally = collections.Counter()
     for n, r in enumerate(sdr_rows(R)):
         i = r["id"]
         files = sorted(by_id[i], key=lambda f: (layers.index(f["layer"]), f["form"]))
@@ -252,10 +260,10 @@ def cmd_data(a):
             if p in readback:
                 rb = readback[p]
                 d["readback"] = [rb["chunks"], rb["pngfix"], rb["pillow"], rb["magick"], rb["pngtopnm"]]
-                issue |= any(x != "ok" for x in d["readback"])
+                issue |= any(not x.startswith(("ok", "opened")) for x in d["readback"])
             if p in jxlcheck:
                 d["jxlcheck"] = [jxlcheck[p]["result"], jxlcheck[p]["colour"] or jxlcheck[p]["error"]]
-                issue |= jxlcheck[p]["result"] != "ok"
+                issue |= not jxlcheck[p]["result"].startswith("ok")
             if p in bytescan:
                 d["bytescan"] = list(bytescan[p])
                 issue |= bool(bytescan[p][0])
@@ -280,13 +288,17 @@ def cmd_data(a):
             if not rows:
                 continue
             paths = alias.get(sha, [])
+            form = form_of.get(rows[0]["path"], "")
+            vs = [verdict(c, form, jxl_support) for c in rows]
+            for (label, problem), c in zip(vs, rows):
+                fmt_ = "jxl" if c["path"].endswith(".jxl") else "png"
+                tally[(fmt_, "problem" if problem else "exact" if label.startswith("exact") else "expected")] += 1
             cen.append({"layer": rows[0]["layer"], "path": rows[0]["path"], "also": [x for x in paths if x != rows[0]["path"]],
                         "rows": [[f"{c['image']} {c['reader']} {short_version(c['version'])}".strip(), c["status"], c["same"],
                                   c["max_diff"], c["srgb_twin_same"], c["srgb_twin_max_diff"],
-                                  int(float(c["ms"])) if c["ms"] else "", c["error"][:160]] for c in rows]})
-            if rows[0]["path"].endswith(".png"):
-                issue |= any(c["status"] != "ok" or (c["same"] == "no" and c["max_diff"] and int(c["max_diff"]) > 1)
-                             for c in rows)
+                                  int(float(c["ms"])) if c["ms"] else "", c["error"][:160], v[0], int(v[1])]
+                                 for c, v in zip(rows, vs)]})
+            issue |= any(v[1] for v in vs)
         details[i] = {"prov": prov.get(i, {}), "files": det_files, "census": cen,
                       "hdr": next((f["gain_map"] for f in files if f.get("gain_map")), ""),
                       "orig": {"path": o.get("path", ""), "format": o.get("format", ""), "bytes": int(o.get("bytes_actual") or 0),
@@ -342,7 +354,7 @@ def cmd_data(a):
     n_hash_rows = len(rows)
 
     m = meta(R)
-    summary = build_summary(R, m, man, images, census_rows, n_hash_rows)
+    summary = build_summary(R, m, man, images, census_rows, n_hash_rows, tally)
     licences = [l for l, _ in collections.Counter(im["lic"] for im in images).most_common()]
     index = {"cell": CELL, "sheetW": CELL * COLS, "classes": classes, "licences": licences, "images": images,
              "summary": summary, "hashesFiles": hash_files, "footer": FOOTER}
@@ -353,6 +365,32 @@ def cmd_data(a):
     print(f"{len(images)} images; " + ", ".join(f"{d} {v / 1e6:.1f} MB" for d, v in sizes.items()), file=sys.stderr)
 
 
+def verdict(c, form, jxl_support):
+    """What a census row means: (label, problem?)."""
+    if c["status"] in ("crash", "unreadable-output"):
+        return c["status"], True
+    if c["status"] != "ok":
+        if "readback returned all-zero" in c["error"]:
+            return "canvas readback failed (WebKit)", False
+        if c["path"].endswith(".jxl") and jxl_support.get((c["image"], c["reader"]), 0) < 0.5:
+            return "no JPEG XL support", False
+        return "error", True
+    if c["same"] == "native":
+        return "exact", False
+    if c["same"] == "rgba8":
+        return "exact as 8-bit RGBA", False
+    md = int(c["max_diff"]) if c["max_diff"] else 99
+    if form in ("hdr-pq", "lossless-pq"):
+        return "HDR shown differently (tone map or 8-bit)", False
+    if c["srgb_twin_max_diff"] != "" and int(c["srgb_twin_max_diff"]) <= 2:
+        return f"colour-managed to sRGB (twin ±{c['srgb_twin_max_diff']})", False
+    if md <= 1:
+        return "rounding (±1)", False
+    if form.startswith("jpeg-in-jxl") and md <= 6:
+        return f"JPEG decoding (±{md})", False
+    return f"differs (±{md})", True
+
+
 def short_version(v):
     """A reader's version string, shortened for a table cell."""
     v = v.replace("Version: ", "").replace("pngtopam: Using libnetpbm from Netpbm Version:", "Netpbm")
@@ -361,7 +399,7 @@ def short_version(v):
     return v.strip()[:40]
 
 
-def build_summary(R, m, man, images, census_rows, n_hash_rows):
+def build_summary(R, m, man, images, census_rows, n_hash_rows, tally):
     last = lambda k: (m.get(k) or [""])[-1]
     num = lambda x: f"{int(x):,}"
     files = {l: len(rows) for l, rows in man.items()}
@@ -419,12 +457,15 @@ def build_summary(R, m, man, images, census_rows, n_hash_rows):
         exact = sum(c["same"] in ("native", "rgba8") for c in census_rows)
         png = [c for c in census_rows if c["path"].endswith(".png")]
         jxl = [c for c in census_rows if c["path"].endswith(".jxl")]
-        s.append({"title": "Reader census (Docker)", "rows": [
-            ["Readers", f"{len(readers)}"], ["Distinct files read", f"{distinct:,}"], ["Decodes", f"{len(census_rows):,}"],
-            ["Decoded without error", f"{ok:,}"], ["Bitmap equal to ours", f"{exact:,}"],
-            ["PNG decodes equal to ours", f"{sum(c['same'] in ('native', 'rgba8') for c in png):,} of {len(png):,}"],
-            ["JPEG XL decodes without error", f"{sum(c['status'] == 'ok' for c in jxl):,} of {len(jxl):,}"]],
-            "download": f"Download decoded-bitmap hashes ({n_hash_rows:,} rows)"})
+        rows = [["Readers", f"{len(readers)}"], ["Distinct files read", f"{distinct:,}"], ["Decodes", f"{len(census_rows):,}"]]
+        for fmt_, name in (("png", "PNG"), ("jxl", "JPEG XL")):
+            n = sum(v for (f, _), v in tally.items() if f == fmt_)
+            if n:
+                rows += [[f"{name}: exact", f"{tally[(fmt_, 'exact')]:,} of {n:,}", "ok"],
+                         [f"{name}: expected differences", f"{tally[(fmt_, 'expected')]:,}", "na"],
+                         [f"{name}: unexplained", f"{tally[(fmt_, 'problem')]:,}", "ok" if not tally[(fmt_, 'problem')] else "warn"]]
+        s.append({"title": "Reader census (Docker)", "rows": rows,
+                  "download": f"Download decoded-bitmap hashes ({n_hash_rows:,} rows)"})
     else:
         s.append({"title": "Decoded-bitmap hashes", "rows": [["Rows (file and decoder)", f"{n_hash_rows:,}"],
                                                               ["Reader census", "running", "na"]],
