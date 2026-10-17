@@ -176,7 +176,10 @@ def main():
       "and netpbm for PNG; libjxl for JPEG XL); an inventory of every part of the file and a "
       "byte scan for nested media and location data; for the sRGB layers, a textbook "
       "colour conversion of each wide-gamut file's own `p3` twin; for HDR, a rebuild from "
-      "third-party decodes.")
+      "third-party decodes." + (" Every JPEG XL file also decodes in zenjxl, jxl-rs and libjxl "
+      "v0.12.0, each lossless file to its PNG twin's bitmap in all three; every `jhgm` gain map "
+      "decodes in all three, lines up with its image and carries the same ISO 21496-1 metadata, "
+      "and a lossless gain map decodes to the same map in all three." if a.layer.startswith("jxl") else ""))
     w("")
     passes = [("SDR render", "tool_commit")]
     passes += [(f"redo {k.split('_')[1]}", k) for k in sorted(m) if k.startswith("redo_") and k.endswith("_tool_commit")]
