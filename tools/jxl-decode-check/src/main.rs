@@ -26,6 +26,12 @@
 //!   jxl-decode-check hdr [--jobs N] < pairs > rows.tsv
 //!       Each `<jxl>\t<hdr.png>` pair: zenjxl's own HDR reconstruction of the JXL's gain map
 //!       (GainMapRender::ReconstructHdr), compared in stops with the 16-bit PQ render.
+//!   jxl-decode-check jxl-inventory [--jobs N] [--unconsumed] < paths > inventory.tsv
+//!       Each JPEG XL file's structural inventory, zenjxl's `DecodeJob::inventory` with a
+//!       default job, in the rows `zencodecs inventory --tsv [--unconsumed]` prints (its CLI on
+//!       imazen/zenpipe#89, which dispatches to the same call): file, offset, length, depth,
+//!       kind, tag, disposition, label, detail, and a `file` row for a file that fails or,
+//!       with --unconsumed, one whose every byte is consumed.
 //!
 //! The hash is XXH3-64 (seed 0) of the interleaved samples in the image's own layout: gray,
 //! gray+alpha, RGB or RGBA; 8-bit samples, or 16-bit little-endian when the image has more
@@ -930,11 +936,77 @@ fn compare_group(reference: &str, outputs: &[(String, Option<String>)]) -> Vec<S
         .collect()
 }
 
+/// One TSV field: tabs and line breaks become spaces (as the zencodecs CLI writes them).
+fn tsv_field(s: &str) -> String {
+    s.replace(['\t', '\n', '\r'], " ")
+}
+
+/// `jxl-inventory`: the inventory rows of one JPEG XL file, in the zencodecs CLI's TSV form.
+fn inventory_rows(path: &str, unconsumed: bool) -> (Vec<String>, bool) {
+    use zencodec::decode::{DecodeJob, DecoderConfig};
+    use zencodec::inventory::{Inventory, PartId};
+    let status = |what: &str, detail: &str| {
+        format!(
+            "{}\t-\t-\t-\tfile\t-\t{what}\t-\t{}",
+            tsv_field(path),
+            tsv_field(detail)
+        )
+    };
+    let data = match std::fs::read(path) {
+        Ok(d) => d,
+        Err(e) => return (vec![status("error", &e.to_string())], false),
+    };
+    let inv = match zenjxl::JxlDecoderConfig::new().job().inventory(&data) {
+        Ok(inv) => inv,
+        Err(e) => return (vec![status("error", &e.to_string())], false),
+    };
+    let mut rows = Vec::new();
+    let mut ok = true;
+    if let Err(e) = inv.validate() {
+        rows.push(status("invalid-inventory", &e.to_string()));
+        ok = false;
+    }
+    fn walk(inv: &Inventory, parent: Option<PartId>, depth: usize, out: &mut Vec<(PartId, usize)>) {
+        for id in inv.children(parent) {
+            out.push((id, depth));
+            walk(inv, Some(id), depth + 1, out);
+        }
+    }
+    let mut order = Vec::new();
+    walk(&inv, None, 0, &mut order);
+    let shown: Vec<_> = order
+        .into_iter()
+        .filter(|(id, _)| {
+            !unconsumed || inv.get(*id).is_some_and(|p| !p.disposition().is_consumed())
+        })
+        .collect();
+    if unconsumed && shown.is_empty() {
+        rows.push(status("clean", "every byte is consumed"));
+        return (rows, ok);
+    }
+    for (id, depth) in shown {
+        let Some(p) = inv.get(id) else { continue };
+        rows.push(format!(
+            "{}\t{}\t{}\t{depth}\t{}\t{}\t{}\t{}\t{}",
+            tsv_field(path),
+            p.range().start,
+            p.len(),
+            p.kind().name(),
+            tsv_field(&p.tag().to_string()),
+            p.disposition(),
+            tsv_field(p.label().unwrap_or("-")),
+            tsv_field(p.detail().unwrap_or("-"))
+        ));
+    }
+    (rows, ok)
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mode = args.first().map(String::as_str).unwrap_or("");
     let mut jobs = 8usize;
     let mut gm_dir: Option<PathBuf> = None;
+    let mut unconsumed = false;
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
@@ -948,6 +1020,10 @@ fn main() {
             "--gainmap-dir" => {
                 gm_dir = Some(PathBuf::from(args.get(i + 1).unwrap_or_else(|| usage())));
                 i += 2;
+            }
+            "--unconsumed" => {
+                unconsumed = true;
+                i += 1;
             }
             _ => usage(),
         }
@@ -1042,6 +1118,21 @@ fn main() {
                 }
             });
         }
+        "jxl-inventory" => {
+            emit("file\toffset\tlength\tdepth\tkind\ttag\tdisposition\tlabel\tdetail".into());
+            let results: Vec<(Vec<String>, bool)> = lines
+                .par_iter()
+                .map(|p| inventory_rows(p, unconsumed))
+                .collect();
+            for (rows, ok) in results {
+                if !ok {
+                    failures.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                }
+                for r in rows {
+                    emit(r);
+                }
+            }
+        }
         "hdr" => {
             emit("jxl\thdr_png\tdecoder\tstatus\twidth\theight\tpq10_p50\tpq10_p999\tpq10_max\tstops_p50\tstops_p999\tstops_max\tsamples_over_5pct\terror".into());
             lines.par_iter().for_each(|l| {
@@ -1065,7 +1156,8 @@ fn usage() -> ! {
         "usage: jxl-decode-check jxl [--jobs N] [--gainmap-dir DIR] < paths\n       \
          jxl-decode-check png [--jobs N] < paths\n       \
          jxl-decode-check compare [--jobs N] < lines (reference TAB output.png [TAB alternate])\n       \
-         jxl-decode-check hdr [--jobs N] < pairs (jxl TAB hdr.png)"
+         jxl-decode-check hdr [--jobs N] < pairs (jxl TAB hdr.png)\n       \
+         jxl-decode-check jxl-inventory [--jobs N] [--unconsumed] < paths"
     );
     std::process::exit(2)
 }

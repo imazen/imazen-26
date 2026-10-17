@@ -17,8 +17,11 @@ zencodec = { git = "https://github.com/imazen/zencodec", branch = "main" }
 zenpixels = { git = "https://github.com/imazen/zenpixels", branch = "main", default-features = false, features = ["std", "icc"] }
 zenpixels-convert = { git = "https://github.com/imazen/zenpixels", branch = "main" }
 bytemuck = "1.25.2"
-zenjxl = { git = "https://github.com/imazen/zenjxl", branch = "main", default-features = false, features = ["zencodec", "decode", "reconstruct-hdr"] }
+zenjxl = { git = "https://github.com/imazen/zenjxl", branch = "main", default-features = false, features = ["zencodec", "decode", "reconstruct-hdr", "inventory"] }
 jxl = "0.7.4"
+# zenjxl's decoder with JPEG reconstruction and brob support, as zencodecs builds it: the
+# inventory then reads `jbrd` and brotli-compressed Exif/XMP the way the zencodecs CLI does.
+zenjxl-decoder = { version = "0.4.0", default-features = false, features = ["jpeg"] }
 xxhash-rust = { version = "0.8.19", features = ["xxh3"] }
 rayon = "1.12.0"
 
