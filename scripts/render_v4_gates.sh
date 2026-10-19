@@ -11,12 +11,11 @@
 #   inventory-gate.log   scripts/inventory_gate.py over it
 #   byte-scan-<layer>.tsv  scripts/byte_scan.py over each PNG and JXL layer
 # and appends the results to RUN.meta. The JXL read-back gate runs in render_v4_jxl.sh.
-# The inventory CLI is zenpipe's feat/inventory branch (imazen/zenpipe#89) until it merges;
-# INVENTORY overrides its path.
+# The inventory CLI is zenpipe main; INVENTORY overrides its path.
 set -euo pipefail
 repo="$(cd "$(dirname "$0")/.." && pwd)"
 out="$1"; jobs="${2:-8}"
-inventory="${INVENTORY:-$HOME/work/zen/zenpipe--inventory/target/release/zencodecs}"
+inventory="${INVENTORY:-$HOME/work/zen/zenpipe/target/release/zencodecs}"
 for f in report.tsv hdr-report.tsv jxl-report.tsv RUN.meta; do
   [ -e "$out/$f" ] || { echo "refusing: no $out/$f (run every pass first)" >&2; exit 1; }
 done

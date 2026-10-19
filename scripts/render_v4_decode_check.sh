@@ -31,13 +31,17 @@ run_heavy() {
 }
 tool="$repo/tools/jxl-decode-check"
 dc="$out/decode-check"
-mkdir -p "$dc"
+mkdir "$dc"
 export TMPDIR="${TMPDIR:-$HOME/tmp}"
-(cd "$tool" && run_heavy 16 20G cargo build --release --locked) > "$dc/build.log" 2>&1 \
-  || { tail -n 20 "$dc/build.log" >&2; exit 1; }
+if [ -z "${DECODE_CHECK_BIN:-}" ]; then
+  (cd "$tool" && run_heavy 8 20G cargo build --release --locked) > "$dc/build.log" 2>&1 \
+    || { tail -n 20 "$dc/build.log" >&2; exit 1; }
+fi
 make -s -C "$tool/libjxl" LIBJXL_BUILD="$libjxl" >> "$dc/build.log" 2>&1 \
   || { tail -n 20 "$dc/build.log" >&2; exit 1; }
-bin="$tool/target/release/jxl-decode-check"
+bin="${DECODE_CHECK_BIN:-$tool/target/release/jxl-decode-check}"
+lock="${DECODE_CHECK_LOCK:-$tool/Cargo.lock}"
+[ -x "$bin" ] && [ -f "$lock" ] || { echo "missing decoder binary or source lock" >&2; exit 1; }
 lib="$tool/libjxl/libjxl_hash"
 # The layers' files, from the manifests (paths are relative to the out-dir).
 python3 - "$out" > "$dc/files.tsv" <<'EOF'
@@ -53,19 +57,25 @@ EOF
 awk -F'\t' -v o="$out" '$1 !~ /^jxl/ {print o "/" $2}' "$dc/files.tsv" > "$dc/png.list"
 awk -F'\t' -v o="$out" '$1 ~ /^jxl/ {print o "/" $2}' "$dc/files.tsv" > "$dc/jxl.list"
 status=0
-rm -rf "$dc/gm"
+# A new decode-check directory preserves all earlier dumps and reports.
 run_heavy "$((jobs * 2))" 24G "$bin" png --jobs "$jobs" < "$dc/png.list" > "$dc/png.tsv" 2> "$dc/png.log" || status=$?
-run_heavy "$((jobs * 2))" 40G "$bin" jxl --jobs "$jobs" --gainmap-dir "$dc/gm" < "$dc/jxl.list" \
+run_heavy "$((jobs * 2))" 24G "$bin" jxl --jobs "$jobs" --gainmap-dir "$dc/gm" < "$dc/jxl.list" \
   > "$dc/jxl.tsv" 2> "$dc/jxl.log" || status=$?
 # libjxl: one single-threaded process per slice of the list.
 mkdir -p "$dc/gm/libjxl" "$dc/libjxl-parts"
 split -n "r/$jobs" -d "$dc/jxl.list" "$dc/libjxl-parts/part-"
-run_heavy "$((jobs * 2))" 40G bash -c '
-  for p in "$1"/libjxl-parts/part-*; do "$2" --gainmap-dir "$1/gm/libjxl" < "$p" > "$p.tsv" 2> "$p.log" & done
-  wait' _ "$dc" "$lib" > "$dc/libjxl.log" 2>&1 || status=$?
+run_heavy "$((jobs * 2))" 24G bash -c '
+  pids=""
+  for p in "$1"/libjxl-parts/part-*; do
+    "$2" --gainmap-dir "$1/gm/libjxl" < "$p" > "$p.tsv" 2> "$p.log" &
+    pids="$pids $!"
+  done
+  status=0
+  for pid in $pids; do wait "$pid" || status=$?; done
+  exit "$status"' _ "$dc" "$lib" > "$dc/libjxl.log" 2>&1 || status=$?
 { head -n 1 "$(ls "$dc"/libjxl-parts/part-*.tsv | head -n 1)"; for f in "$dc"/libjxl-parts/part-*.tsv; do tail -n +2 "$f"; done; } \
   > "$dc/jxl-libjxl.tsv"
-rm -rf "$dc/libjxl-parts"
+# Keep per-process tables and logs as verification evidence.
 # zenjxl's HDR reconstruction of each jhgm file against the PQ render of the same id.
 python3 - "$out" > "$dc/hdr-pairs.tsv" <<'EOF'
 import csv, sys, os
@@ -76,15 +86,16 @@ for r in csv.DictReader(open(os.path.join(out, "manifests", "jxl-p3.tsv")), deli
     if r["form"].endswith("+jhgm"):
         print(f"{out}/{r['path']}\t{out}/{hdr[r['id']]}")
 EOF
-run_heavy "$((jobs * 2))" 40G "$bin" hdr --jobs 4 < "$dc/hdr-pairs.tsv" > "$dc/hdr.tsv" 2> "$dc/hdr.log" || status=$?
+run_heavy "$((jobs * 2))" 24G "$bin" hdr --jobs "$jobs" < "$dc/hdr-pairs.tsv" > "$dc/hdr.tsv" 2> "$dc/hdr.log" || status=$?
 python3 "$repo/scripts/render_v4_decode_report.py" "$out" > "$dc/summary.txt" 2>&1 || status=$?
 tools="tools/jxl-decode-check scripts/render_v4_decode_check.sh scripts/render_v4_decode_report.py"
 {
   echo "decode_check_date	$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "decode_check_tool_commit	$(git -C "$repo" log -1 --format=%H -- $tools)"
   echo "decode_check_tool_dirty	$(git -C "$repo" status --porcelain -- $tools | wc -l)"
-  echo "decode_check_cargo_lock_sha256	$(sha256sum "$tool/Cargo.lock" | cut -d' ' -f1)"
-  echo "decode_check_jxl_rs	$(awk '/^name = "jxl"$/ {getline; print; exit}' "$tool/Cargo.lock" | cut -d'"' -f2)"
+  echo "decode_check_binary_sha256	$(sha256sum "$bin" | cut -d' ' -f1)"
+  echo "decode_check_cargo_lock_sha256	$(sha256sum "$lock" | cut -d' ' -f1)"
+  echo "decode_check_jxl_rs	$(awk '/^name = "jxl"$/ {getline; print; exit}' "$lock" | cut -d'"' -f2)"
   echo "decode_check_libjxl	$("$libjxl/tools/djxl" --version 2>&1 | head -n 1)"
   grep -h -E '^run-heavy: done' "$dc"/png.log "$dc"/jxl.log "$dc"/libjxl.log "$dc"/hdr.log | sed 's/^/decode_check_run_heavy	/' || true
   sed 's/^/decode_check_summary	/' "$dc/summary.txt"
