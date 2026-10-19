@@ -2,3 +2,16 @@
 # Use a separate output directory for candidate encodes. The caller supplies run-heavy.
 measure-twins list out binary="target/release/render-v4" effort="9" jobs="1":
     {{quote(binary)}} jxl --effort {{quote(effort)}} --jobs {{quote(jobs)}} {{quote(list)}} {{quote(out)}}
+
+# Build the two current-main tools with their recorded source locks.
+check-tools:
+    cargo build --release --locked --manifest-path "{{justfile_directory()}}/Cargo.toml"
+    cargo build --release --locked --manifest-path "{{justfile_directory()}}/../jxl-decode-check/Cargo.toml"
+
+# Preserve and reuse checked rows; source hashes must still match the render report.
+readback-resume out jobs="3":
+    python3 "{{justfile_directory()}}/../../scripts/render_v4_readback.py" {{quote(out)}} --jobs {{jobs}} --resume
+
+# This script applies run-heavy to each phase; hold the global build lock around it.
+decode-check out jobs="3":
+    bash "{{justfile_directory()}}/../../scripts/render_v4_decode_check.sh" {{quote(out)}} {{jobs}}

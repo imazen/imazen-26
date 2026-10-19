@@ -24,7 +24,7 @@ import os
 import struct
 import subprocess
 import sys
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
 from PIL import Image
@@ -158,6 +158,7 @@ def main():
     ap.add_argument("out_dir")
     ap.add_argument("--jobs", type=int, default=8)
     ap.add_argument("--ids")
+    ap.add_argument("--resume", action="store_true", help="reuse successful rows after checking each source hash")
     a = ap.parse_args()
     keep = set(a.ids.split(",")) if a.ids else None
     jobs = []
@@ -172,13 +173,47 @@ def main():
                 continue
             jobs.append((a.out_dir, r, hdr))
     cols = ["id", "layer", "path", "chunks", "pngfix", "pillow", "magick", "pngtopnm", "error"]
+    destination = os.path.join(a.out_dir, "readback.tsv")
+    prior = {}
+    if a.resume:
+        with open(destination) as previous:
+            for row in csv.DictReader(previous, delimiter="\t"):
+                key = (row["id"], row["layer"], row["path"])
+                if key in prior:
+                    raise SystemExit("duplicate previous readback row")
+                if not row["error"] and all(row[c].startswith(("ok", "opened")) for c in cols[3:8]):
+                    prior[key] = row
+        backup = destination + ".before-resume"
+        if os.path.exists(backup):
+            raise SystemExit(f"refusing to overwrite {backup}")
+        os.rename(destination, backup)
+    pending, reused = [], []
+    for job in jobs:
+        _, row, _ = job
+        key = (row["id"], row["layer"], row["path"])
+        if key in prior:
+            with open(os.path.join(a.out_dir, row["path"]), "rb") as source:
+                if hashlib.sha256(source.read()).hexdigest() != row["sha256"]:
+                    raise SystemExit("source hash changed before readback reuse")
+            reused.append(prior[key])
+        else:
+            pending.append(job)
     failed = 0
-    with ProcessPoolExecutor(a.jobs) as ex, open(os.path.join(a.out_dir, "readback.tsv"), "w") as out:
+    with ProcessPoolExecutor(a.jobs) as ex, open(destination, "x") as out:
         out.write("\t".join(cols) + "\n")
-        for res in ex.map(check_file, jobs, chunksize=4):
+        for res in reused:
+            out.write("\t".join(str(res.get(c, "")) for c in cols) + "\n")
+        out.flush()
+        print(f"readback: {len(reused)}/{len(jobs)} reused after source hash checks", flush=True)
+        futures = [ex.submit(check_file, job) for job in pending]
+        for index, future in enumerate(as_completed(futures), 1):
+            res = future.result()
             bad = res["error"] or any(not res.get(c, "").startswith(("ok", "opened")) for c in cols[3:8])
             failed += bool(bad)
             out.write("\t".join(str(res.get(c, "")) for c in cols) + "\n")
+            out.flush()
+            if index % 25 == 0 or index == len(pending):
+                print(f"readback: {index + len(reused)}/{len(jobs)} complete; {failed} failures", flush=True)
             if bad:
                 print("FAIL", "\t".join(str(res.get(c, "")) for c in cols), flush=True)
     print(f"{len(jobs) - failed} of {len(jobs)} files pass; {failed} fail")
