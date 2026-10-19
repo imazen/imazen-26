@@ -55,3 +55,8 @@ No image position is sent to that service. A pilot's `--only` ids are explicit;
 missing ids and per-file failures fail the run. `resume` accepts only completed
 records from the same script version. Replaced report files retain timestamped
 backups. The HTML index links every file's part and field tables and the summaries.
+
+An incomplete GPS position keeps its structural and field comparison visible, with an
+explicit classification error. `just --justfile tools/metadata-loss-audit/justfile render CONFIG`
+rebuilds pages from saved value-free records and preserves the original audit provenance;
+it records the renderer hash separately and never reopens an image.

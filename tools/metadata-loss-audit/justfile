@@ -6,3 +6,9 @@ review config ids="":
 
 resume config ids="":
     python3 "{{justfile_directory()}}/strip_review.py" --config {{quote(config)}} --only {{quote(ids)}} --resume
+
+render config:
+    python3 "{{justfile_directory()}}/strip_review.py" --config {{quote(config)}} --render-only
+
+check:
+    python3 -m unittest discover -s "{{justfile_directory()}}" -p "test_strip_review.py"

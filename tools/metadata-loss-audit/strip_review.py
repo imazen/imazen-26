@@ -392,7 +392,7 @@ def render_report(out, records, provenance, total):
     index = []
     for record in sorted(records, key=lambda r: r["id"]):
         cid = record["id"]
-        if record["status"] != "ok":
+        if "parts" not in record:
             body = '<p class=error>Audit incomplete: ' + esc(record["error"]) + "</p>"
             index.append(f'<tr class=error><td><a href="files/{cid}.html">{cid}</a></td>'
                          f'<td>{esc(record["legacy_id"])}</td><td colspan=6>{esc(record["error"])}</td></tr>')
@@ -409,6 +409,8 @@ def render_report(out, records, provenance, total):
                     f'<p>Format {esc(record["before_format"])} → {esc(record["after_format"])}; '
                     f'bytes {record["before_bytes"]:,} → {record["after_bytes"]:,}; '
                     f'inventory parts {record["source_parts"]:,} → {record["shipped_parts"]:,}.</p>')
+            if record["status"] != "ok":
+                body += '<p class=error>Classification incomplete: ' + esc(record["error"]) + "</p>"
             body += "<h2>Metadata field names</h2>"
             for status in ("removed", "changed", "added"):
                 values = fields[status]
@@ -431,13 +433,16 @@ def render_report(out, records, provenance, total):
                          f'<td>{len(fields["changed"])}</td><td>{len(parts)}</td></tr>')
         write_preserved(out / "files" / (cid + ".html"), document(cid + " — metadata removal", body))
     good = [r for r in records if r["status"] == "ok"]
-    summary = {"manifest_images": total, "audited": len(records), "complete": len(good),
+    inventoried = [r for r in records if "parts" in r]
+    summary = {"manifest_images": total, "inventory_comparisons": len(inventoried),
+               "unclassified_gps_files": sum(bool(r["gps"]["incomplete_carriers"]) for r in inventoried), "audited": len(records), "complete": len(good),
                "errors": len(records) - len(good),
-               "source_gps_files": sum(r["gps"]["had_gps"] for r in good),
-               "inside_colorado_files": sum(r["gps"]["inside_colorado"] == "yes" for r in good),
-               "shipped_gps_files": sum(r["shipped_gps"]["had_gps"] for r in good)}
+               "source_gps_files": sum(r["gps"]["had_gps"] for r in inventoried),
+               "inside_colorado_files": sum(r["gps"]["inside_colorado"] == "yes" for r in inventoried),
+               "shipped_gps_files": sum(r["shipped_gps"]["had_gps"] for r in inventoried)}
     body = (f'<p>{len(good):,} of {total:,} originals fully audited; {summary["errors"]} errors. '
-            'Each successful row includes native inventories of both inputs, an ExifTool field comparison '
+            f'{len(inventoried):,} inventory and field comparisons are available. '
+            'Each compared row includes native inventories of both inputs, an ExifTool field comparison '
             'and a live public-object SHA-256 check.</p>'
             '<p>Only field names, structural ranges, hashes and location flags are saved. '
             'Part hashes describe encoded bytes; lossless recompression can change image-data hashes. '
@@ -479,6 +484,8 @@ def main():
     parser.add_argument("--config", required=True)
     parser.add_argument("--only", help="comma-separated legacy ids for an explicit pilot")
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--render-only", action="store_true",
+                        help="rebuild pages from existing value-free records without opening inputs")
     parser.add_argument("--discover", action="store_true", help="resolve source references without opening images")
     args = parser.parse_args()
     config = json.loads(Path(args.config).read_text())
@@ -490,6 +497,16 @@ def main():
         rows = [row for row in rows if row["id"] in selected]
         if {r["id"] for r in rows} != selected:
             raise AuditError("PilotIdMissing")
+    if args.render_only:
+        out = Path(config["out"])
+        summary = json.loads((out / "summary.json").read_text())
+        records = [json.loads((out / "records" / ("1" + r["id"] + ".json")).read_text()) for r in rows]
+        provenance = summary["provenance"]
+        provenance["renderer_sha256"] = digest(Path(__file__).read_bytes())
+        provenance["rendered"] = now()
+        result = render_report(out, records, provenance, total)
+        print(json.dumps(result), flush=True)
+        return int(bool(result["errors"]))
     sources = resolve_sources(config, rows)
     if args.discover:
         print(json.dumps({"images": len(rows), "sources": dict(collections.Counter(
