@@ -19,5 +19,17 @@ interior. The `fixq_*` columns repeat the comparison with the output's quantizat
 transposed (the fix for zenjpeg #205). `DIAG=1` prints where differences sit in the block
 grid; `ALL_TRANSFORMS=1` runs all seven transforms on each file (needs an MCU-aligned file).
 
-Pins match `tools/jxl-transcode-check/head` (zenjpeg `8f703a6e`, jxl-encoder `8da452cf`,
-zenjxl-decoder `940d2c51`).
+Finalization uses every codec from git main; `Cargo.lock` records the revisions.
+The `enough` git patch keeps the tool and codecs on one cancellation trait source.
+
+```sh
+just --justfile tools/jpeg-lossless-check/justfile check
+just --justfile tools/jpeg-lossless-check/justfile sequential list.tsv new-results.tsv artifacts
+```
+
+The explicit sequential-only mode compares a reconstruction-limited original's bare
+coefficient codestream with the transformed JPEG's reconstructible JXL. It records
+semantic coefficient/quantization SHA-256s and exact reconstruction/sample checks.
+The diagnostic JPEG and JXL bytes are required in this mode and are kept under their
+SHA-256 names. Existing artifact bytes must match; an existing output table is refused.
+These transformed JPEGs are diagnostic inputs, not export originals.

@@ -20,6 +20,7 @@
 
 use std::fs;
 use std::io::Write;
+use std::path::{Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 use zenjpeg::decoder::Decoder;
@@ -33,10 +34,15 @@ const BORDER: usize = 16;
 const COLS: &[&str] = &[
     "id",
     "bytes",
+    "original_sha256",
     "progressive",
     "orientation",
     "seq_bytes",
+    "sequential_sha256",
+    "sequential_jxl_sha256",
     "seq_coeff_equal",
+    "original_coeff_sha256",
+    "sequential_coeff_sha256",
     "seq_pixel_maxdiff",
     "seq_jxl_bytes",
     "seq_jxl_rebuild_exact",
@@ -71,6 +77,10 @@ impl Row {
     fn set(&mut self, k: &'static str, v: impl ToString) {
         self.cols.push((k, v.to_string()));
     }
+}
+
+fn sha_hex(b: &[u8]) -> String {
+    sha(b).iter().map(|v| format!("{v:02x}")).collect()
 }
 
 fn sha(b: &[u8]) -> Vec<u8> {
@@ -307,7 +317,39 @@ fn transpose_dqt(jpeg: &mut [u8]) -> bool {
     symmetric
 }
 
-fn coeffs_equal(a: &[u8], b: &[u8]) -> Result<bool, String> {
+fn coefficient_digest(data: &zenjpeg::decoder::DecodedCoefficients) -> String {
+    let mut hash = Sha256::new();
+    hash.update(b"jpeg-coefficients-v1");
+    hash.update(data.width.to_le_bytes());
+    hash.update(data.height.to_le_bytes());
+    hash.update((data.quant_tables.len() as u64).to_le_bytes());
+    for table in &data.quant_tables {
+        hash.update([u8::from(table.is_some())]);
+        if let Some(table) = table {
+            for value in table {
+                hash.update(value.to_le_bytes());
+            }
+        }
+    }
+    hash.update((data.components.len() as u64).to_le_bytes());
+    for component in &data.components {
+        hash.update([
+            component.id,
+            component.h_samp,
+            component.v_samp,
+            component.quant_table_idx,
+        ]);
+        hash.update((component.blocks_wide as u64).to_le_bytes());
+        hash.update((component.blocks_high as u64).to_le_bytes());
+        hash.update((component.coeffs.len() as u64).to_le_bytes());
+        for value in &component.coeffs {
+            hash.update(value.to_le_bytes());
+        }
+    }
+    hash.finalize().iter().map(|v| format!("{v:02x}")).collect()
+}
+
+fn coeffs_equal(a: &[u8], b: &[u8]) -> Result<(bool, String, String), String> {
     let dc = zenjpeg::decoder::DecodeConfig::new();
     let x = dc
         .decode_coefficients(a, enough::Unstoppable)
@@ -315,30 +357,54 @@ fn coeffs_equal(a: &[u8], b: &[u8]) -> Result<bool, String> {
     let y = dc
         .decode_coefficients(b, enough::Unstoppable)
         .map_err(|e| format!("coeffs: {e:?}"))?;
-    Ok(x.width == y.width
+    let same = x.width == y.width
         && x.height == y.height
         && x.quant_tables == y.quant_tables
         && x.components.len() == y.components.len()
         && x.components.iter().zip(&y.components).all(|(p, q)| {
-            p.coeffs == q.coeffs
+            p.id == q.id
+                && p.quant_table_idx == q.quant_table_idx
+                && p.coeffs == q.coeffs
                 && (p.blocks_wide, p.blocks_high, p.h_samp, p.v_samp)
                     == (q.blocks_wide, q.blocks_high, q.h_samp, q.v_samp)
-        }))
+        });
+    Ok((same, coefficient_digest(&x), coefficient_digest(&y)))
 }
 
-fn check(id: &str, path: &str) -> Row {
+struct Settings {
+    sequential_only: bool,
+    artifacts: Option<PathBuf>,
+}
+
+fn keep_artifact(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    if path.exists() {
+        if fs::read(path).map_err(|e| e.to_string())? == bytes {
+            return Ok(());
+        }
+        return Err("artifact exists with different bytes".into());
+    }
+    let mut output = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .map_err(|e| e.to_string())?;
+    output.write_all(bytes).map_err(|e| e.to_string())
+}
+
+fn check(id: &str, path: &str, settings: &Settings) -> Row {
     let mut r = Row {
         cols: vec![("id", id.to_string())],
     };
-    if let Err(e) = run(path, &mut r) {
+    if let Err(e) = run(path, &mut r, settings) {
         r.set("error", e);
     }
     r
 }
 
-fn run(path: &str, r: &mut Row) -> Result<(), String> {
+fn run(path: &str, r: &mut Row, settings: &Settings) -> Result<(), String> {
     let orig = fs::read(path).map_err(|e| format!("read: {e}"))?;
     r.set("bytes", orig.len());
+    r.set("original_sha256", sha_hex(&orig));
     let info = Decoder::new()
         .read_info(&orig)
         .map_err(|e| format!("info: {e:?}"))?;
@@ -358,17 +424,55 @@ fn run(path: &str, r: &mut Row) -> Result<(), String> {
     let seq =
         transform(&orig, &none, enough::Unstoppable).map_err(|e| format!("sequential: {e:?}"))?;
     r.set("seq_bytes", seq.len());
-    r.set("seq_coeff_equal", coeffs_equal(&orig, &seq)? as u8);
+    let seq_sha = sha_hex(&seq);
+    r.set("sequential_sha256", &seq_sha);
+    if let Some(root) = &settings.artifacts {
+        let dir = root.join("jpeg");
+        fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+        keep_artifact(&dir.join(format!("{seq_sha}.jpg")), &seq)?;
+    }
+    let (same, original_hash, sequential_hash) = coeffs_equal(&orig, &seq)?;
+    r.set("seq_coeff_equal", same as u8);
+    r.set("original_coeff_sha256", original_hash);
+    r.set("sequential_coeff_sha256", sequential_hash);
+    if !same {
+        return Err("sequential coefficients or quantization differ".into());
+    }
     let (po, ps) = (zenjpeg_decode(&orig, false)?, zenjpeg_decode(&seq, false)?);
     r.set("seq_pixel_maxdiff", diff(&ps, &po, 0, 0)?.max);
-    let (jo, js) = (transcode(&orig)?, transcode(&seq)?);
+    let jo = if settings.sequential_only {
+        // The original's JBRD range failure is the reason for this measurement;
+        // retain its coefficient codestream for the pixel comparison.
+        let parsed = jxl_encoder::jpeg::read_jpeg(&orig, None, None)
+            .map_err(|e| format!("parse original: {e}"))?;
+        jxl_encoder::jpeg::encode_jpeg_to_jxl(&parsed)
+            .map_err(|e| format!("encode original codestream: {e}"))?
+    } else {
+        transcode(&orig)?
+    };
+    let js = transcode(&seq)?;
+    let jxl_sha = sha_hex(&js);
+    r.set("sequential_jxl_sha256", &jxl_sha);
+    if let Some(root) = &settings.artifacts {
+        let dir = root.join("jxl");
+        fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+        keep_artifact(&dir.join(format!("{jxl_sha}.jxl")), &js)?;
+    }
     r.set("seq_jxl_bytes", js.len());
-    r.set("seq_jxl_rebuild_exact", rebuild_exact(&js, &seq));
+    let rebuilt = rebuild_exact(&js, &seq);
+    r.set("seq_jxl_rebuild_exact", &rebuilt);
+    if rebuilt != "1" {
+        return Err("sequential JPEG reconstruction is not exact".into());
+    }
     let (xo, xs) = (jxl_decode(&jo)?, jxl_decode(&js)?);
     r.set(
         "seq_vs_orig_jxl_pixels_equal",
         (xo.w == xs.w && xo.h == xs.h && xo.px == xs.px) as u8,
     );
+
+    if settings.sequential_only {
+        return Ok(());
+    }
 
     // ALL_TRANSFORMS=1: apply every EXIF orientation's transform (needs a file aligned
     // in both dimensions) and compare with the matching pixel orientation.
@@ -469,19 +573,47 @@ fn run(path: &str, r: &mut Row) -> Result<(), String> {
 }
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() != 3 {
-        eprintln!("usage: jpeg-lossless-check <list.tsv: id<TAB>path> <out.tsv>");
+    let mut args: Vec<String> = std::env::args().collect();
+    let sequential_only = if let Some(i) = args.iter().position(|a| a == "--sequential-only") {
+        args.remove(i);
+        true
+    } else {
+        false
+    };
+    let artifacts = if let Some(i) = args.iter().position(|a| a == "--artifacts") {
+        let value = args
+            .get(i + 1)
+            .expect("--artifacts needs a directory")
+            .clone();
+        args.drain(i..i + 2);
+        Some(PathBuf::from(value))
+    } else {
+        None
+    };
+    let settings = Settings {
+        sequential_only,
+        artifacts,
+    };
+    if args.len() != 3 || (settings.sequential_only && settings.artifacts.is_none()) {
+        eprintln!(
+            "usage: jpeg-lossless-check [--sequential-only] [--artifacts DIR] <list.tsv: id<TAB>path> <new-out.tsv>"
+        );
         std::process::exit(2);
     }
     let list = fs::read_to_string(&args[1]).expect("read list");
-    let mut out = fs::File::create(&args[2]).expect("create out");
+    let mut out = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&args[2])
+        .expect("create new out");
     writeln!(out, "{}", COLS.join("\t")).unwrap();
     let lines: Vec<&str> = list.lines().filter(|l| !l.trim().is_empty()).collect();
+    let mut failures = 0;
     for (n, line) in lines.iter().enumerate() {
         let mut it = line.splitn(2, '\t');
         let (id, path) = (it.next().unwrap_or(""), it.next().unwrap_or(""));
-        let row = check(id, path);
+        let row = check(id, path, &settings);
+        failures += usize::from(row.cols.iter().any(|(k, v)| *k == "error" && !v.is_empty()));
         let vals: Vec<String> = COLS
             .iter()
             .map(|c| {
@@ -500,5 +632,8 @@ fn main() {
             id,
             vals[COLS.len() - 1]
         );
+    }
+    if failures != 0 {
+        std::process::exit(1);
     }
 }

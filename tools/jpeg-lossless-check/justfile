@@ -1,0 +1,11 @@
+# The caller supplies run-heavy and the global build lock.
+check:
+    cargo fmt --check
+    cargo clippy --locked -- -D warnings
+    cargo build --release --locked
+
+sequential list output artifacts:
+    target/release/jpeg-lossless-check --sequential-only --artifacts {{quote(artifacts)}} {{quote(list)}} {{quote(output)}}
+
+oracle results originals artifacts out inventory djxl:
+    python3 "{{justfile_directory()}}/oracle.py" {{quote(results)}} {{quote(originals)}} {{quote(artifacts)}} {{quote(out)}} --inventory {{quote(inventory)}} --djxl {{quote(djxl)}}
