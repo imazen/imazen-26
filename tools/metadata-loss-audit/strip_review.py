@@ -139,7 +139,10 @@ def gps_flags(tags, bounds):
                 if name.startswith("GPS"):
                     gps_fields += 1
                 if name in ("GPSLatitude", "GPSLongitude", "GPSLatitudeRef", "GPSLongitudeRef"):
-                    groups[path + tuple(bits[:-1])][name] = value
+                    group = path + tuple(b for b in bits[:-1] if not re.fullmatch(r"Copy\d+", b))
+                    if name in groups[group] and groups[group][name] != value:
+                        raise AuditError("GPSAmbiguousCarrier")
+                    groups[group][name] = value
                 if isinstance(value, (dict, list)):
                     visit(value, path + (key,))
         elif isinstance(obj, list):
@@ -182,7 +185,7 @@ def gps_flags(tags, bounds):
 
 
 def exif(data):
-    result = subprocess.run(["exiftool", "-j", "-a", "-G4:1", "-s", "-n", "-struct",
+    result = subprocess.run(["exiftool", "-j", "-a", "-G3:1:4", "-s", "-n", "-struct",
                              "-ee3", "-u", "-q", "-q", "-"], input=data,
                             capture_output=True, timeout=180)
     if result.returncode != 0:
@@ -495,10 +498,74 @@ def privacy_control():
         raise AuditError("FieldPrivacyControlFailed")
 
 
+
+def reclassify_gps(config, rows, total):
+    out = Path(config["out"])
+    previous = json.loads((out / "summary.json").read_text())["provenance"]
+    manifest_sha = digest(b"".join((ROOT / "manifests" / (b + ".tsv")).read_bytes()
+                                   for b in ("train", "validate", "test")))
+    if manifest_sha != previous["manifests_sha256"]:
+        raise AuditError("GPSRecheckManifestChanged")
+    records = {r["id"]: json.loads((out / "records" / ("1" + r["id"] + ".json")).read_text())
+               for r in rows}
+    selected = [r for r in rows if records[r["id"]]["gps"]["gps_field_count"]]
+    sources = resolve_sources(config, selected)
+    bounds, boundary = colorado_bounds()
+    archive = archive_client(config) if any("archive_key" in v for v in sources.values()) else None
+    started = now()
+
+    def classify(row):
+        try:
+            data = source_bytes(sources[row["id"]], config, archive)
+            if digest(data) != records[row["id"]]["source_sha256"]:
+                raise AuditError("GPSRecheckSourceChanged")
+            flags = gps_flags(exif(data), bounds)
+            if flags["incomplete_carriers"]:
+                raise AuditError("GPSRecheckIncomplete")
+            return row["id"], flags, None
+        except Exception as error:
+            return row["id"], None, str(error) if isinstance(error, AuditError) else type(error).__name__
+
+    checked, errors = {}, []
+    with futures.ThreadPoolExecutor(max_workers=config.get("workers", 2)) as pool:
+        pending = [pool.submit(classify, row) for row in selected]
+        for index, future in enumerate(futures.as_completed(pending), 1):
+            cid, flags, error = future.result()
+            if error:
+                errors.append({"id": "1" + cid, "error": error})
+            else:
+                checked[cid] = flags
+            if index == 1 or index % 25 == 0 or index == len(selected):
+                print(json.dumps(dict(time=now(), gps_sources_checked=index,
+                                      total=len(selected), errors=len(errors))), flush=True)
+    if errors:
+        write_preserved(out / "gps-recheck-errors.json", json.dumps(errors, indent=2) + "\n")
+        return 1
+    changes = []
+    stamp = dict(tool_sha256=digest(Path(__file__).read_bytes()), checked=now(),
+                 exiftool_groups="3:1:4; CopyN removed when associating coordinates and references")
+    for cid, flags in checked.items():
+        record = records[cid]
+        if any(record["gps"][key] != flags[key] for key in ("had_gps", "inside_colorado")):
+            changes.append(dict(id=record["id"], old_had_gps=record["gps"]["had_gps"],
+                                old_inside_colorado=record["gps"]["inside_colorado"],
+                                had_gps=flags["had_gps"], inside_colorado=flags["inside_colorado"]))
+        record["gps"], record["gps_recheck"] = flags, stamp
+        write_preserved(out / "records" / (record["id"] + ".json"),
+                        json.dumps(record, indent=2) + "\n")
+    previous["gps_recheck"] = dict(started=started, finished=now(), sources=len(checked),
+                                   boundary=boundary, classification_changes=changes, **stamp)
+    summary = render_report(out, list(records.values()), previous, total)
+    print(json.dumps(dict(summary, classification_changes=changes)), flush=True)
+    return int(bool(summary["errors"]))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", required=True)
     parser.add_argument("--only", help="comma-separated legacy ids for an explicit pilot")
+    parser.add_argument("--reclassify-gps", action="store_true",
+                        help="recheck source GPS grouping while preserving inventory/field provenance")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--repair", action="store_true",
                         help="retry failed records, preserving successful records and prior provenance")
@@ -515,6 +582,8 @@ def main():
         rows = [row for row in rows if row["id"] in selected]
         if {r["id"] for r in rows} != selected:
             raise AuditError("PilotIdMissing")
+    if args.reclassify_gps:
+        return reclassify_gps(config, rows, total)
     if args.render_only:
         out = Path(config["out"])
         summary = json.loads((out / "summary.json").read_text())

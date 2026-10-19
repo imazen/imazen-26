@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- The metadata-review GPS classifier associates direction references by document/group rather than per-tag CopyN labels. All 291 GPS-bearing sources were rechecked: no per-file classification changed; carrier annotations were corrected and the old review was preserved.
 - Owner-selected JXL rendering-intent policy: Relative constructors/CICP mapping in jxl-encoder `21cd3e47` and zenjxl `586952a5`; PNG keeps intent 0, stored v4 files are unchanged, and no general re-encode or metadata API plumbing is authorized. The validation record retains the historical intent table.
 - `tools/corpus-thumbs/sync-main.sh` refreshes its source checkouts through jj, checks locks and working-copy changes, and preserves the previous source manifest instead of deleting the checkouts.
 - Licence labels (owner decision 2026-10-16, 3d77e71): the 32 phone screenshots are CC0 and the 12 lkml.org and 5 Wayback Machine captures PD; README, CORPUS-MANIFEST.README.md and the web-screenshot provenance state the public-domain status plainly; render v4 re-rendered the 49 images in every layer

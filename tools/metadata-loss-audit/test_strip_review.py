@@ -7,6 +7,18 @@ import strip_review as review
 
 
 class ReviewTests(unittest.TestCase):
+    def test_gps_instance_labels_do_not_separate_direction_tags(self):
+        tags = {"Main:GPS:GPSLatitudeRef": "S", "Main:GPS:GPSLongitudeRef": "W",
+                "Main:GPS:Copy1:GPSLatitude": "value-only-in-memory",
+                "Main:GPS:Copy1:GPSLongitude": "value-only-in-memory"}
+        with patch.object(review, "coordinate", return_value=float()) as coordinate, \
+                patch.object(review, "inside", return_value=False):
+            result = review.gps_flags(tags, tuple(float() for _ in range(4)))
+        self.assertEqual([c.args[1] for c in coordinate.call_args_list], ["S", "W"])
+        self.assertEqual(result["position_carriers"], 1)
+        self.assertEqual(result["incomplete_carriers"], 0)
+        self.assertEqual(result["inside_colorado"], "no")
+
     def test_inventory_saves_only_fixed_label_prefixes(self):
         private = "metadata-value-sentinel"
         native = ("file\tdepth\tkind\toffset\tlength\ttag\tlabel\tdisposition\tdetail\n"

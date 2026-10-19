@@ -23,3 +23,6 @@ mirror out destination:
 # The route list is explicit; native labels/details never reach the output.
 routes list out binary commit:
     python3 "{{justfile_directory()}}/inventory_routes.py" {{quote(list)}} {{quote(out)}} --inventory {{quote(binary)}} --inventory-commit {{quote(commit)}}
+
+reclassify-gps config:
+    python3 "{{justfile_directory()}}/strip_review.py" --config {{quote(config)}} --reclassify-gps

@@ -71,3 +71,9 @@ changed manifest. Each record retains the hash of the tool that audited it.
 fixed label prefixes from the export allow-list survive; arbitrary native labels and
 details stay in memory. Any read, hash, inventory or unknown-part failure fails the run.
 The nine-route pilot covers all four original formats and every current SDR JXL kind.
+
+GPS grouping uses ExifTool document and metadata-group identity. CopyN is a tag
+instance label, not a position identity; direction references must remain with their
+coordinates. `reclassify-gps CONFIG` rechecks source hashes and classifications while
+retaining the original inventory/field audit provenance. It fails on ambiguous
+coordinate carriers instead of selecting one.
