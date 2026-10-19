@@ -1,4 +1,4 @@
-# Compatibility matrix: image readers vs signalling variants (2026-10-07, round 13)
+# Compatibility matrix: image readers vs signalling variants (2026-10-07, final round 14)
 
 Synthetic fixtures authored by `tools/compat-matrix` (Zen encoders +
 byte-level container writers, no third-party authoring; the five AVIF
@@ -15,11 +15,11 @@ WebKit 26.6, screenshot + canvas modes). Plus two native Zen columns —
 host. **120 fixtures × 35 adapters → 4,200 matrix cells per image set**
 (per-image-set status counts in `summary.tsv`).
 
-Machine-readable output: `/mnt/v/output/imazen-26-compat/2026-10-07-r13/`
+Machine-readable output: `/mnt/v/output/imazen-26-compat/2026-10-07-r14/`
 (LTS + census + metadata), `-latest`, `-reps`, `-reps-latest` (45 corpus
 representatives × 35 adapters), each with `SHA256SUMS`, a `fixtures/`
 archive, per-class `.tsv.gz` extracts under `results-export/` (pointers:
-`tools/compat-matrix/results/*r13*.pointer.md`).
+`tools/compat-matrix/results/*r14*.pointer.md`).
 
 Provenance: every cell JSON records `image_id` (docker image sha, or
 `host` for the native zen/signalled passes), `adapter_sha` (adapter
@@ -124,6 +124,30 @@ orientation axis alone. `n/a` is emitted only when the adapter declares
 the format unsupported — errors and crashes on supported formats are
 counted failures; a webkit-canvas all-zero readback is `flaky`, kept out
 of `summary.tsv` error counts and `diff_runs.py` move tallies.
+
+
+## Status (2026-10-19): where this work stopped
+
+- **Stopped at round 14 by the owner** (2026-10-17). Rounds 1–13 each had an independent review
+  (verify-only, `~/tmp/handoff/compat-review*/` on dev); round 14 fixed review 8's findings and was
+  not reviewed again. The round-14 exports are the final data: `2026-10-07-r14`, `-latest`, `-reps`,
+  `-reps-latest` (4,200 synthetic cells per image set, 1,575 per reps set), mirrored to tower under
+  `imazen-26-compat-archive-2026-10-07/r14/`.
+- **Checked when this landed** (2026-10-19, tool at this commit): `cargo fmt --check`,
+  `cargo clippy --all-targets -D warnings` and the tests pass, and `compat-matrix matrix --check`
+  passes on all four round-14 exports. The only cells it names as missing are the two LTS ffmpeg
+  6.1 JPEG XL cells that crash the reader (`jxl-exif-orient6`, `jxl-jhgm`), kept out on purpose.
+- **Platforms:** the Mac was retired 2026-10-18, so the macOS columns stay at round 14 (macOS 27.0,
+  ImageIO 3.3.0) and the Safari column never produced data. The shipped Chrome 155 and Firefox 157
+  adapters live in imazen/image-compat.
+- **Where the results went:** the synthetic-fixture findings are public as
+  `zenpipe/docs/reader-compat.md` (imazen/zenpipe 9019cd64) and on the image-compat site; the
+  encoder-default recommendations are in imazen/zencodec#132 and imazen/zenpixels#84. The render v4
+  reader census (every shipped file through these readers, 104,496 decodes, 0 unexplained) is in
+  `render_v4_validation_2026-10-15.md`.
+- **Known open items:** the corpus census below ran on the pre-v4 corpus copy. `tools/compat-matrix`
+  here is the tool's only copy: the planned copy into imazen/image-compat (its site and adapters
+  live there) was not made.
 
 ## Reader versions
 
