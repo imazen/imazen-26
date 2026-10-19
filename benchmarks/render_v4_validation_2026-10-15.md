@@ -304,6 +304,47 @@ The owner's call after the census: "if libjxl does box orders that way we should
   124 MP panorama, at an 8.5 GB cap). The earlier JXL rows are in
   `compat-census/census.jxl-before-box-order-2026-10-17.tsv`.
 
+### 2026-10-19: lossless progressive JPEG twins (JXL redo 5)
+
+Owner decision applied to export ids 12003, 12005, 12009, 12012, 12013, 12022,
+12203, 12204, 12207, 12212, 12402 and 12409: replace the coefficient-only fallback
+with lossless encodes of the PNG twins in both families. This is 24 files; no other
+image changed. Current JXL coverage is 3,668 lossless files and 632 JPEG-in-JXL
+files, including 76 `jhgm` gain maps. The earlier counts above describe their dated passes.
+
+Renderer source `1699c213`, jxl-encoder `bcd8eecb`, zenjxl `3f5e22e9`, effort 9,
+three jobs. The recorded render lock has SHA-256
+`6e831eba2300d84f22fbd8f6609bc806dca1b2f6709f81324b059ae36bdd89cc`.
+All 24 outputs match the earlier measured candidate bytes exactly. Their individual
+sizes are in the [measurement pointer](progressive_lossless_2026-10-19.pointer.md).
+The largest is 68,717,977 bytes, below 100 MiB. Excluding the five XL ids, including
+12402, P3 totals 6,297,804,440 bytes and sRGB 4,903,867,897 bytes, both below 10 GB.
+
+All 24 pass libjxl box-order, colour and pixel readback; zenjxl, jxl-rs 0.7.4 and
+libjxl 0.12.0 give exactly the PNG twins' samples (96 decoder rows including PNG).
+Native inventory passes all 24 routes, and both byte scans have zero findings.
+The canonical render retains all replaced files, reports and manifests under
+`before-jxl-redo-5/`, with the new evidence in `jxl-redo-5-evidence/`. `RUN.meta`
+and both JXL manifests record the pass. The full 17,276-row `decoded-xxh3.tsv`
+replaces exactly the 72 affected JXL decoder rows; all 72 bitmap hashes change as
+expected when coefficient decoding becomes an exact PNG twin. The other 17,204
+rows remain identical. Its previous table is retained separately.
+
+A lossless progressive-to-sequential JPEG transform succeeded on all twelve
+originals: quantization tables, component descriptions and coefficient hashes
+remain identical, and JPEG decoded pixels have maximum difference zero. Native
+inventory covers all 36 original JPEG, rewritten JPEG and rewritten-JXL inputs
+and finds `jbrd` in all twelve rewritten JXLs. Both native and libjxl reconstruction
+return each sequential JPEG byte-for-byte. This would preserve coefficients and
+pixels while rebuilding the transformed sequential file, rather than the original
+progressive bytes; the corpus uses the PNG-twin path instead.
+
+Resource records: encoding 926 s, run-heavy peak RSS 12.65 GiB, minimum available
+37,648 MiB; the three-reader/twin/inventory/byte-scan gate 254 s, peak RSS 1.34 GiB,
+minimum available 48,649 MiB. Tooling: `f984cf0c`; hash-table merging is recorded
+with this validation update. The other stored P3/PQ and grayscale rendering-intent
+headers retain their existing values.
+
 ## SDR PNG layers
 
 `png-p3` keeps each source's code values and colour; `png-srgb` converts Display P3 and Adobe
@@ -413,9 +454,9 @@ On the 16-image test set: 32 of 32 files pass; on the six HDR files: 6 of 6.
 - **1-bit JPEG XL** (03da97a). The same 39 pages are encoded through jxl-encoder directly
   with `bits_per_sample` 1 (zencodecs' request has no bit-depth setting); libjxl reads them as
   "1-bit Grayscale" and decodes them to the PNG twins' pixels.
-- **The 12 progressive Unsplash JPEGs** fall back to a bare codestream of the same DCT
-  coefficients without reconstruction data (owner question 2): 2003 decodes within 4 code
-  values of zenjpeg's decode of the JPEG.
+- **The 12 progressive Unsplash JPEGs** initially used a coefficient-only codestream;
+  2003 decoded within 4 code values of zenjpeg's JPEG decode. Owner-approved JXL redo 5
+  replaces all 24 family files with exact lossless PNG twins; see the dated results above.
 - **Effort** (8 sources, both layers, under load): e5 47.4 MB in 39 s, e7 44.0 MB in 75 s,
   e9 41.3 MB in 507 s. JPEG-in-JXL sizes are equal at e7 and e9 (owner question 7).
 - **libjxl's box order** (JXL redo 4, 2026-10-17): the codestream header in the first `jxlp`

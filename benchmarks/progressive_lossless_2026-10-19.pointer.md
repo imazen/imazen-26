@@ -44,3 +44,20 @@ minimum available 38,506 MiB; two large candidates, 505 s, peak RSS 4.99 GiB,
 minimum available 43,059 MiB. Full sequential diagnostics: 42 s, peak RSS 3.46 GiB,
 minimum available 43,726 MiB. Native inventory/libjxl oracle: 15 s, peak RSS 0.40 GiB,
 minimum available 46,411 MiB.
+
+Final JXL redo 5 is applied in
+`/mnt/tower/output/imazen-26-render-v4-2026-10-15/`; its `jxl-redo-5-evidence/`
+retains the three-reader/twin, inventory, byte-scan and promotion reports.
+`before-jxl-redo-5/` retains all 24 replaced files and the earlier reports/manifests.
+The 24 current-main encodes exactly match the measured candidates above. All
+72 affected JXL bitmap hashes now match the PNG twins; the other 17,204 full-table
+rows are unchanged. The new `decoded-xxh3.tsv` SHA-256 is
+`1c3b4d68d02ba6ea891658b9e77e06005de64dd93aa70e384d0e26ebc55ba14b`.
+
+Measurement and sequential-diagnostic artifacts are mirrored at
+`/mnt/tower/output/imazen-26-progressive-lossless-measure-2026-10-19/`;
+three reproducible random file hashes were verified against dev's local copy.
+The current-main encode took 926 s, run-heavy peak RSS 12.65 GiB, minimum
+available 37,648 MiB; its final combined gate took 254 s, peak RSS 1.34 GiB,
+minimum available 48,649 MiB. Full validation is in the
+[render record](render_v4_validation_2026-10-15.md#2026-10-19-lossless-progressive-jpeg-twins-jxl-redo-5).

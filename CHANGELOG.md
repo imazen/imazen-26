@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- JXL redo 5 replaces the twelve progressive Unsplash JPEG fallbacks with 24 lossless PNG twins; all three JXL readers match the PNG samples, structural gates pass, old files are retained, and repository limits hold. Tooling `f984cf0c`; the measured sequential-JPEG alternative remains diagnostic only.
 - The metadata-review GPS classifier associates direction references by document/group rather than per-tag CopyN labels. All 291 GPS-bearing sources were rechecked: no per-file classification changed; carrier annotations were corrected and the old review was preserved.
 - Owner-selected JXL rendering-intent policy: Relative constructors/CICP mapping in jxl-encoder `21cd3e47` and zenjxl `586952a5`; PNG keeps intent 0, stored v4 files are unchanged, and no general re-encode or metadata API plumbing is authorized. The validation record retains the historical intent table.
 - `tools/corpus-thumbs/sync-main.sh` refreshes its source checkouts through jj, checks locks and working-copy changes, and preserves the previous source manifest instead of deleting the checkouts.

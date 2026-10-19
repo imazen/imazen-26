@@ -158,7 +158,8 @@ Git LFS only where GitHub's limits leave no choice.
   JSON, non-ASCII characters escaped, so it reads the same as Latin-1 or UTF-8; JXL and
   `.imi` carry the same text in their own metadata.
 - **JPEG XL.**
-  - JPEG sources ship as JPEG-in-JXL, which rebuilds the original byte for byte, and all
+  - Except for the twelve progressive files below, JPEG sources ship as JPEG-in-JXL,
+    which rebuilds the original byte for byte, and all
     other sources as lossless renders. A JPEG-in-JXL file keeps the JPEG's own metadata (its
     Exif and XMP, under the originals' keep-list) because the rebuild needs it, and its
     orientation lives in the codestream header.
@@ -168,9 +169,13 @@ Git LFS only where GitHub's limits leave no choice.
   - The 12 progressive Unsplash JPEGs (2003, 2005, 2009, 2012, 2013, 2022, 2203, 2204, 2207,
     2212, 2402, 2409) cannot carry JPEG reconstruction data: each has a scan with more than
     65,555 EOB-run reset points, beyond the `jbrd` field's range. libjxl refuses them too, and
-    jxl-encoder now does (zenjxl-decoder#59). Open owner choice: JPEG-in-JXL without
-    reconstruction data (the exact DCT coefficients, no byte-exact JPEG rebuild) or lossless
-    renders.
+    jxl-encoder now does (zenjxl-decoder#59). Owner decision, applied in JXL redo 5
+    (2026-10-19): both JXL families use lossless encodes of their PNG twins. All 24 files
+    pass three-decoder pixel equality, colour, box-order, inventory and byte-scan checks.
+    The largest is 68,717,977 bytes; the repositories excluding XL stay at 6,297,804,440
+    bytes for P3 and 4,903,867,897 bytes for sRGB. 2402 remains in imazen-xl-26. The
+    [validation record](benchmarks/render_v4_validation_2026-10-15.md#2026-10-19-lossless-progressive-jpeg-twins-jxl-redo-5)
+    records the measured sequential-JPEG alternative; that path is not shipped.
   - In `jxl-srgb`, the 168 wide-gamut JPEGs need a colour conversion, so they are lossless
     renders there.
 - **`.imi`.** Lossless pixel twins of the PNG and JXL files, published as single files plus
