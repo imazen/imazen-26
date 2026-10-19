@@ -149,11 +149,24 @@ def gps_flags(tags, bounds):
     visit(tags)
     results = []
     incomplete = 0
+    partial = 0
     for fields in groups.values():
         if "GPSLatitude" not in fields and "GPSLongitude" not in fields:
             continue
         if not {"GPSLatitude", "GPSLongitude"} <= fields.keys():
-            incomplete += 1
+            partial += 1
+            # A known axis outside the state's bounding box conclusively
+            # excludes Colorado even when the other axis is absent.
+            name = "GPSLongitude" if "GPSLongitude" in fields else "GPSLatitude"
+            value = coordinate(fields[name], fields.get(name + "Ref"))
+            limit = 180 if name == "GPSLongitude" else 90
+            if not -limit <= value <= limit:
+                raise AuditError("GPSValueRange")
+            low, high = (bounds[0], bounds[2]) if name == "GPSLongitude" else (bounds[1], bounds[3])
+            if value < low or value > high:
+                results.append(False)
+            else:
+                incomplete += 1
             continue
         lat = coordinate(fields["GPSLatitude"], fields.get("GPSLatitudeRef"))
         lon = coordinate(fields["GPSLongitude"], fields.get("GPSLongitudeRef"))
@@ -165,7 +178,7 @@ def gps_flags(tags, bounds):
             "unknown" if incomplete else "no" if had else "n/a"),
             "position_carriers": len(results), "inside_carriers": sum(results),
             "outside_carriers": len(results) - sum(results),
-            "incomplete_carriers": incomplete, "gps_field_count": gps_fields}
+            "incomplete_carriers": incomplete, "partial_carriers": partial, "gps_field_count": gps_fields}
 
 
 def exif(data):
@@ -484,6 +497,8 @@ def main():
     parser.add_argument("--config", required=True)
     parser.add_argument("--only", help="comma-separated legacy ids for an explicit pilot")
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--repair", action="store_true",
+                        help="retry failed records, preserving successful records and prior provenance")
     parser.add_argument("--render-only", action="store_true",
                         help="rebuild pages from existing value-free records without opening inputs")
     parser.add_argument("--discover", action="store_true", help="resolve source references without opening images")
@@ -516,7 +531,7 @@ def main():
     bounds, boundary = colorado_bounds()
     archive = archive_client(config) if any("archive_key" in s for s in sources.values()) else None
     out = Path(config["out"])
-    if out.exists() and not args.resume:
+    if out.exists() and not (args.resume or args.repair):
         raise AuditError("OutputExistsUseResumeOrNewDirectory")
     out.mkdir(parents=True, exist_ok=True)
     provenance = {"started": now(), "tool_sha256": digest(Path(__file__).read_bytes()),
@@ -526,12 +541,23 @@ def main():
                                                        text=True, check=True).stdout.strip(),
                   "manifests_sha256": digest(b"".join((ROOT / "manifests" / (b + ".tsv")).read_bytes()
                                                         for b in ("train", "validate", "test")))}
+    if args.repair:
+        previous = json.loads((out / "summary.json").read_text())["provenance"]
+        if previous["manifests_sha256"] != provenance["manifests_sha256"]:
+            raise AuditError("RepairManifestChanged")
+        provenance["previous_audit"] = previous
+        provenance["repair"] = "failed records retried; successful records retained with their original tool hashes"
     records, todo = [], []
     for row in rows:
         path = out / "records" / ("1" + row["id"] + ".json")
-        if args.resume and path.exists():
+        if (args.resume or args.repair) and path.exists():
             record = json.loads(path.read_text())
-            if record.get("tool_sha256") != provenance["tool_sha256"] or record["status"] != "ok":
+            if args.repair and record["status"] != "ok":
+                todo.append(row)
+                continue
+            if record["shipped_sha256"] != row["sha256"]:
+                raise AuditError("SavedRecordManifestMismatch")
+            if not args.repair and (record.get("tool_sha256") != provenance["tool_sha256"] or record["status"] != "ok"):
                 raise AuditError("ResumeRecordNeedsNewOutput")
             records.append(record)
         else:

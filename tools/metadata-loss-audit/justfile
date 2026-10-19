@@ -12,3 +12,6 @@ render config:
 
 check:
     python3 -m unittest discover -s "{{justfile_directory()}}" -p "test_strip_review.py"
+
+repair config:
+    python3 "{{justfile_directory()}}/strip_review.py" --config {{quote(config)}} --repair

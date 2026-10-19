@@ -60,3 +60,8 @@ An incomplete GPS position keeps its structural and field comparison visible, wi
 explicit classification error. `just --justfile tools/metadata-loss-audit/justfile render CONFIG`
 rebuilds pages from saved value-free records and preserves the original audit provenance;
 it records the renderer hash separately and never reopens an image.
+
+A partial position is outside Colorado when its known axis is outside the state
+bounding box; otherwise it remains unclassified. `repair CONFIG` retries failed
+records, preserves successful records and prior audit provenance, and refuses a
+changed manifest. Each record retains the hash of the tool that audited it.
