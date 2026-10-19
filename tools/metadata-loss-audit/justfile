@@ -26,3 +26,7 @@ routes list out binary commit:
 
 reclassify-gps config:
     python3 "{{justfile_directory()}}/strip_review.py" --config {{quote(config)}} --reclassify-gps
+
+# gain-maps-report map_sha256 hashes samples; inventory needs encoded-file hashes.
+gain-map-routes render out:
+    python3 "{{justfile_directory()}}/../../scripts/gain_map_inventory_routes.py" {{quote(render)}} {{quote(out)}}
