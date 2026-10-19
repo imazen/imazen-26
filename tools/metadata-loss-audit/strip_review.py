@@ -412,13 +412,15 @@ def render_report(out, records, provenance, total):
         else:
             fields, parts, gps, shipped = record["fields"], record["parts"], record["gps"], record["shipped_gps"]
             body = (f'<p>Legacy id {esc(record["legacy_id"])} · {esc(record["path"])}</p>'
-                    f'<p><a href="{esc(record["url"])}">Published original</a></p>'
+                    f'<p><a href="{esc(record["url"])}">Published original</a> · '
+                    f'<a href="../records/{cid}.json">Comparison record</a></p>'
                     f'<p>Source: {esc(record["source_generation"])}. '
                     f'Public bytes match the manifest SHA-256.</p>'
                     f'<p>Had GPS: {esc(gps["had_gps"])}. Inside Colorado: {esc(gps["inside_colorado"])}. '
                     f'Shipped GPS: {esc(shipped["had_gps"])}. '
                     f'Position carriers: {gps["position_carriers"]}; inside: {gps["inside_carriers"]}; '
-                    f'outside: {gps["outside_carriers"]}.</p>'
+                    f'outside: {gps["outside_carriers"]}; partial: {gps.get("partial_carriers", 0)}. '
+                    'A partial position outside either state axis is outside Colorado.</p>'
                     f'<p>Format {esc(record["before_format"])} → {esc(record["after_format"])}; '
                     f'bytes {record["before_bytes"]:,} → {record["after_bytes"]:,}; '
                     f'inventory parts {record["source_parts"]:,} → {record["shipped_parts"]:,}.</p>')

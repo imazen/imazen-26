@@ -15,3 +15,7 @@ check:
 
 repair config:
     python3 "{{justfile_directory()}}/strip_review.py" --config {{quote(config)}} --repair
+
+# Preserve content and timestamps without attempting NAS ownership changes.
+mirror out destination:
+    rsync -rlt {{quote(out + "/")}} {{quote(destination + "/")}}
