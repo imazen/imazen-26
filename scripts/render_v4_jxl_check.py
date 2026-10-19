@@ -35,7 +35,7 @@ import subprocess
 import sys
 import tempfile
 import zlib
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
 
@@ -243,8 +243,13 @@ def main():
     failed = sum(1 for j in jobs if j is None)
     with ProcessPoolExecutor(a.jobs) as ex, open(a.out or os.path.join(a.out_dir, "jxl-check.tsv"), "w") as out:
         out.write("\t".join(cols) + "\n")
-        for res in ex.map(check, [j for j in jobs if j is not None], chunksize=4):
+        pending = [ex.submit(check, job) for job in jobs if job is not None]
+        for index, future in enumerate(as_completed(pending), 1):
+            res = future.result()
             out.write("\t".join(str(res.get(c, "")) for c in cols) + "\n")
+            out.flush()
+            if index % 25 == 0 or index == len(pending):
+                print(f"JXL check: {index}/{len(jobs)} complete; {failed} failures", flush=True)
             if res["result"] == "FAIL":
                 failed += 1
                 print("FAIL", res["id"], res["layer"], res["error"], flush=True)

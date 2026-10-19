@@ -177,15 +177,26 @@ def main():
     ap.add_argument("--out", default="-")
     ap.add_argument("--allowlist", default=os.path.join(os.path.dirname(os.path.dirname(
         os.path.abspath(__file__))), "manifests", "byte_scan_allowlist.tsv"))
+    ap.add_argument("--paths", help="explicit newline-separated absolute paths instead of walking the tree")
     a = ap.parse_args()
     allow = []
     with open(a.allowlist) as f:
         next(f)
         allow = [line.rstrip("\n").split("\t")[:2] for line in f if line.strip()]
     rows, bad, allowed = [], 0, 0
-    for root, _, files in os.walk(a.tree):
+    if a.paths:
+        paths = open(a.paths).read().splitlines()
+        base = os.path.realpath(a.tree)
+        if not paths or len(paths) != len(set(paths)) or any(
+                not os.path.isabs(path) or os.path.commonpath([base, os.path.realpath(path)]) != base
+                for path in paths):
+            sys.exit("explicit paths must be unique files inside the selected tree")
+        groups = [(os.path.dirname(path), [], [os.path.basename(path)]) for path in paths]
+    else:
+        groups = os.walk(a.tree)
+    for root, _, files in groups:
         for f in sorted(files):
-            if not re.match(r"\d{4,5}_", f):  # corpus ids, or export ids with the leading 1
+            if not a.paths and not re.match(r"\d{4,5}_", f):  # corpus ids, or export ids with the leading 1
                 continue
             p = os.path.join(root, f)
             found, ok = [], []
@@ -196,6 +207,8 @@ def main():
             bad += bool(found)
             allowed += len(ok)
             rows.append((os.path.relpath(p, a.tree), "; ".join(found), "; ".join(ok)))
+            if len(rows) % 100 == 0:
+                print(f"byte-scan: {len(rows)} files; {bad} with findings", file=sys.stderr, flush=True)
     out = sys.stdout if a.out == "-" else open(a.out, "w")
     out.write("path\tfindings\tallowed\n")
     for p, f, ok in sorted(rows):

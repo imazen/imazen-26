@@ -15,3 +15,58 @@ readback-resume out jobs="3":
 # This script applies run-heavy to each phase; hold the global build lock around it.
 decode-check out jobs="3":
     bash "{{justfile_directory()}}/../../scripts/render_v4_decode_check.sh" {{quote(out)}} {{jobs}}
+
+# Fresh sample directory planned by current_main_samples.py; no shipped files change.
+sample-encodes out jobs="3":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    binary="{{justfile_directory()}}/target/release/render-v4"
+    "$binary" png-sdr --jobs {{jobs}} "{{out}}/list.tsv" "{{out}}" > "{{out}}/report.tsv"
+    "$binary" gain-maps --jobs {{jobs}} "{{out}}/hdr-list.tsv" "{{out}}" > "{{out}}/gain-maps-report.tsv"
+    "$binary" png-hdr --jobs {{jobs}} "{{out}}/hdr-list.tsv" "{{out}}" > "{{out}}/hdr-report.tsv"
+    "$binary" jxl --effort 9 --jobs {{jobs}} "{{out}}/list.tsv" "{{out}}" > "{{out}}/jxl-report.tsv"
+    "$binary" jxl-hdr --effort 9 --jobs {{jobs}} "{{out}}/hdr-list.tsv" "{{out}}" > "{{out}}/jxl-hdr-report.tsv"
+
+recover-identical-report candidate reference:
+    python3 "{{justfile_directory()}}/../../scripts/recover_identical_jxl_report.py" {{quote(candidate)}} {{quote(reference)}}
+
+jxl-check out jobs="3":
+    python3 "{{justfile_directory()}}/../../scripts/render_v4_jxl_check.py" {{quote(out)}} --jobs {{jobs}}
+
+# The byte scanner emits only finding names/offsets, never matched coordinate values.
+byte-scans out originals:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    result=0
+    for layer in png-p3 png-srgb jxl-p3 jxl-srgb imi-p3 imi-srgb gain-maps; do
+        python3 "{{justfile_directory()}}/../../scripts/byte_scan.py" "{{out}}/$layer" --out "{{out}}/byte-scan-$layer.tsv" || result=1
+    done
+    python3 "{{justfile_directory()}}/../../scripts/byte_scan.py" {{quote(originals)}} --paths "{{out}}/../originals-byte-scan.list" --out "{{out}}/byte-scan-originals.tsv" || result=1
+    exit "$result"
+
+# Standalone source snapshots and explicit compatibility overrides retain their own locks.
+beta-check-tools root config:
+    CARGO_TARGET_DIR={{quote(root + "/target")}} cargo --config {{quote(config)}} build --release --locked --manifest-path {{quote(root + "/render-v4/Cargo.toml")}}
+    CARGO_TARGET_DIR={{quote(root + "/target")}} cargo --config {{quote(config)}} build --release --locked --manifest-path {{quote(root + "/jxl-decode-check/Cargo.toml")}}
+
+# A staged, explicit lossless redo: all three readers, PNG twins and structural gates.
+subset-check root binary lib inventory commit jobs="3":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    scripts="{{justfile_directory()}}/../../scripts"
+    python3 "$scripts/check_jxl_subset.py" prepare {{quote(root)}}
+    {{quote(binary)}} png --jobs {{jobs}} < "{{root}}/subset-check/png.list" > "{{root}}/subset-check/png.tsv" 2> "{{root}}/subset-check/png.log"
+    {{quote(binary)}} jxl --jobs {{jobs}} < "{{root}}/subset-check/jxl.list" > "{{root}}/subset-check/native.tsv" 2> "{{root}}/subset-check/native.log"
+    {{quote(lib)}} < "{{root}}/subset-check/jxl.list" > "{{root}}/subset-check/libjxl.tsv" 2> "{{root}}/subset-check/libjxl.log"
+    for layer in jxl-p3 jxl-srgb; do
+        python3 "$scripts/byte_scan.py" "{{root}}/$layer" --out "{{root}}/subset-check/byte-scan-$layer.tsv"
+    done
+    python3 "{{justfile_directory()}}/../metadata-loss-audit/inventory_routes.py" "{{root}}/subset-check/inventory-list.tsv" "{{root}}/subset-check/inventory" --inventory {{quote(inventory)}} --inventory-commit {{quote(commit)}}
+    python3 "$scripts/check_jxl_subset.py" verify {{quote(root)}}
+
+# Default is a read-only plan; --apply retains old files and manifests beside the render.
+promote-subset candidate render ids apply="":
+    python3 "{{justfile_directory()}}/../../scripts/promote_lossless_jxl_redo.py" {{quote(candidate)}} {{quote(render)}} --ids {{quote(ids)}} {{apply}}
+
+merge-subset-hashes candidate render number:
+    python3 "{{justfile_directory()}}/../../scripts/merge_jxl_redo_hashes.py" {{quote(candidate)}} {{quote(render)}} {{number}}

@@ -126,6 +126,8 @@ def main():
                 raise ValueError("promoted manifest does not record the replacement")
             if recorded["tool_commit"] != build["tool_commit"]:
                 raise ValueError("promoted manifest lost encoder provenance")
+    subprocess.run([sys.executable, str(Path(__file__).with_name("merge_jxl_redo_hashes.py")),
+                    str(candidate), str(render), str(number)], check=True)
     (evidence / "promotion-summary.json").write_text(json.dumps(plan, indent=2) + "\n")
     print(json.dumps({"promoted": len(fresh), "redo": number, "old_files_retained": str(backup)}), flush=True)
 
