@@ -422,7 +422,7 @@ On the 16-image test set: 32 of 32 files pass; on the six HDR files: 6 of 6.
   box, then `jbrd`, Exif, XMP and `jhgm`, then the frames, and no box after the codestream.
   The check fails a file in any other order.
 - **Rendering intent differs from cjxl's on 3,566 of the 3,644 lossless files** (measured
-  2026-10-17 with cjxl v0.12.0 on one PNG twin of each kind; open owner question). cjxl
+  2026-10-17 with cjxl v0.12.0 on one PNG twin of each kind; historical v4 headers). cjxl
   takes the intent from the PNG: the twins' `sRGB` chunk says Perceptual, and a `cICP` chunk
   leaves the spec default, Relative. jxl-encoder ignores the input's intent:
 
@@ -437,7 +437,22 @@ On the 16-image test set: 32 of 32 files pass; on the six HDR files: 6 of 6.
   equal cjxl's transcode of the rebuilt JPEG on all 6 colour kinds sampled (four ICC
   profiles, sRGB and gray). The intent does not change decoded samples, and the census
   readers that colour-manage matched our references with the current intents. jxl-encoder's
-  `docs/LIBJXL_DIVERGENCES.md` records the divergence (33ae2413).
+  `docs/LIBJXL_DIVERGENCES.md` records that measurement (33ae2413).
+
+  **Owner decision, 2026-10-19: Relative for JXL constructors, code only.** render-v4
+  hard-codes intent 0 (Perceptual) in the PNG `sRGB` chunk (`main.rs`); the old
+  jxl-encoder constructors held Perceptual, while the sRGB compact header serialized
+  Relative, and zenjxl hard-coded Perceptual when mapping CICP. jxl-encoder
+  `21cd3e47` makes the constructors/default Relative and keeps sRGB's one-bit header
+  byte unchanged; zenjxl `586952a5` maps CICP to Relative. The constructor tests read
+  the intent with jxl-rs and read lossless samples with jxl-rs and libjxl v0.12;
+  the wrapper tests read Relative and identical samples for P3 and P3/PQ.
+
+  No general re-encode, remote worker or zencodec/zenpixels plumbing is part of this
+  decision. The existing table remains the description of the stored v4 headers:
+  the 206 P3/PQ files (and the gray files) retain their older intent until a re-render
+  is authorized for another reason. PNG keeps its intent 0. The PNG/JXL twins' colour
+  encodings can differ in this no-op intent field while their lossless samples agree.
 
 ### Gain-map form (`jhgm`)
 
