@@ -214,7 +214,7 @@ Size effect, using the measured lossless-render sizes for the other ids (GiB):
 | test | 74 | 1.63 → 1.28 | 4.55 → 4.21 |
 | all | 417 | 8.06 → 6.18 | 22.38 → 20.49 |
 
-It doesn't change the layout conclusion: train twins still exceed a 10 GB repository.
+It doesn't change the layout conclusion: train twins still exceed our 10 GB repository planning target.
 
 ## Blockers
 

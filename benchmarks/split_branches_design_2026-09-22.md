@@ -12,20 +12,20 @@ one, including how it treats HDR, colour profiles and crop/scale/subset variants
 
 | limit | value |
 |---|---|
-| on-disk size | **10 GB per repository** (the "large files" page: ideally <1 GB, <5 GB strongly recommended) |
+| on-disk size | **10 GB recommended maximum for the compressed `.git` directory**, not a hard cap (the "large files" page: ideally <1 GB, <5 GB strongly recommended) |
 | push | 2 GB per push |
-| file | 100 MB hard block (1 MB recommended) |
+| file | 100 MiB hard block (1 MB recommended) |
 | directory width | 3,000 entries |
 | branches | 5,000 |
 
 Three consequences follow from how git stores objects:
 
 - **Branches share one object store.** `train`, `validate` and `test` branches in one
-  repository draw on the same 10 GB, not 10 GB each.
+  repository contribute to one object store and its recommended size target.
 - **History only grows.** A re-render adds its full size and the old blobs stay
   reachable (and live on in every clone and fork). The registry already treats sets as
   immutable, so every render pass is a permanent addition.
-- **Images don't compress further** inside git's packs.
+- **Payload totals are planning figures.** Git pack sizes for these layouts have not been measured.
 
 **What we would put in them** (measured 2026-09-22 from the manifests and the
 `/mnt/v` copies; GiB):
@@ -52,7 +52,7 @@ renders: 0.533× for SDR and 0.646× for 16-bit HDR.
 | layout | fits GitHub? | notes |
 |---|---|---|
 | **A. Raw bytes, `train`/`validate`/`test` branches in this repo** | **No.** SDR PNG alone is 10.54 GiB; with originals and HDR, 19.8 GiB, all charged to one repo. Seven files are blocked outright. | Every later render pass adds to the same budget, permanently. |
-| **B. Raw bytes, one repository per bucket** | With PNG renders: test fits (0.99 + 2.04 + 0.89 = 3.9 GiB); validate ~5.9 GiB, already past the "strongly recommended" 5 GB; **train 9.96 GiB is at the hard limit**. JXL-only fits every bucket (train 4.03 GiB), but PNG + JXL twins put train at 11.2 GiB. | Works only for one lean format, which gives up the twin check. No JXL render exceeds 100 MB. |
+| **B. Raw bytes, one repository per bucket** | With PNG renders: test fits (0.99 + 2.04 + 0.89 = 3.9 GiB); validate ~5.9 GiB, already past the "strongly recommended" 5 GB; **train 9.96 GiB exceeds our 10 GB planning target**. JXL-only fits every bucket (train 4.03 GiB), but PNG + JXL twins put train at 11.2 GiB. | Works only for one lean format, which gives up the twin check. No JXL render exceeds 100 MB. |
 | **C. LFS pointers on R2, `train`/`validate`/`test` branches in this repo** (the mechanism `variant/png-v3` and `variant/pristine-8th` already use) | **Yes.** Git holds ~130-byte pointers; bytes live at `codec-corpus/lfs/imazen-26/<sha256>` behind `imazen-lfs.pages.dev`. No GitHub storage, bandwidth, 10 GB or 100 MB limit applies. | Consumers need `git-lfs`. Re-renders cost R2 bytes, not repo size. Cloning a bucket is one command. |
 
 **Proposal: C for the corpus, plus one small raw-git repository for decoder
@@ -206,10 +206,10 @@ So:
 
 - **Raw git, one repo for all buckets:** JXL-only (8.06 GiB) fits under 10 GB but not
   under the 5 GB "strongly recommended" line, and it leaves no room for a second
-  render pass. Twins (22.4 GiB) do not fit.
+  render pass. Twins (22.4 GiB) exceed that planning target.
 - **Raw git, one repo per bucket:** JXL-only fits every bucket (train 4.03 GiB), but
   that drops the PNG twin, which is the decoder-consistency check. Twins put train
-  at 11.2 GiB (over the limit) and validate at 6.63 GiB (over the recommended 5 GB).
+  at 11.2 GiB (over the planning target) and validate at 6.63 GiB (over the recommended 5 GB).
 - **LFS on R2 (proposed):** carries twins for every bucket, and later passes, with none
   of these limits.
 

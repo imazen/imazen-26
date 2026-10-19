@@ -23,7 +23,7 @@ Buckets follow the family-aware split map. The derived sizes come from the png-v
 (native gamut) and their measured lossless JXL; the sRGB- and P3-converted layers haven't
 been rendered, so theirs will differ somewhat.
 
-**What fits GitHub:** all branches of a repository share its 10 GB, and history keeps
+**Planning target:** all branches share one Git object store; GitHub recommends a maximum of 10 GB for its compressed on-disk size. History keeps
 every earlier render. `png-srgb` and `png-p3` exceed 10 GB on the first pass. `jxl-p3` fits
 once, with no room for a second pass. The originals fit but are over the recommended 5 GB,
 and two DNGs (1455, 1458) exceed the 100 MB file limit. So all five should carry their bytes

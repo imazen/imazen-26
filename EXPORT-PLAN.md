@@ -61,6 +61,13 @@ retired, and the review may retire more.
 
 ## Repositories
 
+**First publication (owner, 2026-10-19):** `imazen-26-originals`,
+`imazen-26-jxl-p3`, `imazen-26-jxl-srgb` and `imazen-xl-26`. Each has
+`train`, `validate` and `test` data branches with family-preserving membership,
+plus README and decoding guidance. Ordinary PNG render repositories are deferred;
+the fixed XL set retains all public layers of its five ids, including PNG twins.
+IMI remains private. The table below describes the complete later layout.
+
 Plain git, one repository per set and subset, with `train`, `validate` and `test` branches.
 Git LFS only where GitHub's limits leave no choice.
 
@@ -78,11 +85,11 @@ Git LFS only where GitHub's limits leave no choice.
   - 12402: its SDR PNG, 101.2 MiB in both PNG layers.
   - 11531's HDR PNG is 99.5 MiB, under the limit. No JPEG XL file exceeds 71 MiB.
   - An XL image leaves the other repositories completely.
-- **Repository size.** GitHub caps a repository at 10 GB on disk and a push at 2 GiB
+- **Repository size.** GitHub recommends at most 10 GB for the compressed `.git` directory and enforces a 2 GB push limit
   ([repository limits](https://docs.github.com/en/repositories/creating-and-managing-repositories/repository-limits),
-  checked 2026-10-16). Without the XL images, v4
+  checked 2026-10-19). The sizes below are encoded payload totals, not measured Git object-store sizes. Without the XL images, the current v4 payload
   measures: originals 4.86 GB, `png-p3` 12.59 GB (6.13 / 3.81 / 2.66 by bucket), `png-srgb`
-  9.44 GB, `jxl-p3` 6.16 GB, `jxl-srgb` 4.77 GB. The PNG layers get a repository per bucket;
+  9.44 GB, `jxl-p3` 6.30 GB, `jxl-srgb` 4.90 GB. The PNG layers get a repository per bucket;
   the others one repository with a branch per bucket. A large branch goes up in several
   pushes.
 - **R2 copies.** Every layer also sits under named prefixes in an `imazen-26` R2 bucket.
