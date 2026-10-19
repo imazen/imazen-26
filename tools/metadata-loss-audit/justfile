@@ -1,0 +1,8 @@
+discover config:
+    python3 "{{justfile_directory()}}/strip_review.py" --config {{quote(config)}} --discover
+
+review config ids="":
+    python3 "{{justfile_directory()}}/strip_review.py" --config {{quote(config)}} --only {{quote(ids)}}
+
+resume config ids="":
+    python3 "{{justfile_directory()}}/strip_review.py" --config {{quote(config)}} --only {{quote(ids)}} --resume

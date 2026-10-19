@@ -28,3 +28,30 @@ python3 compare.py; python3 heic_diff.py
 `compare.py` reads the signal index path and `cand_list.tsv`/`cand_signal.tsv` from the
 current directory; the 2026-09-25 inputs and outputs are in
 `/mnt/v/output/imazen-26-variants/metadata-audit-2026-09-25/`.
+
+## Removal review
+
+`strip_review.py` compares every original's source and published bytes with native
+inventories and ExifTool. It saves part differences, metadata field names and GPS
+presence/Colorado flags. Metadata values and native inventory labels/details stay
+in memory. Source and public-object hashes must match their provenance records.
+Private source paths belong in a caller-supplied JSON configuration.
+
+```sh
+just --justfile tools/metadata-loss-audit/justfile discover config.json
+just --justfile tools/metadata-loss-audit/justfile review config.json 1000,1044
+just --justfile tools/metadata-loss-audit/justfile review config.json
+```
+
+Configuration keys: `staging`, `matches`, `camera_manifest`, `camera_copies`,
+`archive_bucket`, `archive_prefix`, `public_base`, `inventory`, `inventory_commit`,
+`out`, and `workers`. The native CLI needs stdin support and RAW inventory. Local
+inputs are read only; an unavailable pre-pass copy is read from the originals
+archive into memory with `s5cmd cat`. Public objects are read live and verified.
+
+The Colorado classifier uses the inclusive bounding box of the [Census state
+geometry](https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/0).
+No image position is sent to that service. A pilot's `--only` ids are explicit;
+missing ids and per-file failures fail the run. `resume` accepts only completed
+records from the same script version. Replaced report files retain timestamped
+backups. The HTML index links every file's part and field tables and the summaries.
