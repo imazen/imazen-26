@@ -1,0 +1,4 @@
+# Inputs must be PNG twins; list columns are id, PNG path, output stem, provenance.
+# Use a separate output directory for candidate encodes. The caller supplies run-heavy.
+measure-twins list out binary="target/release/render-v4" effort="9" jobs="1":
+    {{quote(binary)}} jxl --effort {{quote(effort)}} --jobs {{quote(jobs)}} {{quote(list)}} {{quote(out)}}
