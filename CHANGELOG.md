@@ -22,6 +22,7 @@
 - The v4 review no longer excuses ffmpeg 6.1 failing on a box after the JPEG XL codestream, which no file has now (68d12aa)
 
 ### Added
+- Explicit inventory-route audit: per-route hashes, statuses and structural rows, with only fixed allow-list label prefixes retained. The nine-route pilot covers JPEG, PNG, HEIC, DNG and every SDR JXL kind.
 - [Full metadata removal review](benchmarks/metadata_strip_review_2026-10-19.pointer.md): 2,115/2,115 source/public inventory and field comparisons, 291 GPS-bearing sources (48 inside Colorado), zero shipped GPS positions; no shipped bytes changed.
 - `tools/render-v4/justfile` exposes candidate JPEG XL measurements from an explicit PNG-twin list and separate output directory.
 - Metadata removal review retains structural diffs for incomplete GPS records and can retry failed records without discarding successful comparisons; a known axis outside the state bounding box excludes Colorado even if the other axis is missing.

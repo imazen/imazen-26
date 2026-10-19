@@ -220,7 +220,7 @@ def safe_tag(tag):
     return "named-tag-" + digest(tag.encode())[:16]
 
 
-def inventory(binary, data):
+def inventory(binary, data, label_prefixes=()):
     result = subprocess.run([binary, "inventory", "--tsv", "-"], input=data,
                             capture_output=True, timeout=180)
     if result.returncode != 0:
@@ -245,7 +245,8 @@ def inventory(binary, data):
         parents.append(key[-1])
         parts.append({"key": key, "depth": depth, "kind": kind, "tag": tag,
                       "disposition": disposition, "offset": start, "length": length,
-                      "sha256": digest(memoryview(data)[start:start + length])})
+                      "sha256": digest(memoryview(data)[start:start + length]),
+                      "label": next((p for p in label_prefixes if p and row["label"].startswith(p)), "")})
     if not parts:
         raise AuditError("EmptyInventory")
     return parts

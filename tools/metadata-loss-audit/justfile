@@ -19,3 +19,7 @@ repair config:
 # Preserve content and timestamps without attempting NAS ownership changes.
 mirror out destination:
     rsync -rlt {{quote(out + "/")}} {{quote(destination + "/")}}
+
+# The route list is explicit; native labels/details never reach the output.
+routes list out binary commit:
+    python3 "{{justfile_directory()}}/inventory_routes.py" {{quote(list)}} {{quote(out)}} --inventory {{quote(binary)}} --inventory-commit {{quote(commit)}}

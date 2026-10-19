@@ -65,3 +65,9 @@ A partial position is outside Colorado when its known axis is outside the state
 bounding box; otherwise it remains unclassified. `repair CONFIG` retries failed
 records, preserves successful records and prior audit provenance, and refuses a
 changed manifest. Each record retains the hash of the tool that audited it.
+
+`inventory_routes.py` checks an explicit TSV of `id`, `layer`, absolute `path`, and
+`sha256`. It writes a status for every route and sanitized structural TSV rows. Only
+fixed label prefixes from the export allow-list survive; arbitrary native labels and
+details stay in memory. Any read, hash, inventory or unknown-part failure fails the run.
+The nine-route pilot covers all four original formats and every current SDR JXL kind.

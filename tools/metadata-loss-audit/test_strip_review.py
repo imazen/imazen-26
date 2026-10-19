@@ -1,11 +1,22 @@
 """Controls for value-free reporting, including incomplete source metadata."""
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import strip_review as review
 
 
 class ReviewTests(unittest.TestCase):
+    def test_inventory_saves_only_fixed_label_prefixes(self):
+        private = "metadata-value-sentinel"
+        native = ("file\tdepth\tkind\toffset\tlength\ttag\tlabel\tdisposition\tdetail\n"
+                  f"-\t0\tsegment\t0\t3\tFFE5\tMEDIABIN_DIDB:{private}\tunknown\t{private}\n")
+        result = SimpleNamespace(returncode=0, stdout=native.encode(), stderr=private.encode())
+        with patch.object(review.subprocess, "run", return_value=result):
+            parts = review.inventory("inventory", b"abc", ("MEDIABIN_DIDB",))
+        self.assertEqual(parts[0]["label"], "MEDIABIN_DIDB")
+        self.assertNotIn(private, str(parts))
+
     def test_field_changes_never_include_values(self):
         private = "private-value-sentinel"
         changes = review.field_diff(
