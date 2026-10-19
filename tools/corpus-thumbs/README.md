@@ -20,6 +20,10 @@ quantizer to 1). `--to-jpeg` re-encoded 1044 for the 2026-10-15 originals pass. 
 2026-09-25 run: `/mnt/v/output/imazen-26/gallery-2026-09-25/` (with the page, its data and
 `SHA256SUMS`). `DEBUG_DECODE=1` prints each decode's pixel descriptor and channel means.
 
+`sync-main.sh` keeps its source checkouts under jj, refuses an existing lock or
+uncommitted changes, and preserves the previous commit manifest before updating it.
+It never deletes a checkout.
+
 It builds against the main branch of every imazen crate, never crates.io releases. Most come
 from git with `branch = "main"`, and the committed `Cargo.lock` records the commits a build
 used. zencodec, zenmeta and ultrahdr-core are patched in by path from `zen-main/`, because

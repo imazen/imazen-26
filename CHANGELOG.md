@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- `tools/corpus-thumbs/sync-main.sh` refreshes its source checkouts through jj, checks locks and working-copy changes, and preserves the previous source manifest instead of deleting the checkouts.
 - Licence labels (owner decision 2026-10-16, 3d77e71): the 32 phone screenshots are CC0 and the 12 lkml.org and 5 Wayback Machine captures PD; README, CORPUS-MANIFEST.README.md and the web-screenshot provenance state the public-domain status plainly; render v4 re-rendered the 49 images in every layer
 - render-v4 builds against jxl-encoder d73b6c98 (3a24186): an UltraHDR transcode's `jhgm` gain-map codestream takes the primary JPEG's orientation, which the 25 rotated Samsung UltraHDR photos needed for zenjxl's HDR reconstruction to place their gain maps; render-v4 compares the `jhgm` map with the JPEG's turned by the JPEG's orientation (54b6643)
 - The byte-scan gate allows 11231's UltraHDR gain-map JPEG inside its `jbrd` box (ce99f73), owner OK on the condition that the gain maps decode in jxl-rs, libjxl and zenjxl
