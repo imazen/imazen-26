@@ -135,3 +135,9 @@ publication-progress log:
 
 resume-corpus stage repos receipts:
     python3 "{{justfile_directory()}}/../../scripts/publish_corpus.py" repositories {{quote(stage)}} {{quote(repos)}} {{quote(receipts)}} --resume
+
+# Image files are already compressed; these are Git transport/storage settings only.
+publication-pack repo:
+    git -C {{quote(repo)}} config core.compression 1
+    git -C {{quote(repo)}} config pack.compression 1
+    git -C {{quote(repo)}} config pack.window 0

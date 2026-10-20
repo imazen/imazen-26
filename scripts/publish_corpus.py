@@ -230,6 +230,9 @@ def repositories(args):
             # NAS-created directories use the share owner; trust only this newly created path.
             run(["git", "config", "--global", "--add", "safe.directory", base])
             run(["git", "config", "pack.threads", "4"], cwd=base)
+            run(["git", "config", "core.compression", "1"], cwd=base)
+            run(["git", "config", "pack.compression", "1"], cwd=base)
+            run(["git", "config", "pack.window", "0"], cwd=base)
             run(["gh", "repo", "create", f"imazen/{name}", "--private", "--description",
                  "imazen-26 image corpus: " + spec["layer"]])
             run(["gh", "api", f"repos/imazen/{name}/actions/permissions", "--method", "PUT", "-F", "enabled=false"])
