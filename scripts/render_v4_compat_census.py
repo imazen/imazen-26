@@ -328,6 +328,9 @@ def main():
             print(f"{finished}/{len(todo)} chunks ({rows} cells in chunk {futs[fut]}), {el / 60:.1f} min, "
                   f"eta {el / finished * (len(todo) - finished) / 60:.0f} min, {budget.used}/{budget.total} GB held",
                   file=sys.stderr, flush=True)
+    # --ids limits decoding, while the review still needs aliases for the entire corpus.
+    if ids:
+        _, alias, _ = distinct_files(render, set())
     with open(os.path.join(outdir, "aliases.tsv"), "w") as f:
         f.write("sha256\tpath\n")
         f.writelines(f"{sha}\t{p}\n" for sha, ps in sorted(alias.items()) for p in ps)
