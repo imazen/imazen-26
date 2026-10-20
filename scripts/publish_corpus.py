@@ -184,8 +184,31 @@ def sha(base, revision):
                 "-T", "commit_id"], cwd=base, capture=True)
 
 
+def check_tree(base, revision, branch):
+    """Reject every unlisted path, including extensionless filesystem artifacts."""
+    allowed = {"README.md", "DECODING.md", "CITATION.cff", "manifest.tsv", "CHANGELOG.md",
+               ".gitattributes", ".lfsconfig", ".github/workflows/validate.yml",
+               "tools/validate.py", "BRANCHES.tsv"}
+    if branch != "main":
+        manifest = subprocess.check_output(["git", "show", f"{revision}:manifest.tsv"], cwd=base, text=True)
+        allowed.update(row["path"] for row in csv.DictReader(manifest.splitlines(), delimiter="\t"))
+    paths = subprocess.check_output(["git", "ls-tree", "-r", "--name-only", revision], cwd=base, text=True).splitlines()
+    unexpected = set(paths) - allowed
+    if unexpected:
+        raise ValueError(f"unlisted committed paths: {len(unexpected)}; first: {min(unexpected)}")
+
+
+def exclude_transient_files(base):
+    exclude = base / ".git/info/exclude"
+    text = exclude.read_text() if exclude.exists() else ""
+    if ".fuse_hidden*" not in text.splitlines():
+        exclude.parent.mkdir(parents=True, exist_ok=True)
+        exclude.write_text(text + "\n.fuse_hidden*\n")
+
+
 def push(base, branch):
     candidate = run(["jj", "log", "--no-graph", "-r", "@", "-T", "commit_id"], cwd=base, capture=True)
+    check_tree(base, candidate, branch)
     old = subprocess.run(["git", "rev-parse", "--verify", f"refs/remotes/origin/{branch}"],
                          cwd=base, capture_output=True, text=True)
     if old.returncode == 0:
@@ -233,6 +256,7 @@ def repositories(args):
             run(["git", "config", "core.compression", "1"], cwd=base)
             run(["git", "config", "pack.compression", "1"], cwd=base)
             run(["git", "config", "pack.window", "0"], cwd=base)
+            exclude_transient_files(base)
             run(["gh", "repo", "create", f"imazen/{name}", "--private", "--description",
                  "imazen-26 image corpus: " + spec["layer"]])
             run(["gh", "api", f"repos/imazen/{name}/actions/permissions", "--method", "PUT", "-F", "enabled=false"])
@@ -243,6 +267,7 @@ def repositories(args):
             root = push(base, "main")
             run(["gh", "repo", "edit", f"imazen/{name}", "--default-branch", "main"])
         refs = {}
+        exclude_transient_files(base)
         for branch in spec["branches"]:
             prior = subprocess.run(["git", "rev-parse", "--verify", f"refs/remotes/origin/{branch}"],
                                    cwd=base, capture_output=True, text=True)
@@ -327,6 +352,12 @@ def verify_git(args):
         name = spec["repository"]
         base = args.repos / name
         receipt = json.loads((args.receipts / f"{name}.json").read_text())
+        reachable = subprocess.check_output(["git", "rev-list", *receipt["refs"].values()], cwd=base, text=True).splitlines()
+        for commit in reachable:
+            # A branch's manifest identifies its bucket; main's full catalogue has no data paths.
+            branches = subprocess.check_output(["git", "show", f"{commit}:manifest.tsv"], cwd=base, text=True)
+            buckets = {r["bucket"] for r in csv.DictReader(branches.splitlines(), delimiter="\t")}
+            check_tree(base, commit, next(iter(buckets)) if len(buckets) == 1 else "main")
         for branch, commit in receipt["refs"].items():
             remote = run(["gh", "api", f"repos/imazen/{name}/git/ref/heads/{branch}",
                           "--jq", ".object.sha"], capture=True)
