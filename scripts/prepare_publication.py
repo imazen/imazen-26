@@ -119,8 +119,10 @@ def special_card(name, layer, rows, version):
     kinds = Counter(row["layer"] for row in rows)
     lines = [f"# {name}", "", "imazen-26 is a corpus for testing image codecs and image processing.", ""]
     if layer == "originals":
-        lines += ["This repository holds the source files byte for byte. It includes JPEG, PNG,",
-                  "HEIC and DNG; their encoded metadata and orientation remain in the files.", ""]
+        lines += ["This repository holds JPEG, PNG and HEIC source files byte for byte;",
+                  "their encoded metadata and orientation remain in the files.",
+                  "The DNG originals and other XL images are in",
+                  "[imazen-xl-26](https://github.com/imazen/imazen-xl-26).", ""]
     elif layer == "xl":
         lines += ["This repository holds all three DNG originals and every public layer of images",
                   "with a file exceeding GitHub's 100 MiB limit. DNG 11444 joins the larger",
@@ -131,7 +133,7 @@ def special_card(name, layer, rows, version):
         encoding = "JPEG XL" if layer.startswith("jxl") else "PNG"
         lines += [f"This repository holds {encoding} renders in {colour}.",
                   "The XL images are in [imazen-xl-26](https://github.com/imazen/imazen-xl-26).",
-                  "DNG sources remain in the originals repository and have no rendered twins.", ""]
+                  "DNG sources are in imazen-xl-26 and have no rendered twins.", ""]
         if layer.startswith("jxl"):
             lines += ["Lossless files preserve their PNG twins' samples. JPEG-in-JXL files retain",
                       "JPEG coefficients and reconstruct the original JPEG byte for byte.", ""]
