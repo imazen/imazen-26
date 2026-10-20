@@ -201,6 +201,8 @@ def repositories(args):
         refresh(base)
         run(["jj", "git", "init", "--colocate", base])
         run(["jj", "config", "set", "--repo", "snapshot.max-new-file-size", "100MiB"], cwd=base)
+        # NAS-created directories use the share owner; trust only this newly created path.
+        run(["git", "config", "--global", "--add", "safe.directory", base])
         run(["git", "config", "pack.threads", "4"], cwd=base)
         run(["gh", "repo", "create", f"imazen/{name}", "--private", "--description",
              "imazen-26 image corpus: " + spec["layer"]])
