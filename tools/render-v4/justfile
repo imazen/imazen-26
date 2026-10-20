@@ -132,3 +132,6 @@ publish-corpus phase stage repos receipts:
 
 publication-progress log:
     tail -n 6 {{quote(log)}}
+
+resume-corpus stage repos receipts:
+    python3 "{{justfile_directory()}}/../../scripts/publish_corpus.py" repositories {{quote(stage)}} {{quote(repos)}} {{quote(receipts)}} --resume

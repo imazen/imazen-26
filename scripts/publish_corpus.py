@@ -184,10 +184,18 @@ def sha(base, revision):
 
 
 def push(base, branch):
+    candidate = run(["jj", "log", "--no-graph", "-r", "@", "-T", "commit_id"], cwd=base, capture=True)
+    old = subprocess.run(["git", "rev-parse", "--verify", f"refs/remotes/origin/{branch}"],
+                         cwd=base, capture_output=True, text=True)
+    if old.returncode == 0:
+        run(["git", "merge-base", "--is-ancestor", old.stdout.strip(), candidate], cwd=base)
     run(["jj", "bookmark", "set", branch, "-r", "@"], cwd=base)
     run(["jj", "git", "push", "--bookmark", branch], cwd=base)
     revision = sha(base, branch)
     run(["git", "merge-base", "--is-ancestor", revision, f"origin/{branch}"], cwd=base)
+    # Non-main data bookmarks need an explicit child; they may remain mutable after push.
+    if sha(base, "@") == revision:
+        run(["jj", "new", branch, "-m", "data: append the next publication batch"], cwd=base)
     return revision
 
 
@@ -197,27 +205,56 @@ def repositories(args):
     for spec in plan(args):
         name = spec["repository"]
         base = args.repos / name
-        base.mkdir(parents=True, exist_ok=False)
-        refresh(base)
-        run(["jj", "git", "init", "--colocate", base])
-        run(["jj", "config", "set", "--repo", "snapshot.max-new-file-size", "100MiB"], cwd=base)
-        # NAS-created directories use the share owner; trust only this newly created path.
-        run(["git", "config", "--global", "--add", "safe.directory", base])
-        run(["git", "config", "pack.threads", "4"], cwd=base)
-        run(["gh", "repo", "create", f"imazen/{name}", "--private", "--description",
-             "imazen-26 image corpus: " + spec["layer"]])
-        run(["gh", "api", f"repos/imazen/{name}/actions/permissions", "--method", "PUT", "-F", "enabled=false"])
-        run(["jj", "git", "remote", "add", "origin", f"https://github.com/imazen/{name}.git"], cwd=base)
-        metadata(base, args.stage / name / "main", args.version)
-        run(["python3", "tools/validate.py", "--branch", "main"], cwd=base)
-        run(["jj", "describe", "-m", "docs: introduce dataset and decoding guidance"], cwd=base)
-        root = push(base, "main")
-        run(["gh", "repo", "edit", f"imazen/{name}", "--default-branch", "main"])
+        if (args.receipts / f"{name}.json").exists():
+            if not args.resume:
+                raise ValueError("repository receipt already exists; use explicit resume")
+            print(f"completed repository retained: {name}", flush=True)
+            continue
+        if base.exists():
+            if not args.resume or not (base / ".workongoing").exists() or AGENT not in (base / ".workongoing").read_text():
+                raise ValueError("existing repository is not an explicitly resumed owned checkout")
+            origin = run(["git", "config", "--get", "remote.origin.url"], cwd=base, capture=True)
+            if origin != f"https://github.com/imazen/{name}.git":
+                raise ValueError("existing publication checkout has a different remote")
+            visibility = run(["gh", "repo", "view", f"imazen/{name}", "--json", "visibility", "--jq", ".visibility"], capture=True)
+            if visibility != "PRIVATE":
+                raise ValueError("repository upload resume requires private staging")
+            run(["jj", "git", "fetch"], cwd=base)
+            root = sha(base, "main")
+        else:
+            base.mkdir(parents=True, exist_ok=False)
+            refresh(base)
+            run(["jj", "git", "init", "--colocate", base])
+            run(["jj", "config", "set", "--repo", "snapshot.max-new-file-size", "100MiB"], cwd=base)
+            # NAS-created directories use the share owner; trust only this newly created path.
+            run(["git", "config", "--global", "--add", "safe.directory", base])
+            run(["git", "config", "pack.threads", "4"], cwd=base)
+            run(["gh", "repo", "create", f"imazen/{name}", "--private", "--description",
+                 "imazen-26 image corpus: " + spec["layer"]])
+            run(["gh", "api", f"repos/imazen/{name}/actions/permissions", "--method", "PUT", "-F", "enabled=false"])
+            run(["jj", "git", "remote", "add", "origin", f"https://github.com/imazen/{name}.git"], cwd=base)
+            metadata(base, args.stage / name / "main", args.version)
+            run(["python3", "tools/validate.py", "--branch", "main"], cwd=base)
+            run(["jj", "describe", "-m", "docs: introduce dataset and decoding guidance"], cwd=base)
+            root = push(base, "main")
+            run(["gh", "repo", "edit", f"imazen/{name}", "--default-branch", "main"])
         refs = {}
         for branch in spec["branches"]:
-            run(["jj", "new", root, "-m", f"data: add {branch} bucket"], cwd=base)
+            prior = subprocess.run(["git", "rev-parse", "--verify", f"refs/remotes/origin/{branch}"],
+                                   cwd=base, capture_output=True, text=True)
+            start = f"{branch}@origin" if prior.returncode == 0 else root
+            run(["jj", "new", start, "-m", f"data: add {branch} bucket"], cwd=base)
             metadata(base, args.stage / name / branch, args.version)
-            pending = rows(args.stage / name / f"{branch}.sources.tsv")
+            selected = rows(args.stage / name / f"{branch}.sources.tsv")
+            pending = []
+            for row in selected:
+                file = base / row["path"]
+                if file.exists():
+                    valid = file.read_bytes() == pointer(row) if spec["lfs"] else digest(file) == row["sha256"]
+                    if not valid:
+                        raise ValueError("resumed checkout has a changed encoded file")
+                else:
+                    pending.append(row)
             chunks, chunk, size = [], [], 0
             for row in pending:
                 cost = len(pointer(row)) if spec["lfs"] else int(row["bytes"])
@@ -395,6 +432,7 @@ def main():
     parser.add_argument("repos", type=Path)
     parser.add_argument("receipts", type=Path)
     parser.add_argument("--version", default="2026.10.19")
+    parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     args.receipts.mkdir(parents=True, exist_ok=True)
     {"verify-inputs": verify_inputs, "lfs": lfs, "repositories": repositories,
