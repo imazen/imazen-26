@@ -39,6 +39,9 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
 
+# Each djxl call uses one worker; --jobs controls process-level parallelism.
+# The decoder's machine-default pool is independent of Python's worker count.
+
 
 def pnm(data):
     """Parse djxl's P5/P6/P7 output: (channels, samples); 16-bit PNM comes back big-endian."""
@@ -155,7 +158,7 @@ def check(job):
                 ext = {"gray1": "pgm", "gray8": "pgm", "rgb8": "ppm", "rgba8": "pam"}[twin["layout"]]
                 out = os.path.join(tmp, "d." + ext)
                 icc = os.path.join(tmp, "d.icc")
-                subprocess.run(["djxl", path, out, f"--icc_out={icc}", "--quiet"], capture_output=True, check=True)
+                subprocess.run(["djxl", path, out, f"--icc_out={icc}", "--num_threads=1", "--quiet"], capture_output=True, check=True)
                 ch, px = pnm(open(out, "rb").read())
                 if rgba_hash(ch, px) != twin["rgba_sha256"]:
                     raise ValueError("libjxl decodes different pixels")
@@ -175,7 +178,7 @@ def check(job):
                 if r["jpeg_sha256"] != original_sha:
                     raise ValueError("render-v4's rebuild is not the original")
                 out = os.path.join(tmp, "r.jpg")
-                subprocess.run(["djxl", path, out, "--quiet"], capture_output=True, check=True)
+                subprocess.run(["djxl", path, out, "--num_threads=1", "--quiet"], capture_output=True, check=True)
                 if hashlib.sha256(open(out, "rb").read()).hexdigest() != original_sha:
                     raise ValueError("libjxl's rebuild is not the original")
                 res["result"] = "ok"
@@ -185,7 +188,7 @@ def check(job):
                 if r["pixels_sha256"] != twin["rgb16_sha256"]:
                     raise ValueError("render-v4 decode hash differs from the .hdr.png twin")
                 out = os.path.join(tmp, "d.ppm")
-                subprocess.run(["djxl", path, out, "--bits_per_sample=16", "--quiet"], capture_output=True, check=True)
+                subprocess.run(["djxl", path, out, "--bits_per_sample=16", "--num_threads=1", "--quiet"], capture_output=True, check=True)
                 ch, px = pnm(open(out, "rb").read())
                 if ch != 3 or hashlib.sha256(px.astype("<u2").tobytes()).hexdigest() != twin["rgb16_sha256"]:
                     raise ValueError("libjxl decodes different 16-bit samples")
@@ -193,7 +196,7 @@ def check(job):
                     raise ValueError(f"colour statement: {colour_line}")
                 res["result"] = "ok"
             elif kind == "jpeg-in-jxl-codestream":
-                subprocess.run(["djxl", path, os.path.join(tmp, "d.ppm"), "--quiet"], capture_output=True, check=True)
+                subprocess.run(["djxl", path, os.path.join(tmp, "d.ppm"), "--num_threads=1", "--quiet"], capture_output=True, check=True)
                 res["result"] = "ok (decodes; no rebuild data by design)"
             else:
                 raise ValueError(f"unknown kind {r['kind']}")

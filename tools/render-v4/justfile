@@ -50,6 +50,16 @@ beta-check-tools root config:
     CARGO_TARGET_DIR={{quote(root + "/target")}} cargo --config {{quote(config)}} build --release --locked --manifest-path {{quote(root + "/render-v4/Cargo.toml")}}
     CARGO_TARGET_DIR={{quote(root + "/target")}} cargo --config {{quote(config)}} build --release --locked --manifest-path {{quote(root + "/jxl-decode-check/Cargo.toml")}}
 
+# Each receipt run gets a fresh directory; prior build evidence is retained.
+beta-tool-receipts root config out:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    mkdir {{quote(out)}}
+    cargo --config {{quote(config)}} metadata --locked --format-version 1 --manifest-path {{quote(root + "/render-v4/Cargo.toml")}} > "{{out}}/render-v4-metadata.json"
+    cargo --config {{quote(config)}} metadata --locked --format-version 1 --manifest-path {{quote(root + "/jxl-decode-check/Cargo.toml")}} > "{{out}}/jxl-decode-check-metadata.json"
+    python3 "{{justfile_directory()}}/../../scripts/record_tool_build.py" "{{root}}/render-v4/Cargo.toml" "{{root}}/target/release/render-v4" "{{out}}/render-v4-metadata.json" "{{out}}/render-v4-build.json"
+    python3 "{{justfile_directory()}}/../../scripts/record_tool_build.py" "{{root}}/jxl-decode-check/Cargo.toml" "{{root}}/target/release/jxl-decode-check" "{{out}}/jxl-decode-check-metadata.json" "{{out}}/jxl-decode-check-build.json"
+
 # A staged, explicit lossless redo: all three readers, PNG twins and structural gates.
 subset-check root binary lib inventory commit jobs="3":
     #!/usr/bin/env bash
@@ -87,8 +97,8 @@ cohort-check roots out:
     python3 "{{justfile_directory()}}/../../scripts/check_codec_cohort.py" {{quote(roots)}} {{quote(out)}}
 
 colour-oracles out originals hdrinfo:
-    python3 "{{justfile_directory()}}/../../scripts/colour_oracle.py" "{{out}}/report.tsv" {{quote(out)}} {{quote(originals)}} "{{out}}/list.tsv"
-    python3 "{{justfile_directory()}}/../../scripts/hdr_oracle.py" "{{out}}/hdr-report.tsv" {{quote(out)}} "{{out}}/list.tsv" {{quote(hdrinfo)}}
+    OPENBLAS_NUM_THREADS="${OMP_NUM_THREADS:-1}" MKL_NUM_THREADS="${OMP_NUM_THREADS:-1}" NUMEXPR_NUM_THREADS="${OMP_NUM_THREADS:-1}" MAGICK_THREAD_LIMIT="${OMP_NUM_THREADS:-1}" python3 "{{justfile_directory()}}/../../scripts/colour_oracle.py" "{{out}}/report.tsv" {{quote(out)}} {{quote(originals)}} "{{out}}/list.tsv"
+    OPENBLAS_NUM_THREADS="${OMP_NUM_THREADS:-1}" MKL_NUM_THREADS="${OMP_NUM_THREADS:-1}" NUMEXPR_NUM_THREADS="${OMP_NUM_THREADS:-1}" MAGICK_THREAD_LIMIT="${OMP_NUM_THREADS:-1}" python3 "{{justfile_directory()}}/../../scripts/hdr_oracle.py" "{{out}}/hdr-report.tsv" {{quote(out)}} "{{out}}/list.tsv" {{quote(hdrinfo)}}
 
 sample-decode-parity stored sample binary lib:
     #!/usr/bin/env bash
@@ -104,3 +114,11 @@ sample-libjxl-parity stored sample lib:
     set -euo pipefail
     {{quote(lib)}} < "{{sample}}/decode-parity/files.list" > "{{sample}}/decode-parity/libjxl.tsv" 2> "{{sample}}/decode-parity/libjxl.log"
     python3 "{{justfile_directory()}}/../../scripts/check_sample_decode_parity.py" verify {{quote(stored)}} {{quote(sample)}}
+
+sample-encode-comparison stored previous current:
+    python3 "{{justfile_directory()}}/../../scripts/compare_sample_encodes.py" {{quote(stored)}} {{quote(previous)}} {{quote(current)}}
+
+
+# Destination must be new; Cargo caches are excluded and three files are SHA-256 checked.
+archive-validation source destination:
+    python3 "{{justfile_directory()}}/../../scripts/archive_validation.py" {{quote(source)}} {{quote(destination)}}
