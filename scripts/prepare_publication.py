@@ -46,8 +46,9 @@ run `git lfs pull` to retrieve the image it names.
 ## PNG
 
 Use a PNG decoder that preserves the stored bit depth and colour metadata.
-The source-colour (`p3`) collection also contains sRGB and Adobe RGB images;
-its name does not mean every file is Display P3. Honour the ICC/cICP or sRGB
+The `p3` collection contains sRGB and Display P3 images. Adobe RGB sources
+are converted to Display P3 using relative colorimetric intent and gamut clipping.
+Honour the ICC/cICP or sRGB
 signalling instead of interpreting every RGB buffer as sRGB.
 
 For example, ImageMagick can read a PNG into a PPM for inspection:
@@ -129,7 +130,7 @@ def special_card(name, layer, rows, version):
                   "DNGs here so the ordinary originals and JXL sets have identical membership.",
                   "These ids are excluded from the ordinary repositories. Image bytes use Git LFS.", ""]
     else:
-        colour = "source colour (including sRGB, Display P3 and Adobe RGB)" if layer.endswith("p3") else "sRGB"
+        colour = "sRGB and Display P3 (Adobe RGB sources converted to Display P3)" if layer.endswith("p3") else "sRGB"
         encoding = "JPEG XL" if layer.startswith("jxl") else "PNG"
         lines += [f"This repository holds {encoding} renders in {colour}.",
                   "The XL images are in [imazen-xl-26](https://github.com/imazen/imazen-xl-26).",
