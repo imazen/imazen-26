@@ -125,3 +125,7 @@ archive-validation source destination:
 
 publication-cards render originals out sets="compact":
     python3 "{{justfile_directory()}}/../../scripts/prepare_publication.py" {{quote(render)}} {{quote(originals)}} {{quote(out)}} --sets {{sets}}
+
+# Owner approval is required before invoking publication phases that write externally.
+publish-corpus phase stage repos receipts:
+    python3 "{{justfile_directory()}}/../../scripts/publish_corpus.py" {{quote(phase)}} {{quote(stage)}} {{quote(repos)}} {{quote(receipts)}}
