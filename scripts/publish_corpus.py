@@ -322,6 +322,8 @@ def repositories(args):
 
 def sync_docs(args):
     """Append approved membership guidance and refresh the branch pins before exposure."""
+    if any(not (args.receipts / f"{spec['repository']}.json").exists() for spec in plan(args)):
+        raise ValueError("all four repository upload receipts are required first")
     for spec in plan(args):
         name = spec["repository"]
         base = args.repos / name
