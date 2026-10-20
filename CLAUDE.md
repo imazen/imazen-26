@@ -1,5 +1,15 @@
 # Known Bugs
 
+## Open: browser comparison reference for converted Adobe RGB sources
+
+After converting 13005 and 13006 to Display P3, their unchanged sRGB twins still
+come directly from the Adobe RGB originals. Native P3→sRGB conversion differs
+from those twins by at most three 8-bit levels; Chromium/WebKit comparisons
+against the twins differ by three or four and produce six visible census
+findings. Independent direct ICC conversion agrees within one level and all
+three JXL decoders reproduce the converted PNG samples exactly. The review
+retains the findings. Evidence: `benchmarks/p3_conversion_2026-10-20.pointer.md`.
+
 ## Resolved 2026-10-20: stale raw decoder report inputs
 
 The canonical raw `decode-check` tables still held pre-redo-5 results while the
