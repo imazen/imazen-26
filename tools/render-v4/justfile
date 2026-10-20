@@ -129,3 +129,6 @@ publication-cards render originals out sets="compact":
 # Owner approval is required before invoking publication phases that write externally.
 publish-corpus phase stage repos receipts:
     python3 "{{justfile_directory()}}/../../scripts/publish_corpus.py" {{quote(phase)}} {{quote(stage)}} {{quote(repos)}} {{quote(receipts)}}
+
+publication-progress log:
+    tail -n 6 {{quote(log)}}
