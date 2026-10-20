@@ -161,7 +161,8 @@ def metadata(base, source, version):
             raise ValueError("unexpected metadata directory")
         shutil.copy2(file, base / file.name)
     attributes = base / ".gitattributes"
-    lfs_rules = attributes.read_text() if attributes.exists() else ""
+    declared = source / ".gitattributes"
+    lfs_rules = declared.read_text() if declared.exists() else ""
     attributes.write_text(
         "*.md text eol=lf\n*.tsv text eol=lf\n*.cff text eol=lf\n"
         "*.py text eol=lf\n*.yml text eol=lf\n"
