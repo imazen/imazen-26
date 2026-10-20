@@ -25,6 +25,8 @@
 - The v4 review no longer excuses ffmpeg 6.1 failing on a box after the JPEG XL codestream, which no file has now (68d12aa)
 
 ### Added
+- Current-main recheck with archmage/magetypes 0.9.31-beta.1 and zentone 0.2.0: stored-file PNG/JXL/IMI, colour/HDR and byte checks pass; the unified CLI reports 4,300 unsupported IMI routes (zqi issue 73). The evidence pointer records sample-only Relative-intent header changes and unchanged decoded hashes; no broad re-render was applied. Verification tooling `e708c066`.
+- Minimal publication preparation for originals, both JXL layers and XL, with decoding guides and family-preserving holdout manifests (6,423 file records); preparation publishes no images or branches (`829ad0f8`). GitHub limit terminology and current payload sizes were corrected with owner approval (`a0df60da`).
 - Explicit inventory-route audit: per-route hashes, statuses and structural rows, with only fixed allow-list label prefixes retained. The nine-route pilot covers JPEG, PNG, HEIC, DNG and every SDR JXL kind.
 - [Full metadata removal review](benchmarks/metadata_strip_review_2026-10-19.pointer.md): 2,115/2,115 source/public inventory and field comparisons, 291 GPS-bearing sources (48 inside Colorado), zero shipped GPS positions; no shipped bytes changed.
 - `tools/render-v4/justfile` exposes candidate JPEG XL measurements from an explicit PNG-twin list and separate output directory.

@@ -10,6 +10,19 @@ All runs: dev, under run-heavy, zen crates at main (`tools/render-v4/Cargo.lock`
 read files: ImageMagick 7.1.2-18 (LittleCMS, libpng), Pillow, netpbm `pngtopnm`, libpng
 `pngfix`, libheif 1.21.2 `heif-dec`, libjxl 0.11.1 `djxl`/`jxlinfo`, exiftool.
 
+## 2026-10-19: current-main recheck
+
+The [dated evidence record](current_main_recheck_2026-10-19.pointer.md) covers
+all stored PNG, JXL, IMI, gain-map, colour/HDR and byte-scan checks with the
+main-source 0.9.31-beta.1 cohort. Decoded JXL hashes are unchanged after redo 5.
+The unified CLI succeeds on 10,791 routes; the 4,300 IMI routes are explicitly
+unsupported and tracked in zqi issue 73. IMI's two separate readers pass.
+
+The sample pass changes nine JXL headers under the approved Relative-intent
+policy, with no size, pixel or gain-map metadata changes; PNG and IMI samples
+are byte-identical. No general re-render was applied. The candidate inventory
+PRs also preserve all 8,600 per-reader rows across the 4,300 JXL files.
+
 ## Full run
 
 `/mnt/tower/output/imazen-26-render-v4-2026-10-15` on tower (`RUN.meta` there records every

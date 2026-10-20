@@ -224,3 +224,19 @@ A file ships only if all of these pass:
 - **Allow-listed findings.** The byte scan allows 11231's UltraHDR gain-map JPEG inside its
   JPEG-in-JXL `jbrd` box, which the byte-exact rebuild needs (owner OK 2026-10-16), beside the
   museum thumbnails (`manifests/byte_scan_allowlist.tsv`).
+
+## 2026-10-19: finalization evidence and first-phase staging
+
+The [current-main recheck](benchmarks/current_main_recheck_2026-10-19.pointer.md)
+records the full stored-file checks, the unsupported IMI inventory routes,
+sample encoder differences and open decoder review PRs. The owner-selected
+first phase has 6,423 file records and 17,214,539,422 encoded bytes across
+originals, JXL P3, JXL sRGB and XL. IMI remains private and ordinary PNG
+repositories remain a later phase.
+
+`scripts/prepare_publication.py --sets compact` prepares concise READMEs,
+decoding instructions, citations and exact branch manifests. Related-image
+families remain within one train/validate/test bucket. `main` is documentation;
+each data branch contains only its bucket. Preparation creates no Git repository,
+remote branch, tag or image copy. Publication still requires the owner's
+README review and explicit go-ahead.
