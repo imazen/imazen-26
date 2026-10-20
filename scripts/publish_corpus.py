@@ -511,6 +511,21 @@ def release(args):
             stream.write("\nPer-file licences and original source/attribution URLs are retained in `manifest.tsv`. See the [validation record](https://github.com/imazen/imazen-26/blob/main/benchmarks/current_main_recheck_2026-10-19.pointer.md).\n")
         run(["gh", "release", "create", tag, "-R", f"imazen/{name}", "--verify-tag",
              "--title", args.version, "--notes-file", note, "--generate-notes"])
+        remote_tag = run(["gh", "api", f"repos/imazen/{name}/git/ref/tags/{tag}",
+                          "--jq", ".object.sha"], capture=True)
+        published = json.loads(run(["gh", "release", "view", tag, "-R", f"imazen/{name}",
+                                    "--json", "tagName,isDraft,isPrerelease,url"], capture=True))
+        visibility = run(["gh", "repo", "view", f"imazen/{name}", "--json", "visibility", "--jq", ".visibility"], capture=True)
+        request = urllib.request.Request(f"https://raw.githubusercontent.com/imazen/{name}/{tag}/README.md",
+                                         headers={"User-Agent": "imazen-26 publication"})
+        with urllib.request.urlopen(request, timeout=90) as response:
+            public_readme = response.read()
+        if (remote_tag != receipt["refs"]["main"] or visibility != "PUBLIC"
+                or published["isDraft"] or published["isPrerelease"] or published["tagName"] != tag
+                or public_readme != (args.stage / name / "main/README.md").read_bytes()):
+            raise ValueError("remote release, tag, visibility or public README verification failed")
+        save(args.receipts / f"{name}.release.json", {**published, "commit": remote_tag,
+             "readme_sha256": hashlib.sha256(public_readme).hexdigest(), "visibility": visibility})
     save(args.receipts / "released.json", {"version": args.version, "repositories": [s["repository"] for s in plan(args)]})
 
 
