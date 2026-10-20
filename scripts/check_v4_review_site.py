@@ -9,7 +9,9 @@ through the page's download button and compares it with the parts the site serve
 any page error, console error, failed request or HTTP status of 400 or more.
 """
 import argparse
+import csv
 import hashlib
+import io
 import json
 import sys
 import urllib.error
@@ -76,6 +78,16 @@ def main():
     print(f"hash download: {len(got):,} bytes, sha256 {hashlib.sha256(got).hexdigest()[:16]}, "
           f"{'equal to' if got == expect else 'DIFFERENT FROM'} the {len(idx['hashesFiles'])} served parts")
     print(f"a missing path answers HTTP {missing}")
+    identities, duplicates = set(), set()
+    lines = (line for line in io.StringIO(got.decode("utf-8")) if not line.startswith("#"))
+    for row in csv.DictReader(lines, delimiter="\t"):
+        identity = (row["path"], row["decoder"])
+        if identity in identities:
+            duplicates.add(identity)
+        identities.add(identity)
+    print(f"hash download identities: {len(identities):,} unique, {len(duplicates):,} duplicated")
+    if duplicates:
+        problems.append(f"{len(duplicates)} duplicate path/decoder identities in the hash download")
     if missing != "404":
         problems.append(f"a missing path answers HTTP {missing}, not 404")
     if tiles != len(images):
