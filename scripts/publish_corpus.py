@@ -11,6 +11,7 @@ import hashlib
 import json
 import shutil
 import subprocess
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -379,6 +380,12 @@ def client_check(args):
         receipt = json.loads((args.receipts / f"{name}.verified.json").read_text())
         if sha(base, f"{branch}@origin") != receipt["refs"][branch]:
             raise ValueError("fresh consumer checkout differs from the pinned commit")
+        public_manifest = f"https://raw.githubusercontent.com/imazen/{name}/{receipt['refs'][branch]}/manifest.tsv"
+        request = urllib.request.Request(public_manifest, headers={"User-Agent": "imazen-26 publication"})
+        with urllib.request.urlopen(request, timeout=90) as response:
+            public_hash = hashlib.file_digest(response, "sha256").hexdigest()
+        if public_hash != spec["manifest_sha256"][branch]:
+            raise ValueError("anonymous public manifest differs from the approved bytes")
         run(["python3", "tools/validate.py", "--branch", branch], cwd=base)
         object_count = 0
         if spec["lfs"]:
@@ -393,7 +400,8 @@ def client_check(args):
             raise ValueError("consumer validation changed its checkout")
         (base / ".workongoing").unlink()
         results.append({"repository": name, "branch": branch, "commit": receipt["refs"][branch],
-                        "branch_files": len(rows(base / "manifest.tsv")), "lfs_files": object_count})
+                        "branch_files": len(rows(base / "manifest.tsv")), "lfs_files": object_count,
+                        "anonymous_manifest_sha256": public_hash})
     save(args.receipts / "consumer-checks.json", results)
 
 
