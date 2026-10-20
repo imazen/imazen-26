@@ -295,6 +295,33 @@ def repositories(args):
              "manifest_sha256": spec["manifest_sha256"], "files": spec["files"], "bytes": spec["bytes"]})
 
 
+def sync_docs(args):
+    """Append approved membership guidance and refresh the branch pins before exposure."""
+    for spec in plan(args):
+        name = spec["repository"]
+        base = args.repos / name
+        receipt_path = args.receipts / f"{name}.json"
+        receipt = json.loads(receipt_path.read_text())
+        previous = json.loads(receipt_path.read_text())
+        for branch in [*spec["branches"], "main"]:
+            desired = (args.stage / name / branch / "README.md").read_bytes()
+            old = subprocess.check_output(["git", "show", f"{receipt['refs'][branch]}:README.md"], cwd=base)
+            if old == desired:
+                continue
+            run(["jj", "new", branch, "-m", "docs: align source guidance with XL membership"], cwd=base)
+            (base / "README.md").write_bytes(desired)
+            if branch == "main":
+                with (base / "BRANCHES.tsv").open("w") as stream:
+                    stream.write("branch\tcommit\tmanifest_sha256\n")
+                    for bucket in spec["branches"]:
+                        stream.write(f"{bucket}\t{receipt['refs'][bucket]}\t{spec['manifest_sha256'][bucket]}\n")
+            receipt["refs"][branch] = push(base, branch)
+        if receipt != previous:
+            save(args.receipts / f"{name}.before-readme.json", previous)
+            receipt_path.rename(args.receipts / f"{name}.upload.json")
+            save(receipt_path, receipt)
+
+
 def verify_git(args):
     for spec in plan(args):
         name = spec["repository"]
@@ -438,7 +465,7 @@ def release(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("phase", choices=["verify-inputs", "lfs", "repositories", "verify-git", "expose", "client-check", "release"])
+    parser.add_argument("phase", choices=["verify-inputs", "lfs", "repositories", "sync-docs", "verify-git", "expose", "client-check", "release"])
     parser.add_argument("stage", type=Path)
     parser.add_argument("repos", type=Path)
     parser.add_argument("receipts", type=Path)
@@ -446,7 +473,7 @@ def main():
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     args.receipts.mkdir(parents=True, exist_ok=True)
-    {"verify-inputs": verify_inputs, "lfs": lfs, "repositories": repositories,
+    {"verify-inputs": verify_inputs, "lfs": lfs, "repositories": repositories, "sync-docs": sync_docs,
      "verify-git": verify_git, "expose": expose, "client-check": client_check,
      "release": release}[args.phase](args)
 
