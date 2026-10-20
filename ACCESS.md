@@ -13,6 +13,10 @@ the metadata policy; this page is the "just give me a URL" index.
 
 ## Public v4 export
 
+Version **2026.10.19** is published in all four repositories. Their matching
+`v2026.10.19` tags contain the catalogues and decoding guides; image branches
+are pinned in `BRANCHES.tsv`. [Publication verification](benchmarks/minimal_publication_2026-10-19.pointer.md).
+
 | Repository | Image IDs | Files | Decoding guide |
 |---|---:|---:|---|
 | [Originals](https://github.com/imazen/imazen-26-originals) | 2,109 | 2,109 | [Original formats](https://github.com/imazen/imazen-26-originals/blob/main/DECODING.md) |

@@ -243,4 +243,8 @@ remote branch, tag or image copy. The owner reviewed the READMEs and approved
 publication on 2026-10-19. The four repositories are now public; their links and
 decoding guides are in the [access index](ACCESS.md#public-v4-export).
 
+All four have verified `v2026.10.19` releases. The
+[publication record](benchmarks/minimal_publication_2026-10-19.pointer.md)
+pins the released main commits, CI and the complete byte and fresh-consumer checks.
+
 Owner update, 2026-10-19: DNG 11444 moves to XL for membership parity. The ordinary originals and both JXL repositories each contain the same 2,109 image IDs. XL contains six images and 22 files. Total file count and bytes across the four repositories are unchanged.
