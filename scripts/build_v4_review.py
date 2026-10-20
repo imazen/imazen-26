@@ -18,6 +18,12 @@
         maps each full-resolution pack to the asset URL its Artifact upload returned
         (fp_NNN.webp<TAB>url); --hash-urls does the same for the hash parts, with each part's
         sha256 (decoded-xxh3-NN.txt<TAB>sha256<TAB>url), and the build stops if a part changed.
+    build_v4_review.py site <render-dir> <stage-dir> <site-dir> [--no-census]
+        The same page as a static site for any web host (scripts/deploy_v4_review_site.sh puts it
+        on Cloudflare Pages): <site>/index.html (the page, with the artifact runtime replaced:
+        marks read-only, the hash download saved by the browser), data/, thumbs/, packs/, hashes/
+        and the full-resolution packs as fullpacks/fp_NNN.webp, all under relative paths. Run
+        `images` and `fullpacks` first.
     build_v4_review.py census <render-dir> png|jxl
         The reader census's verdicts for one format, counted per reader and outcome, with an
         example of each unexplained one.
@@ -232,8 +238,8 @@ def jxl_census_info(R, paths, jxlcheck):
 
 
 def cmd_data(a):
-    R, S = a.render, a.stage
-    work = os.path.join(S, "work")
+    R, S = a.render, getattr(a, "site", "") or a.stage
+    work = os.path.join(a.stage, "work")
     for d in ("data", "thumbs", "packs"):
         os.makedirs(os.path.join(S, d), exist_ok=True)
     layers = ("png-p3", "png-srgb", "jxl-p3", "jxl-srgb")
@@ -475,6 +481,53 @@ def cmd_data(a):
     print(f"{len(images)} images; " + ", ".join(f"{d} {v / 1e6:.1f} MB" for d, v in sizes.items()), file=sys.stderr)
 
 
+# What a static host can give the page of the artifact runtime: no shared marks (the page then
+# says marks are unavailable and works read-only, and the mark button is hidden) and the hash
+# download saved by the browser. The empty icon keeps browsers from asking for /favicon.ico.
+SITE_HEAD = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="icon" href="data:,">
+<style>#vmark { display: none; }</style>
+<script>
+window.claude = { use: async name => name !== 'downloads' ? null : { save: async ({ filename, data }) => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(data); a.download = filename;
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  return { status: 'saved' };
+} } };
+</script>
+</head>
+<body>
+"""
+
+
+def cmd_site(a):
+    site = a.site = os.path.abspath(a.site)
+    for d in ("data", "thumbs", "packs", "hashes", "fullpacks"):
+        shutil.rmtree(os.path.join(site, d), ignore_errors=True)
+    os.makedirs(os.path.join(site, "fullpacks"))
+    src = os.path.join(a.stage, "work", "fullpacks")
+    urls = os.path.join(a.stage, "work", "site-fullpack-urls.tsv")
+    with open(urls, "w") as f:
+        for n in sorted(os.listdir(src)):
+            if n.endswith(".webp"):
+                shutil.copy(os.path.join(src, n), os.path.join(site, "fullpacks", n))
+                f.write(f"{n}\tfullpacks/{n}\n")
+    a.fullpack_urls, a.hash_urls = urls, ""
+    cmd_data(a)
+    os.remove(os.path.join(site, "v4-review.html"))
+    page = open(os.path.join(REPO, "scripts", "v4_review_page.html")).read()
+    open(os.path.join(site, "index.html"), "w").write(SITE_HEAD + page + "\n</body>\n</html>\n")
+    # Without a 404 page, Cloudflare Pages answers a missing path with index.html and status 200.
+    open(os.path.join(site, "404.html"), "w").write(
+        '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><title>Not found</title></head>\n'
+        '<body><p>Not found. The review is at <a href="/">the start page</a>.</p></body></html>\n')
+
+
 # QImageReader.allocationLimit() in MB in imazen26-compat:lts and :latest, read 2026-10-16. Both
 # read the 108 MP 11415 with QT_IMAGEIO_MAXALLOC=1024 and refuse it without.
 QT_DEFAULT_ALLOC_MB = {"6.4.2": 128, "6.11.2": 256}
@@ -688,11 +741,15 @@ def main():
     p = sub.add_parser("data"); p.add_argument("render"); p.add_argument("stage"); p.add_argument("--fullpack-urls", default="")
     p.add_argument("--hash-urls", default="", help="the hash parts' asset URLs (part name, sha256, URL per line)")
     p.add_argument("--no-census", action="store_true", help="leave the reader census out (while it runs)")
+    p = sub.add_parser("site", help="the page as a static site for a web host")
+    p.add_argument("render"); p.add_argument("stage"); p.add_argument("site")
+    p.add_argument("--no-census", action="store_true", help="leave the reader census out")
     p = sub.add_parser("census", help="count the census verdicts of one format")
     p.add_argument("render"); p.add_argument("format", choices=("png", "jxl"))
     a = ap.parse_args()
     a.render = os.path.abspath(a.render)
-    {"images": cmd_images, "fullpacks": cmd_fullpacks, "data": cmd_data, "census": cmd_census}[a.cmd](a)
+    {"images": cmd_images, "fullpacks": cmd_fullpacks, "data": cmd_data, "site": cmd_site,
+     "census": cmd_census}[a.cmd](a)
 
 
 if __name__ == "__main__":
