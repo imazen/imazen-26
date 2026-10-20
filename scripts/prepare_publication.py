@@ -162,7 +162,7 @@ def special_card(name, layer, rows, version):
     return "\n".join(lines)
 
 
-def review_pages(root, plan):
+def review_pages(root, plan, published=False):
     style = "body{max-width:1100px;margin:2em auto;padding:0 1em;font:16px system-ui;line-height:1.5}pre{white-space:pre-wrap;background:#f4f5f7;padding:1.2em}td,th{padding:.45em .8em;text-align:left}table{border-collapse:collapse}tr{border-bottom:1px solid #ddd}"
     def document(title, body):
         return f'<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>{html.escape(title)}</title><style>{style}</style><body>{body}</body></html>'
@@ -179,7 +179,8 @@ def review_pages(root, plan):
         name = row["repository"]
         base = root / name
         body = '<p><a href="../index.html">All repositories</a></p><h1>' + html.escape(name) + '</h1>'
-        body += '<p>README text proposed for publication. Image files and Git branches have not been published.</p>'
+        body += ('<p>Published README text. Image files are on the train, validate and test branches.</p>' if published
+                 else '<p>README text proposed for publication. Image files and Git branches have not been published.</p>')
         body += markdown_source((base / "main/README.md").read_text())
         body += '<h2 id="decoding">Decoding instructions</h2>' + markdown_source((base / "main/DECODING.md").read_text())
         body += '<h2>Branch manifests</h2><ul>'
@@ -188,7 +189,8 @@ def review_pages(root, plan):
         body += '</ul><p><a href="main/CITATION.cff">CITATION.cff</a></p>'
         (base / "review.html").write_text(document(name, body))
         items.append(f'<tr><td><a href="{name}/review.html">{name}</a></td><td>{row["images"]}</td><td>{row["files"]}</td><td>{row["bytes"]:,}</td><td>{", ".join(row["branches"])}</td></tr>')
-    intro = '<h1>imazen-26 publication review</h1><p>Prepared README text, decoding instructions and exact branch membership. No repositories, branches, tags or image bytes have been published by this staging step.</p>'
+    intro = ('<h1>imazen-26 published datasets</h1><p>Published README text, decoding instructions and exact branch membership. See each repository for its release and immutable branch pins.</p>' if published
+             else '<h1>imazen-26 publication review</h1><p>Prepared README text, decoding instructions and exact branch membership. No repositories, branches, tags or image bytes have been published by this staging step.</p>')
     intro += '<p>XL holds all three DNGs and every public layer of the five size-limit images, including their PNG twins. Ordinary PNG render repositories are a separate publication phase; IMI remains private.</p>'
     table = '<table><tr><th>Repository</th><th>Images</th><th>Files</th><th>Bytes</th><th>Data branches</th></tr>' + ''.join(items) + '</table>'
     (root / "index.html").write_text(document("imazen-26 publication review", intro + table))

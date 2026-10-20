@@ -96,8 +96,8 @@ candidate-decode-parity root binary baseline list files="4300" jobs="6":
 cohort-check roots out:
     python3 "{{justfile_directory()}}/../../scripts/check_codec_cohort.py" {{quote(roots)}} {{quote(out)}}
 
-colour-oracles out originals hdrinfo:
-    OPENBLAS_NUM_THREADS="${OMP_NUM_THREADS:-1}" MKL_NUM_THREADS="${OMP_NUM_THREADS:-1}" NUMEXPR_NUM_THREADS="${OMP_NUM_THREADS:-1}" MAGICK_THREAD_LIMIT="${OMP_NUM_THREADS:-1}" python3 "{{justfile_directory()}}/../../scripts/colour_oracle.py" "{{out}}/report.tsv" {{quote(out)}} {{quote(originals)}} "{{out}}/list.tsv"
+colour-oracles out originals hdrinfo source_render="":
+    OPENBLAS_NUM_THREADS="${OMP_NUM_THREADS:-1}" MKL_NUM_THREADS="${OMP_NUM_THREADS:-1}" NUMEXPR_NUM_THREADS="${OMP_NUM_THREADS:-1}" MAGICK_THREAD_LIMIT="${OMP_NUM_THREADS:-1}" python3 "{{justfile_directory()}}/../../scripts/colour_oracle.py" "{{out}}/report.tsv" {{quote(out)}} {{quote(originals)}} "{{out}}/list.tsv" {{if source_render == "" { "" } else { "--source-render " + quote(source_render) }}}
     OPENBLAS_NUM_THREADS="${OMP_NUM_THREADS:-1}" MKL_NUM_THREADS="${OMP_NUM_THREADS:-1}" NUMEXPR_NUM_THREADS="${OMP_NUM_THREADS:-1}" MAGICK_THREAD_LIMIT="${OMP_NUM_THREADS:-1}" python3 "{{justfile_directory()}}/../../scripts/hdr_oracle.py" "{{out}}/hdr-report.tsv" {{quote(out)}} "{{out}}/list.tsv" {{quote(hdrinfo)}}
 
 sample-decode-parity stored sample binary lib:
@@ -148,3 +148,29 @@ publication-pack repo:
     git -C {{quote(repo)}} config core.compression 1
     git -C {{quote(repo)}} config pack.compression 1
     git -C {{quote(repo)}} config pack.window 0
+
+# Adobe RGB→Display P3 replacements, with retained native PNGs as the conversion oracle inputs.
+p3-colour-check candidate previous:
+    OPENBLAS_NUM_THREADS=1 python3 "{{justfile_directory()}}/../../scripts/check_p3_conversion.py" {{quote(candidate)}} {{quote(previous)}}
+
+p3-promote candidate render apply="":
+    python3 "{{justfile_directory()}}/../../scripts/promote_p3_conversion.py" {{quote(candidate)}} {{quote(render)}} {{apply}}
+
+p3-publish render repository evidence apply="":
+    python3 "{{justfile_directory()}}/../../scripts/publish_p3_conversion.py" {{quote(render)}} {{quote(repository)}} {{quote(evidence)}} {{apply}}
+
+# Use the frozen, recorded main cohort; the caller supplies the shared heavy-job lock.
+p3-build root config target:
+    CARGO_TARGET_DIR={{quote(target)}} cargo --offline --config {{quote(config)}} build --release --locked --manifest-path {{quote(root + "/render-v4/Cargo.toml")}}
+
+p3-clippy root config target:
+    CARGO_TARGET_DIR={{quote(target)}} cargo clippy --offline --config {{quote(config)}} --release --locked --no-deps --manifest-path {{quote(root + "/render-v4/Cargo.toml")}}
+
+p3-refresh candidate render imi_tool baseline="" resume="":
+    python3 "{{justfile_directory()}}/../../scripts/refresh_p3_evidence.py" {{quote(candidate)}} {{quote(render)}} {{quote(imi_tool)}} {{if baseline == "" { "" } else { "--baseline-decodes " + quote(baseline) }}} {{resume}}
+
+p3-review-check url site render out:
+    python3 "{{justfile_directory()}}/../../scripts/check_p3_review.py" {{quote(url)}} {{quote(site)}} {{quote(render)}} {{quote(out)}}
+
+review-browser-check url chrome:
+    uvx --with playwright python "{{justfile_directory()}}/../../scripts/check_v4_review_site.py" {{quote(url)}} --chrome {{quote(chrome)}}
