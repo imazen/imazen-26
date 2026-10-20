@@ -11,6 +11,7 @@ import hashlib
 import json
 import shutil
 import subprocess
+import time
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -412,10 +413,27 @@ def expose(args):
         name = spec["repository"]
         if not (args.receipts / f"{name}.verified.json").exists():
             raise ValueError("committed bytes must be verified before exposure")
-        run(["gh", "repo", "edit", f"imazen/{name}", "--visibility", "public",
-             "--accept-visibility-change-consequences"])
+        visibility = run(["gh", "repo", "view", f"imazen/{name}", "--json", "visibility", "--jq", ".visibility"], capture=True)
+        if visibility != "PUBLIC":
+            run(["gh", "repo", "edit", f"imazen/{name}", "--visibility", "public",
+                 "--accept-visibility-change-consequences"])
         run(["gh", "api", f"repos/imazen/{name}/actions/permissions", "--method", "PUT", "-F", "enabled=true"])
-        run(["gh", "workflow", "run", "validate.yml", "-R", f"imazen/{name}", "--ref", "main"])
+        receipt = json.loads((args.receipts / f"{name}.verified.json").read_text())
+        checks = json.loads(run(["gh", "run", "list", "-R", f"imazen/{name}", "--workflow", "validate.yml",
+                                "--branch", "main", "--limit", "10", "--json", "headSha"], capture=True))
+        if any(x["headSha"] == receipt["refs"]["main"] for x in checks):
+            continue
+        for attempt in range(6):
+            dispatched = subprocess.run(["gh", "workflow", "run", "validate.yml", "-R", f"imazen/{name}",
+                                         "--ref", "main"], capture_output=True, text=True)
+            print(dispatched.stdout + dispatched.stderr, end="", flush=True)
+            if dispatched.returncode == 0:
+                break
+            # Actions can list a newly enabled workflow before indexing its dispatch trigger.
+            if attempt == 5 or not ("HTTP 422" in dispatched.stderr and "workflow_dispatch" in dispatched.stderr):
+                dispatched.check_returncode()
+            print("Waiting 5 seconds for Actions workflow registration", flush=True)
+            time.sleep(5)
     save(args.receipts / "public.json", {"repositories": [s["repository"] for s in plan(args)]})
 
 
