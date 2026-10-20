@@ -288,6 +288,10 @@ def cmd_data(a):
     for r in ([] if a.no_census else tsv(os.path.join(R, "compat-census", "aliases.tsv"))):
         alias[r["sha256"]].append(r["path"])
     census_rows = [] if a.no_census else tsv(os.path.join(R, "compat-census", "census.tsv"))
+    # The append-only census retains earlier encodes; the public view and hash download
+    # describe the bytes in today's manifests.
+    current_hashes = {r["sha256"] for layer in man.values() for r in layer}
+    census_rows = [r for r in census_rows if r["sha256"] in current_hashes]
     for r in census_rows:
         census[r["sha256"]].append(r)
     jxl_seen, jxl_ok = collections.Counter(), collections.Counter()
