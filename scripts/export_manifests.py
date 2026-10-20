@@ -47,7 +47,7 @@ def main():
     n = 1
     while os.path.exists(os.path.join(render, f"redo-{n}-report.tsv")):
         for r in rows(os.path.join(render, f"redo-{n}-report.tsv")):
-            redo[r["id"]] = n
+            redo[(r["id"], r["layer"])] = n
         n += 1
     n = 1
     while os.path.exists(os.path.join(render, f"jxl-redo-{n}-report.tsv")):
@@ -57,8 +57,8 @@ def main():
         n += 1
 
     def tool(pass_name, i, layer=None):
-        if pass_name == "sdr" and i in redo:
-            k = f"redo_{redo[i]}_"
+        if pass_name == "sdr" and (i, layer) in redo:
+            k = f"redo_{redo[(i, layer)]}_"
             return m.get(k + "tool_commit", ""), m.get(k + "render_v4_cargo_lock_sha256", "")
         if pass_name == "jxl" and (i, layer) in jxl_redo:
             k = f"jxl_redo_{jxl_redo[(i, layer)]}_"
@@ -70,7 +70,7 @@ def main():
     sdr = {(r["id"], r["layer"]): r for r in rows(os.path.join(render, "report.tsv"))}
     for (i, layer), r in sdr.items():
         p = lst[i]
-        commit, lock = tool("sdr", i)
+        commit, lock = tool("sdr", i, layer)
         out[layer].append({**{c: "" for c in COLUMNS}, "id": i, "bucket": p["split"], "path": r["path"],
                            "form": "sdr", "width": r["width"], "height": r["height"], "bytes": r["bytes"],
                            "sha256": r["sha256"], "pixels_sha256": r["rgba_sha256"], "colour": r["colour"],
