@@ -1,5 +1,15 @@
 # Known Bugs
 
+## Resolved 2026-10-20: stale raw decoder report inputs
+
+The canonical raw `decode-check` tables still held pre-redo-5 results while the
+full recheck and canonical bitmap table already reflected redo 5. Regenerating
+the report from those raw tables reported 24 obsolete mismatches. The P3
+conversion refresh uses the verified full recheck as its baseline, merges only
+the new P3 rows, and checks that exactly eight bitmap rows change. The refreshed
+full report passes all 4,300 JXL files and all 3,670 lossless PNG twins.
+Evidence: `benchmarks/p3_conversion_2026-10-20.pointer.md`.
+
 ## Resolved 2026-10-20: selected census aliases and historical reader hashes
 
 `--ids` narrowed the census alias output along with decoding. It now writes the
