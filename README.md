@@ -18,6 +18,13 @@ charts and line patterns, UI screenshots, and AI-generated graphics. It spans th
 cases that codecs trip on — photographic noise, hard-edged vector graphics, bilevel
 scan texture, dense text, and large flat regions.
 
+The public v4 export is available as [originals](https://github.com/imazen/imazen-26-originals),
+[JXL in source colour](https://github.com/imazen/imazen-26-jxl-p3),
+[JXL in sRGB](https://github.com/imazen/imazen-26-jxl-srgb) and
+[XL](https://github.com/imazen/imazen-xl-26). Each repository has decoding instructions
+and `train`, `validate` and `test` branches. See the [access index](ACCESS.md#public-v4-export)
+for membership and holdout guidance.
+
 Every file follows one naming convention (lowercase throughout):
 
 ```

@@ -239,7 +239,8 @@ repositories remain a later phase.
 decoding instructions, citations and exact branch manifests. Related-image
 families remain within one train/validate/test bucket. `main` is documentation;
 each data branch contains only its bucket. Preparation creates no Git repository,
-remote branch, tag or image copy. Publication still requires the owner's
-README review and explicit go-ahead.
+remote branch, tag or image copy. The owner reviewed the READMEs and approved
+publication on 2026-10-19. The four repositories are now public; their links and
+decoding guides are in the [access index](ACCESS.md#public-v4-export).
 
 Owner update, 2026-10-19: DNG 11444 moves to XL for membership parity. The ordinary originals and both JXL repositories each contain the same 2,109 image IDs. XL contains six images and 22 files. Total file count and bytes across the four repositories are unchanged.

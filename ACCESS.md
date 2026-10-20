@@ -1,7 +1,8 @@
 # imazen-26 — public access index
 
-Everything below is served over plain HTTPS from a public R2 bucket — no
-credentials, no presigned URLs. Base URL for every item on this page:
+The current v4 export is in the GitHub repositories below. Earlier corpus and
+variant objects remain available over public R2 HTTPS, without credentials or
+presigned URLs. Base URL for the R2 keys on this page:
 
 ```
 https://codec-corpus.r2.imazen.org/<key>
@@ -9,6 +10,25 @@ https://codec-corpus.r2.imazen.org/<key>
 
 See [`STORAGE-MAP.md`](STORAGE-MAP.md) for the canonical-vs-derived layer map and
 the metadata policy; this page is the "just give me a URL" index.
+
+## Public v4 export
+
+| Repository | Image IDs | Files | Decoding guide |
+|---|---:|---:|---|
+| [Originals](https://github.com/imazen/imazen-26-originals) | 2,109 | 2,109 | [Original formats](https://github.com/imazen/imazen-26-originals/blob/main/DECODING.md) |
+| [JXL source colour](https://github.com/imazen/imazen-26-jxl-p3) | 2,109 | 2,183 | [Colour and HDR](https://github.com/imazen/imazen-26-jxl-p3/blob/main/DECODING.md) |
+| [JXL sRGB](https://github.com/imazen/imazen-26-jxl-srgb) | 2,109 | 2,109 | [sRGB](https://github.com/imazen/imazen-26-jxl-srgb/blob/main/DECODING.md) |
+| [XL](https://github.com/imazen/imazen-xl-26) | 6 | 22 | [R2-backed Git LFS](https://github.com/imazen/imazen-xl-26/blob/main/DECODING.md) |
+
+`main` holds documentation and the full catalogue. Image files are on `train`,
+`validate` and `test`; each branch contains only its bucket. Related sources and
+renditions stay together. Keep validate and test out of fitting, tuning and default
+selection. `BRANCHES.tsv` pins each data branch's commit and manifest SHA-256.
+
+The three ordinary repositories have identical image membership. XL holds all
+three DNGs and every public layer of the five size-limit images, including PNG
+twins; its test branch is empty. Ordinary PNG repositories remain a later phase.
+Each manifest retains the file's licence and source attribution. IMI stays private.
 
 ## Metadata policy — read before use
 
