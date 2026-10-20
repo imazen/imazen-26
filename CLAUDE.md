@@ -1,5 +1,16 @@
 # Known Bugs
 
+## Resolved 2026-10-20: selected census aliases and historical reader hashes
+
+`--ids` narrowed the census alias output along with decoding. It now writes the
+full current alias map after a selected top-up. The append-only census also
+retains old encoded hashes: including those in the public hash download after
+redo 5 would create 252 duplicate path/decoder identities. The builder now selects
+current manifest hashes, while preserving the historical census rows. The public
+browser check rejects duplicate identities. The top-up covers all 24 replacement
+paths, and the deployed download has zero duplicates. Evidence:
+`benchmarks/review_topup_2026-10-20.pointer.md`.
+
 ## Resolved 2026-10-20: temporary filesystem files in publication snapshots
 
 A branch switch on the publication storage exposed `.fuse_hidden*` files to jj's

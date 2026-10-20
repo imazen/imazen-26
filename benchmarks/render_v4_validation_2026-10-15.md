@@ -358,6 +358,26 @@ minimum available 48,649 MiB. Tooling: `f984cf0c`; hash-table merging is recorde
 with this validation update. The other stored P3/PQ and grayscale rendering-intent
 headers retain their existing values.
 
+**Reader census top-up, 2026-10-20.** After the four dataset repositories were
+published, the census read the redo-5 replacements: 12 distinct encoded hashes
+covering all 24 paths, with 252 rows from 21 readers. All 144 successful decodes
+match our samples (128 natively, 16 as RGBA8); the other 108 rows are readers
+without JPEG XL support. The unchanged verdict command reports **52,500 stored
+JXL rows, 2,500 hashes, zero unexplained**. This includes 252 preserved rows for
+the old encodes; the current files have 52,248 rows over 2,488 distinct hashes.
+The original table is an unchanged prefix of the appended table.
+
+The selected run used `--jobs 2 --mem-budget 16`; all 168 reader containers
+finished without OOM kills. Full aliases still cover all 8,600 current PNG/JXL
+paths. The public builder selects rows by current encoded hash, avoiding 252
+duplicate path/decoder identities from historical rows. The browser check now
+rejects duplicate identities. The [public review](https://imazen-26-review.pages.dev/)
+was redeployed and checked: 2,112 tiles, full-resolution viewing, a byte-exact
+40,591,101-byte hash download, 197,876 unique identities and zero duplicates,
+HTTP 404 for a missing path, and no page or request errors. See the
+[top-up evidence](review_topup_2026-10-20.pointer.md) for commands, deployment,
+resource records and preserved artifacts. No image was re-encoded.
+
 ## SDR PNG layers
 
 `png-p3` keeps each source's code values and colour; `png-srgb` converts Display P3 and Adobe
