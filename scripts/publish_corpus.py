@@ -318,7 +318,51 @@ def expose(args):
     save(args.receipts / "public.json", {"repositories": [s["repository"] for s in plan(args)]})
 
 
+def client_check(args):
+    """Fetch fresh public data branches, plus XL objects through the Git LFS client."""
+    if not (args.receipts / "public.json").exists():
+        raise ValueError("public exposure must precede anonymous consumer checks")
+    results = []
+    for spec in plan(args):
+        name = spec["repository"]
+        base = args.repos.parent / "consumer-checks" / name
+        base.mkdir(parents=True, exist_ok=False)
+        refresh(base)
+        run(["jj", "git", "init", "--colocate", base])
+        run(["git", "config", "--global", "--add", "safe.directory", base])
+        run(["jj", "config", "set", "--repo", "snapshot.max-new-file-size", "100MiB"], cwd=base)
+        run(["jj", "git", "remote", "add", "origin", f"https://github.com/imazen/{name}.git"], cwd=base)
+        branch = "train" if spec["lfs"] else "test"
+        selected_branches = spec["branches"] if spec["lfs"] else [branch]
+        command = ["jj", "git", "fetch"]
+        for selected in selected_branches:
+            command += ["--branch", selected]
+        run(command, cwd=base)
+        run(["jj", "new", f"{branch}@origin", "-m", "test: verify published consumer checkout"], cwd=base)
+        receipt = json.loads((args.receipts / f"{name}.verified.json").read_text())
+        if sha(base, f"{branch}@origin") != receipt["refs"][branch]:
+            raise ValueError("fresh consumer checkout differs from the pinned commit")
+        run(["python3", "tools/validate.py", "--branch", branch], cwd=base)
+        object_count = 0
+        if spec["lfs"]:
+            run(["git", "lfs", "fetch", "--all", "origin"], cwd=base)
+            for row in rows(args.stage / name / "main/manifest.tsv"):
+                oid = row["sha256"]
+                file = base / ".git/lfs/objects" / oid[:2] / oid[2:4] / oid
+                if file.stat().st_size != int(row["bytes"]) or digest(file) != oid:
+                    raise ValueError("Git LFS client object differs from the approved bytes")
+                object_count += 1
+        if run(["jj", "diff", "--summary"], cwd=base, capture=True):
+            raise ValueError("consumer validation changed its checkout")
+        (base / ".workongoing").unlink()
+        results.append({"repository": name, "branch": branch, "commit": receipt["refs"][branch],
+                        "branch_files": len(rows(base / "manifest.tsv")), "lfs_files": object_count})
+    save(args.receipts / "consumer-checks.json", results)
+
+
 def release(args):
+    if not (args.receipts / "consumer-checks.json").exists():
+        raise ValueError("fresh public consumer checks are required before tagging")
     for spec in plan(args):
         name = spec["repository"]
         base = args.repos / name
@@ -346,7 +390,7 @@ def release(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("phase", choices=["verify-inputs", "lfs", "repositories", "verify-git", "expose", "release"])
+    parser.add_argument("phase", choices=["verify-inputs", "lfs", "repositories", "verify-git", "expose", "client-check", "release"])
     parser.add_argument("stage", type=Path)
     parser.add_argument("repos", type=Path)
     parser.add_argument("receipts", type=Path)
@@ -354,7 +398,8 @@ def main():
     args = parser.parse_args()
     args.receipts.mkdir(parents=True, exist_ok=True)
     {"verify-inputs": verify_inputs, "lfs": lfs, "repositories": repositories,
-     "verify-git": verify_git, "expose": expose, "release": release}[args.phase](args)
+     "verify-git": verify_git, "expose": expose, "client-check": client_check,
+     "release": release}[args.phase](args)
 
 
 if __name__ == "__main__":
