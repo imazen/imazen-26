@@ -65,7 +65,7 @@ retired, and the review may retire more.
 `imazen-26-jxl-p3`, `imazen-26-jxl-srgb` and `imazen-xl-26`. Each has
 `train`, `validate` and `test` data branches with family-preserving membership,
 plus README and decoding guidance. Ordinary PNG render repositories are deferred;
-the fixed XL set retains all public layers of its five ids, including PNG twins.
+XL retains all three DNGs and all public layers of the five size-limit ids, including PNG twins.
 IMI remains private. The table below describes the complete later layout.
 
 Plain git, one repository per set and subset, with `train`, `validate` and `test` branches.
@@ -77,9 +77,10 @@ Git LFS only where GitHub's limits leave no choice.
 | `imazen-26-png-srgb`, `imazen-26-png-p3` | lossless PNG renders |
 | `imazen-26-jxl-srgb`, `imazen-26-jxl-p3` | JPEG XL (see below) |
 | `imazen-26-imi-srgb`, `imazen-26-imi-p3` | IMIJ `.imi` renders; private until IMIJ ships with a frozen format version |
-| `imazen-xl-26` | every image that has a file over GitHub's 100 MiB limit in any layer, with all of its layers, in GitHub LFS |
+| `imazen-xl-26` | all three DNG originals and every image with a file over GitHub's 100 MiB limit in any layer, with all of its layers, in Git LFS |
 
-- **XL membership** (v4 sizes, `scripts/export_sizing.py`, 2026-10-16): 5 ids.
+- **XL membership** (`manifests/export_xl.tsv`, owner update 2026-10-19): 6 ids; five have a file over 100 MiB.
+  - 11444: its 18,775,730-byte DNG original, moved here by the owner for identical membership across ordinary originals and JXL repositories.
   - 11455 and 11458: their DNG originals (118.8 and 126.8 MiB).
   - 11521 and 11540: their HDR PNGs (107.9 and 100.4 MiB).
   - 12402: its SDR PNG, 101.2 MiB in both PNG layers.
@@ -88,7 +89,7 @@ Git LFS only where GitHub's limits leave no choice.
 - **Repository size.** GitHub recommends at most 10 GB for the compressed `.git` directory and enforces a 2 GB push limit
   ([repository limits](https://docs.github.com/en/repositories/creating-and-managing-repositories/repository-limits),
   checked 2026-10-19). The sizes below are encoded payload totals, not measured Git object-store sizes. Without the XL images, the current v4 payload
-  measures: originals 4.86 GB, `png-p3` 12.59 GB (6.13 / 3.81 / 2.66 by bucket), `png-srgb`
+  measures: originals 4.84 GB, `png-p3` 12.59 GB (6.13 / 3.81 / 2.66 by bucket), `png-srgb`
   9.44 GB, `jxl-p3` 6.30 GB, `jxl-srgb` 4.90 GB. The PNG layers get a repository per bucket;
   the others one repository with a branch per bucket. A large branch goes up in several
   pushes.
@@ -240,3 +241,5 @@ families remain within one train/validate/test bucket. `main` is documentation;
 each data branch contains only its bucket. Preparation creates no Git repository,
 remote branch, tag or image copy. Publication still requires the owner's
 README review and explicit go-ahead.
+
+Owner update, 2026-10-19: DNG 11444 moves to XL for membership parity. The ordinary originals and both JXL repositories each contain the same 2,109 image IDs. XL contains six images and 22 files. Total file count and bytes across the four repositories are unchanged.

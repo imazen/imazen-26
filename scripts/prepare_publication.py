@@ -19,7 +19,6 @@ import render_v4_list
 
 
 BUCKETS = ("train", "validate", "test")
-XL_IDS = {"11455", "11458", "11521", "11540", "12402"}
 REPO = Path(__file__).resolve().parents[1]
 
 DECODING = """# Decoding the files
@@ -123,14 +122,15 @@ def special_card(name, layer, rows, version):
         lines += ["This repository holds the source files byte for byte. It includes JPEG, PNG,",
                   "HEIC and DNG; their encoded metadata and orientation remain in the files.", ""]
     elif layer == "xl":
-        lines += ["This repository holds every public layer of the five XL images. An image",
-                  "belongs here when any of its layers exceeds GitHub's 100 MiB file limit.",
+        lines += ["This repository holds all three DNG originals and every public layer of images",
+                  "with a file exceeding GitHub's 100 MiB limit. DNG 11444 joins the larger",
+                  "DNGs here so the ordinary originals and JXL sets have identical membership.",
                   "These ids are excluded from the ordinary repositories. Image bytes use Git LFS.", ""]
     else:
         colour = "source colour (including sRGB, Display P3 and Adobe RGB)" if layer.endswith("p3") else "sRGB"
         encoding = "JPEG XL" if layer.startswith("jxl") else "PNG"
         lines += [f"This repository holds {encoding} renders in {colour}.",
-                  "The five XL ids are in [imazen-xl-26](https://github.com/imazen/imazen-xl-26).",
+                  "The XL images are in [imazen-xl-26](https://github.com/imazen/imazen-xl-26).",
                   "DNG sources remain in the originals repository and have no rendered twins.", ""]
         if layer.startswith("jxl"):
             lines += ["Lossless files preserve their PNG twins' samples. JPEG-in-JXL files retain",
@@ -186,7 +186,7 @@ def review_pages(root, plan):
         (base / "review.html").write_text(document(name, body))
         items.append(f'<tr><td><a href="{name}/review.html">{name}</a></td><td>{row["images"]}</td><td>{row["files"]}</td><td>{row["bytes"]:,}</td><td>{", ".join(row["branches"])}</td></tr>')
     intro = '<h1>imazen-26 publication review</h1><p>Prepared README text, decoding instructions and exact branch membership. No repositories, branches, tags or image bytes have been published by this staging step.</p>'
-    intro += '<p>The five fixed XL ids retain all public layers, including their PNG twins. Ordinary PNG render repositories are a separate publication phase; IMI remains private.</p>'
+    intro += '<p>XL holds all three DNGs and every public layer of the five size-limit images, including their PNG twins. Ordinary PNG render repositories are a separate publication phase; IMI remains private.</p>'
     table = '<table><tr><th>Repository</th><th>Images</th><th>Files</th><th>Bytes</th><th>Data branches</th></tr>' + ''.join(items) + '</table>'
     (root / "index.html").write_text(document("imazen-26 publication review", intro + table))
 
@@ -201,6 +201,9 @@ def main():
     parser.add_argument("--date", default="2026-10-19")
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=False)
+    policy = read_table(REPO / "manifests/export_xl.tsv")
+    xl_ids = {row["id"] for row in policy}
+    oversize_ids = {row["id"] for row in policy if row["reason"] == "file_over_100_mib"}
     buckets = render_v4_list.family_buckets()
     families = defaultdict(set)
     for row in read_table(REPO / "manifests/split_map_family_v2.tsv"):
@@ -246,7 +249,7 @@ def main():
             row.update(layer=layer, provenance_json=provenance[row["id"]])
         layers[layer] = rows
     measured_xl = {r["id"] for rows in layers.values() for r in rows if int(r["bytes"]) > 100 * 1024**2}
-    if measured_xl != XL_IDS:
+    if measured_xl != oversize_ids:
         raise ValueError("XL membership changed")
     specs = [("imazen-26-originals", "originals", None)]
     if args.sets == "plan":
@@ -257,8 +260,8 @@ def main():
     plan = []
     for name, layer, only_bucket in specs:
         rows = [dict(r) for key, items in layers.items() for r in items
-                if (layer == "xl" and r["id"] in XL_IDS) or
-                (key == layer and r["id"] not in XL_IDS and (only_bucket is None or r["bucket"] == only_bucket))]
+                if (layer == "xl" and r["id"] in xl_ids) or
+                (key == layer and r["id"] not in xl_ids and (only_bucket is None or r["bucket"] == only_bucket))]
         if layer == "xl":
             for row in rows:
                 row["path"] = row["layer"] + "/" + row["path"]

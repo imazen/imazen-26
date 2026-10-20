@@ -55,6 +55,15 @@ def main():
     for i, layer, path, n in files:
         if n > FILE_LIMIT:
             xl.setdefault(i, []).append((layer, path, n))
+    # The owner also keeps the third, smaller DNG in XL for set parity.
+    with open(os.path.join(REPO, "manifests", "export_xl.tsv")) as stream:
+        policy = list(csv.DictReader(stream, delimiter="\t"))
+    oversized = set(xl)
+    expected_oversized = {r["id"] for r in policy if r["reason"] == "file_over_100_mib"}
+    if oversized != expected_oversized:
+        sys.exit("measured over-limit ids differ from the export XL policy")
+    for row in policy:
+        xl.setdefault(row["id"], [])
     rows = []
     for layer in ("originals", "png-p3", "png-srgb", "jxl-p3", "jxl-srgb"):
         for b in ("train", "validate", "test"):
@@ -72,8 +81,11 @@ def main():
         tot = sum(r[5] for r in rows if r[0] == layer)
         print(f"{layer:<10} all       {sum(r[4] for r in rows if r[0] == layer):>6} {'':>7} {tot / 1e9:>10.2f}"
               + ("  over 10 GB" if tot > REPO_LIMIT else ""))
-    print(f"\nXL images (a file over 100 MiB in some layer): {len(xl)}")
+    print(f"\nXL images: {len(xl)} ({len(oversized)} with a file over 100 MiB)")
     for i in sorted(xl):
+        if not xl[i]:
+            print(f"  {i} ({bucket.get(i, '?')}): owner-selected DNG membership parity")
+            continue
         biggest = max(xl[i], key=lambda x: x[2])
         print(f"  {i} ({bucket.get(i, '?')}): {len(xl[i])} files over; largest {biggest[0]} "
               f"{biggest[2] / 2**20:.1f} MiB  {biggest[1]}")
