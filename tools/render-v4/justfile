@@ -122,3 +122,6 @@ sample-encode-comparison stored previous current:
 # Destination must be new; Cargo caches are excluded and three files are SHA-256 checked.
 archive-validation source destination:
     python3 "{{justfile_directory()}}/../../scripts/archive_validation.py" {{quote(source)}} {{quote(destination)}}
+
+publication-cards render originals out sets="compact":
+    python3 "{{justfile_directory()}}/../../scripts/prepare_publication.py" {{quote(render)}} {{quote(originals)}} {{quote(out)}} --sets {{sets}}
