@@ -2,7 +2,7 @@
 //!
 //! The passes are subcommands, each writing beside the others in one output directory:
 //! - `png-sdr` (this file): the two SDR PNG layers.
-//!   - `png-p3`: each source's own colour space and code values.
+//!   - `png-p3`: sRGB or Display P3; Adobe RGB sources are converted to Display P3.
 //!   - `png-srgb`: sRGB. Display P3 and Adobe RGB sources are converted relative-colorimetric
 //!     (a matrix in linear light), out-of-gamut colours clipped, and the clipped pixels
 //!     counted. An sRGB source's `png-srgb` file is byte-identical to its `png-p3` file.
@@ -18,7 +18,7 @@
 //! For the PNG layers: orientation baked into the pixels; channels and bit depth follow the
 //! source (8-bit, and the 1-bit patent pages stay 1-bit), a fully opaque alpha channel dropped
 //! and reported; colour signalling as the plan says (an `sRGB` chunk for sRGB, the source's
-//! `iCCP` plus an agreeing `cICP` where H.273 has a code, `iCCP` alone for Adobe RGB); one
+//! `iCCP` plus an agreeing `cICP` for Display P3); one
 //! provenance `tEXt` chunk (keyword `imazen-26`, the row's JSON, ASCII so it reads the same as
 //! Latin-1 or UTF-8) before the image data; zenpng at effort 22. Every output is decoded again
 //! and must hold exactly the pixels it was written from and that one text chunk. DNGs are not
@@ -275,6 +275,16 @@ fn orient_pixels(
 /// Convert code values from `colour` to sRGB: linear light, the gamut matrix, clip, encode.
 /// Returns the pixels and how many had a channel outside sRGB by more than half a code value.
 fn to_srgb(px: &Pixels, w: usize, colour: Colour) -> Result<(Pixels, u64), String> {
+    to_colour(px, w, colour, Colour::Srgb)
+}
+
+/// Relative-colorimetric matrix conversion with an sRGB transfer at the destination.
+fn to_colour(
+    px: &Pixels,
+    w: usize,
+    colour: Colour,
+    target: Colour,
+) -> Result<(Pixels, u64), String> {
     let (src, alpha): (Vec<u8>, Option<Vec<u8>>) = match px {
         Pixels::Gray(_) => return Ok((px.clone(), 0)),
         Pixels::Rgb(p) => (p.clone(), None),
@@ -290,13 +300,13 @@ fn to_srgb(px: &Pixels, w: usize, colour: Colour) -> Result<(Pixels, u64), Strin
     let from = PixelDescriptor::RGB8_SRGB
         .with_primaries(colour.primaries())
         .with_transfer(colour.transfer());
-    let linear = PixelDescriptor::RGBF32_LINEAR.with_primaries(ColorPrimaries::Bt709);
+    let linear = PixelDescriptor::RGBF32_LINEAR.with_primaries(target.primaries());
     let opts = ConvertOptions::permissive().with_clip_out_of_gamut(false);
     let plan =
         ConvertPlan::new_explicit(from, linear, &opts).map_err(|e| format!("plan: {e:?}"))?;
     let encode = ConvertPlan::new_explicit(
         linear,
-        PixelDescriptor::RGB8_SRGB,
+        PixelDescriptor::RGB8_SRGB.with_primaries(target.primaries()),
         &ConvertOptions::permissive(),
     )
     .map_err(|e| format!("plan: {e:?}"))?;
@@ -586,16 +596,19 @@ fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
 
     // (layer, file, layout, rgba sha256, clipped pixels)
     let mut files: Vec<(&str, Vec<u8>, String, String, String)> = Vec::new();
-    let png = encode_png(
-        &px,
-        w,
-        h,
-        colour,
-        icc.as_deref(),
-        row.provenance,
-        sub_byte_gray,
-    )?;
-    let hash = check(&png, &px, w, h, row.provenance)?;
+    let (p3px, p3colour, p3icc, p3clipped) = if colour == Colour::AdobeRgb {
+        let (converted, clipped) = to_colour(&px, w, colour, Colour::DisplayP3)?;
+        (
+            converted,
+            Colour::DisplayP3,
+            Some(zenpixels_convert::icc_profiles::display_p3_icc(false)),
+            clipped.to_string(),
+        )
+    } else {
+        (px.clone(), colour, icc.as_deref(), String::new())
+    };
+    let png = encode_png(&p3px, w, h, p3colour, p3icc, row.provenance, sub_byte_gray)?;
+    let hash = check(&png, &p3px, w, h, row.provenance)?;
     if colour.is_srgb() {
         files.push((
             "png-p3",
@@ -606,7 +619,7 @@ fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
         ));
         files.push(("png-srgb", png, layout_of(&px), hash, "0".into()));
     } else {
-        files.push(("png-p3", png, layout_of(&px), hash, String::new()));
+        files.push(("png-p3", png, layout_of(&p3px), hash, p3clipped));
         let (spx, clipped) = to_srgb(&px, w, colour)?;
         let png = encode_png(
             &spx,
@@ -629,7 +642,7 @@ fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
         rows.push(format!(
             "{}\t{layer}\t{layer}/{name}\t{w}\t{h}\t{layout}\t{alpha}\t{}\t{gm}\t{clip}\t{}\t{}\t{hash}\t",
             row.id,
-            colour.name(),
+            if *layer == "png-p3" { p3colour.name() } else { colour.name() },
             png.len(),
             hex(&Sha256::digest(png)),
         ));

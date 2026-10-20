@@ -443,7 +443,19 @@ pub(crate) fn render(row: &Row, out_dir: &Path) -> Result<Vec<String>, String> {
         };
     let mut files: Vec<Written> = Vec::new();
 
-    if is_jpeg {
+    if colour == Colour::AdobeRgb {
+        if gain_map.is_some() {
+            return Err("Adobe RGB gain-map conversion needs an explicit HDR policy".into());
+        }
+        let (p3px, _) = crate::to_colour(&px, w, colour, Colour::DisplayP3)?;
+        let (jxl, hash) = lossless(&p3px, Colour::DisplayP3, None)?;
+        let mut p3 = blank("jxl-p3", jxl, "lossless", hash);
+        p3.colour = Colour::DisplayP3.name();
+        files.push(p3);
+        let (spx, _) = to_srgb(&px, w, colour)?;
+        let (jxl, hash) = lossless(&spx, Colour::Srgb, None)?;
+        files.push(blank("jxl-srgb", jxl, "lossless", hash));
+    } else if is_jpeg {
         let (jxl, kind) = jpeg_in_jxl(&data, effort)?;
         let jpeg_sha256 = if kind == "jpeg-in-jxl" {
             let back = zencodecs::reconstruct_jpeg_from_jxl(&jxl)

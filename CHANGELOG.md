@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Changed
+- Convert the two Adobe RGB sources to Display P3 in the P3 render family, with relative colorimetric intent and gamut clipping. Their JXL files use lossless converted samples; originals and sRGB derivatives stay unchanged.
 - Owner-selected export parity: DNG 11444 joins the other two DNGs in XL. The ordinary originals and both JXL repositories now share 2,109 image IDs; XL has six IDs and 22 files. `manifests/export_xl.tsv` drives preparation and sizing, with five size-limit IDs distinguished from the parity exception.
 - JXL redo 5 replaces the twelve progressive Unsplash JPEG fallbacks with 24 lossless PNG twins; all three JXL readers match the PNG samples, structural gates pass, old files are retained, and repository limits hold. Tooling `f984cf0c`; the measured sequential-JPEG alternative remains diagnostic only.
 - The metadata-review GPS classifier associates direction references by document/group rather than per-tag CopyN labels. All 291 GPS-bearing sources were rechecked: no per-file classification changed; carrier annotations were corrected and the old review was preserved.

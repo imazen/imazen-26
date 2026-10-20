@@ -108,8 +108,10 @@ Git LFS only where GitHub's limits leave no choice.
 - **Orientation.** It is baked into the pixels and the tag is removed. File names carry the
   displayed size.
 - **Colour.**
-  - The `p3` layers keep each source's own colour space. sRGB stays sRGB and is never
-    converted to P3 at 8 bits; Adobe RGB keeps its profile.
+  - The `p3` layers contain sRGB and Display P3. sRGB stays sRGB and is never
+    converted to P3 at 8 bits. Adobe RGB sources are converted to Display P3 with
+    relative colorimetric intent and gamut clipping (owner decision, 2026-10-20).
+    The original Adobe RGB JPEG bytes remain in the originals repository.
   - The `srgb` layers convert relative colorimetric, clipping out-of-gamut colours, and
     record the clipped-pixel count per file.
   - Untagged sources are written as sRGB and marked `assumed`.
@@ -166,13 +168,16 @@ Git LFS only where GitHub's limits leave no choice.
   JSON, non-ASCII characters escaped, so it reads the same as Latin-1 or UTF-8; JXL and
   `.imi` carry the same text in their own metadata.
 - **JPEG XL.**
-  - Except for the twelve progressive files below, JPEG sources ship as JPEG-in-JXL,
+  - Except for the twelve progressive files below and the two Adobe RGB sources, JPEG
+    sources ship as JPEG-in-JXL,
     which rebuilds the original byte for byte, and all
     other sources as lossless renders. A JPEG-in-JXL file keeps the JPEG's own metadata (its
     Exif and XMP, under the originals' keep-list) because the rebuild needs it, and its
     orientation lives in the codestream header.
-  - Lossless files state sRGB and Display P3 in JXL's own colour encoding and Adobe RGB as its
-    ICC profile, and carry the provenance JSON as XMP (one `imazen26:provenance` property).
+  - Lossless files state sRGB and Display P3 in JXL's own colour encoding. Adobe RGB
+    sources use lossless encodes of their converted Display P3 PNG twins (owner decision,
+    2026-10-20); the originals remain available byte for byte in the originals repository.
+    Lossless files carry the provenance JSON as XMP (one `imazen26:provenance` property).
     Owner question 5 settles whether JPEG-in-JXL files carry provenance too.
   - The 12 progressive Unsplash JPEGs (2003, 2005, 2009, 2012, 2013, 2022, 2203, 2204, 2207,
     2212, 2402, 2409) cannot carry JPEG reconstruction data: each has a scan with more than

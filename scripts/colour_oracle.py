@@ -74,13 +74,16 @@ def main():
     ap.add_argument("originals")
     ap.add_argument("list")
     ap.add_argument("--ids")
+    ap.add_argument("--source-render", help="prior native PNGs when the P3 layer has been converted")
     a = ap.parse_args()
     keep = set(a.ids.split(",")) if a.ids else None
     with open(a.list) as f:
         source = {line.split("\t")[0]: line.split("\t")[1] for line in f if line.strip()}
     with open(a.report, newline="") as f:
         rows = [r for r in csv.DictReader(f, delimiter="\t") if not r["error"]]
-    p3 = {r["id"]: r["path"] for r in rows if r["layer"] == "png-p3"}
+    source_render = a.source_render or a.render
+    with open(os.path.join(source_render, "report.tsv"), newline="") as stream:
+        p3 = {r["id"]: r for r in csv.DictReader(stream, delimiter="\t") if r["layer"] == "png-p3"}
     failed = ungated = 0
     for r in rows:
         if r["layer"] != "png-srgb" or r["colour"] not in TO_XYZ or (keep and r["id"] not in keep):
@@ -98,7 +101,10 @@ def main():
                f"ours-lcms {stats(ours, lc)}"
         bad = None
         if r["id"] in p3:
-            with Image.open(os.path.join(a.render, p3[r["id"]])) as im:
+            original = p3[r["id"]]
+            if original["colour"] != r["colour"]:
+                raise ValueError("P3 twin is converted; pass --source-render with its retained native PNG")
+            with Image.open(os.path.join(source_render, original["path"])) as im:
                 own = np.asarray(im.convert("RGB"))
             own_ref = textbook(own, r["colour"])
             line += f"; ours-textbook(own decode) {stats(ours, own_ref)}"
