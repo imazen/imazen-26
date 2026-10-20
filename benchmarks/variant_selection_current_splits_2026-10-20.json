@@ -1,0 +1,61 @@
+{
+  "observed_date": "2026-10-20",
+  "scope": "Registry and manifest inspection; historical render bytes not revalidated",
+  "corpus_commit": "4c1b74d40d83be42e2115abbaa65a122556e19b5",
+  "current_family_map": {
+    "path": "manifests/split_map_family_v2.tsv",
+    "sha256": "5fe109a932f592b4432f540fdefe56701de2efd749299e3e2ed7765150e0249b"
+  },
+  "selections": [
+    {
+      "path": "manifests/imazen26_representatives_K500_2026-06-14.tsv",
+      "sha256": "0e57b458ddd06c66a7fbb9c9d0e3ebb081c5a706be9cb4295dc1d3584452ed1c",
+      "selection_rows": 500,
+      "distinct_origins": 414,
+      "current_origin_buckets": {
+        "train": 203,
+        "validate": 138,
+        "test": 68,
+        "retired_or_absent": 5
+      },
+      "crop_label_rows": {
+        "c25_tl": 20,
+        "c50_center": 57,
+        "c50_bl": 61,
+        "c50_br": 50,
+        "c25_tr": 41,
+        "c50_tl": 47,
+        "full": 44,
+        "c25_br": 37,
+        "c25_bl": 45,
+        "c50_tr": 48,
+        "c25_center": 50
+      }
+    },
+    {
+      "path": "manifests/imazen26_representatives_K500_even_2026-06-18.tsv",
+      "sha256": "7e99345a2de6760b460df88224ccd447f5078060f38d59f60fce9b90678a8958",
+      "selection_rows": 500,
+      "distinct_origins": 386,
+      "current_origin_buckets": {
+        "train": 334,
+        "validate": 29,
+        "test": 16,
+        "retired_or_absent": 7
+      },
+      "crop_label_rows": {
+        "c25_tl": 37,
+        "c50_bl": 58,
+        "c50_center": 57,
+        "full": 50,
+        "c25_tr": 43,
+        "c25_br": 44,
+        "c50_br": 49,
+        "c50_tl": 49,
+        "c25_bl": 30,
+        "c25_center": 48,
+        "c50_tr": 35
+      }
+    }
+  ]
+}
