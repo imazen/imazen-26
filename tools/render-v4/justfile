@@ -130,6 +130,13 @@ publication-cards render originals out sets="compact":
 publish-corpus phase stage repos receipts:
     python3 "{{justfile_directory()}}/../../scripts/publish_corpus.py" {{quote(phase)}} {{quote(stage)}} {{quote(repos)}} {{quote(receipts)}}
 
+# Called under the shared heavy-job lock after all repository upload receipts exist.
+publish-verified stage repos receipts:
+    @just --justfile {{quote(justfile())}} publish-corpus sync-docs {{quote(stage)}} {{quote(repos)}} {{quote(receipts)}}
+    @just --justfile {{quote(justfile())}} publish-corpus verify-git {{quote(stage)}} {{quote(repos)}} {{quote(receipts)}}
+    @just --justfile {{quote(justfile())}} publish-corpus expose {{quote(stage)}} {{quote(repos)}} {{quote(receipts)}}
+    @just --justfile {{quote(justfile())}} publish-corpus client-check {{quote(stage)}} {{quote(repos)}} {{quote(receipts)}}
+
 publication-progress log:
     tail -n 6 {{quote(log)}}
 
