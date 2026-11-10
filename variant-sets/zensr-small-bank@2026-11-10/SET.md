@@ -1,6 +1,6 @@
 # zensr-small-bank@2026-11-10
 
-**Status:** completed local exploration bank; image bytes are not published.
+**Status:** completed exploration bank with a verified retained mirror; image bytes are not published.
 **Consumer:** [zensr](https://github.com/imazen/zensr), repair/SR tuning tools.
 **Membership authority:** corpus metadata at
 `32ba0ebea7b3cccbd6e141a397d90423140a7fc6`.
@@ -37,7 +37,7 @@ exposure precludes fresh base-model generalization claims.
 Generator source: zensr `053525fee19d4b055b5add9e9844e4cb0fce7f6a`;
 frozen image worker source: `69c3f45352331753f8fc43bdfa7dbef3adf04bc9`.
 [Generator and retention contract](https://github.com/imazen/zensr/blob/63f6d78d80817e482d803b5e776308a10730f04a/tools/sr-bank/README.md).
-[Measured generation and limitations](https://github.com/imazen/zensr/blob/63f6d78d80817e482d803b5e776308a10730f04a/benchmarks/sr_bank_2026-11-10.md).
+[Measured generation and limitations](https://github.com/imazen/zensr/blob/090c6291fe8ad48250b7e8dc6ceb51e9fc660596/benchmarks/sr_bank_2026-11-10.md).
 
 `files.tsv` hashes the archive files. Its width/height are zero because each
 archive contains multiple image geometries. `records.tsv` hashes each
@@ -54,3 +54,13 @@ Completed bank identity SHA-256:
 `86ba55a4193a56aa22b1fec9e66c4e1ec673a1d52cebf7339ad6c68c786fa2a8`.
 Source-image licences remain those of the corpus manifests. This registration
 publishes metadata only and does not redistribute images or model weights.
+
+Verified retained copy (2026-11-10):
+`tower:/mnt/disk1/coefficient/output/zensr/sr-bank-20261110-v1.tar`,
+7,749,263,360 bytes, SHA-256
+`35689212375377ed1bd479c952db1248d52f769158872faa9f971b7e45b6f56d`.
+The archive includes `run-v3/shards/` plus the plan, original reuse provenance,
+frozen binaries and completed scalar blend study. Sender/receiver stream hashes
+match; file/directory fsync completed; three seeded random IMIJ members read back
+from the retained tar match their registered file hashes. The local receipt is
+`BACKUP_RECEIPT.json` in the bank root. Access was over SSH, without NFS.
