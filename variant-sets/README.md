@@ -29,6 +29,7 @@ A set = one directory `variant-sets/<name>@<date>/` containing:
 
 | set id | what | files | status |
 |---|---|---:|---|
+| [`zensr-small-bank@2026-11-10`](zensr-small-bank@2026-11-10/SET.md) | aspect-preserving small repair/SR candidates; published-ID/family-v2 split intersection | 244 archives | completed local exploration bank; bytes not published |
 | [`sdr-fps-1p5gp@2026-08-23`](sdr-fps-1p5gp@2026-08-23/SET.md) | byte successor of the 06-14 set (`oxipng -o4 --nx`, ratio 0.703) — same pixels, names, containers | 1,482 | **active** (train-only by construction) |
 | [`hdr-grid-15scale@2026-08-23`](hdr-grid-15scale@2026-08-23/SET.md) | byte successor of the 06-14 set (`--nx`, ratio 0.875); cICP/16-bit verified intact | 1,140 | **active** |
 | [`cleanpicker-ladder11@2026-08-23`](cleanpicker-ladder11@2026-08-23/SET.md) | byte successor of the 06-26 set (`--nx`, ratio 0.897); iCCP verified intact | 4,497 | **active** — the SDR picker corpus |
