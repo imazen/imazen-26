@@ -64,3 +64,17 @@ frozen binaries and completed scalar blend study. Sender/receiver stream hashes
 match; file/directory fsync completed; three seeded random IMIJ members read back
 from the retained tar match their registered file hashes. The local receipt is
 `BACKUP_RECEIPT.json` in the bank root. Access was over SSH, without NFS.
+
+## Frozen-input limitations
+
+This registration identifies the original experiment, not corrected encoder
+outputs. Its pinned zenjpeg `24b6d3fb` has a partial-strip chroma-padding bug:
+a neutral 32×8 420 witness gains tint during encoding, reproduced by both
+zenjpeg and libjpeg-turbo decoding. JPEG padding was corrected on main through
+[zenjpeg PR 262](https://github.com/imazen/zenjpeg/pull/262). The bank also
+predates zensr's partial-block projection correction `0bb29cf6`. Original
+JPEGs, candidates and scores remain frozen; no claim of corrected-runtime
+quality follows from this registry.
+
+[Separate projection replay and corrected SR witnesses](https://github.com/imazen/zensr/blob/5042bccd10027964c25d86a13cdc46ef926e6dbe/benchmarks/projection_fix_2026-11-10.md)
+retain new artifact identities rather than overwriting these archives.
